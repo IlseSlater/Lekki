@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
+  },
+  "include": ["src/**/*"],
+  "references": [
+    { "path": "../../packages/contracts" },
+    { "path": "../../packages/domain" },
+    { "path": "../../packages/profile-engine" },
+    { "path": "../../packages/runtime/entry" },
+    { "path": "../../packages/runtime/context" },
+    { "path": "../../packages/runtime/experience" },
+    { "path": "../../packages/runtime/capability" },
+    { "path": "../../packages/shared" },
+    { "path": "../../packs/restaurant" },
+    { "path": "../../connectors/manual-payment" },
+    { "path": "../../connectors/payfast" }
+  ]
+}

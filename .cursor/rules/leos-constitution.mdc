@@ -1,0 +1,21 @@
+---
+description: Immutable LEOS Platform Constitution governing all agent skills.
+globs: **/*
+alwaysApply: true
+---
+
+# THE LEOS PLATFORM CONSTITUTION
+
+1. **LEOS GIVES PEOPLE CONFIDENCE:** The primary success metric of LEOS is Human Confidence. Reduce uncertainty in every moment.
+2. **HOSPITALITY BEFORE SOFTWARE:** We do not build enterprise software, admin panels, or complex dashboards. We prepare experiences.
+3. **NEVER ASK A HUMAN TO REMEMBER:** LEOS remembers identity, previous choices, venue profiles, and defaults automatically.
+4. **ONE QUESTION PER SCREEN:** Every view or step must answer exactly ONE human question.
+5. **ONE PRIMARY ACTION:** Every workspace view features exactly ONE gold primary action (`#D7A14A`).
+6. **LIVE EXPERIENCE IS REAL:** Studio never shows a fake "preview". It projects the actual, running Guest Experience Shell.
+7. **PLATFORM BEFORE PACK:** Core runtimes remain generic. Industry nouns (table, menu, kitchen) belong strictly inside Experience Packs.
+8. **CAPABILITIES BEFORE VENDORS:** Code requests abstract capabilities (`CreatePayment`, `Refund`), never vendor SDKs (`Stripe`, `Pilot`).
+9. **HUMAN CONFIDENCE INDEX (HCI):** Every change must maintain or increase the screen's HCI score across CX, DX, OX, and PX.
+10. **REUSE BEFORE INVENTION:** Never introduce new architectural concepts, abstractions, or libraries without concrete proof and LEK/ADR documentation.
+11. **DIGITAL CALM:** Prefer whitespace over density, clarity over decoration, and two simple taps over one crowded screen.
+
+**Ops:** `docs/LEKKI-BUILD.md` · specialists `.cursor/skills/README.md` · EO still owns `Continue building Lekki`.

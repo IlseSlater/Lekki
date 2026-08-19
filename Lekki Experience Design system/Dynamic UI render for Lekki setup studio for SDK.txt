@@ -1,0 +1,1700 @@
+The Architecture
+                    LEKKI SETUP STUDIO
+
+                    Dynamic UI Renderer
+                           │
+        ┌──────────────────┼──────────────────┐
+        │                  │                  │
+   Pilot Schema      Sage Schema      WhatsApp Schema
+        │                  │                  │
+        └──────────────────┼──────────────────┘
+                           │
+                  Configuration Engine
+                           │
+                     Secrets Service
+                           │
+                  Connector Runtime
+
+Notice something important...
+
+There are no custom pages.
+
+Everything comes from schemas.
+
+Restaurant Owner Experience
+
+Imagine this is the first screen.
+
+────────────────────────────────────────────────────────────
+
+                 Setup Your Business
+
+Let's connect the services your business uses.
+
+Payments
+Accounting
+Messaging
+Banking
+Analytics
+
+────────────────────────────────────────────────────────────
+
+✓ Pilot Payments
+
+Connect
+
+────────────────────────────────────────────────────────────
+
+Click
+
+Connect
+
+Setup Studio Opens
+────────────────────────────────────────────────────────────
+
+Pilot Payments
+
+Verified Partner
+
+This will take about 2 minutes.
+
+□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
+
+Step 1 of 5
+
+Merchant Details
+
+────────────────────────────────────────────────────────────
+
+Merchant ID
+
+[__________________________]
+
+API Key
+
+[__________________________]
+
+Webhook Secret
+
+[__________________________]
+
+Environment
+
+○ Production
+
+○ Sandbox
+
+────────────────────────────────────────
+
+          Test Connection
+
+────────────────────────────────────────
+
+Nothing here is hardcoded.
+
+The connector schema generated this.
+
+Click
+
+Test Connection
+
+□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
+
+Connecting to Pilot...
+
+✓ Merchant Found
+
+Company
+
+Lekki Restaurant (Pty) Ltd
+
+Merchant Number
+
+MID-10482
+
+Country
+
+South Africa
+
+Currency
+
+ZAR
+
+────────────────────────────────────────
+
+Continue
+
+────────────────────────────────────────
+
+Again...
+
+Generated.
+
+Settlement Screen
+□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
+
+Where should your money go?
+
+Settlement Account
+
+────────────────────────────────────────
+
+Bank
+
+▼ First National Bank
+
+Account Holder
+
+Lekki Restaurant
+
+Account Number
+
+*************1123
+
+Settlement Currency
+
+ZAR
+
+────────────────────────────────────────
+
+Validate
+
+────────────────────────────────────────
+Routing Screen
+
+Instead of radio buttons...
+
+I'd use visual cards.
+
+□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
+
+How does your business operate?
+
+Choose one.
+
+────────────────────────────────────────
+
+┌────────────────────────────┐
+
+Global Settlement
+
+One merchant
+
+All venues
+
+Corporate accounting
+
+○ Select
+
+└────────────────────────────┘
+
+┌────────────────────────────┐
+
+Venue Routing
+
+Each venue
+
+Own merchant
+
+Own settlement
+
+○ Select
+
+└────────────────────────────┘
+
+┌────────────────────────────┐
+
+Location Routing
+
+Tables
+
+Bars
+
+Food Halls
+
+Hotels
+
+○ Select
+
+└────────────────────────────┘
+
+People understand pictures much faster than text.
+
+Choose
+
+Venue Routing
+
+Screen expands.
+
+Cape Town
+
+Merchant
+
+[MID001]
+
+Settlement
+
+[FNB]
+
+──────────────
+
+Johannesburg
+
+Merchant
+
+[MID002]
+
+Settlement
+
+[Standard Bank]
+
+──────────────
+
+Durban
+
+Merchant
+
+[MID003]
+
+Settlement
+
+[Nedbank]
+Review Screen
+□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
+
+Review
+
+Provider
+
+Pilot
+
+Merchant
+
+Verified
+
+Routing
+
+Venue
+
+Venues
+
+12
+
+Settlement Accounts
+
+12
+
+Capabilities
+
+✓ Payments
+
+✓ Refunds
+
+✓ Settlement
+
+✓ Reconciliation
+
+────────────────────────
+
+Activate
+
+────────────────────────
+
+Click Activate
+
+Beautiful animation.
+
+□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
+
+Installing
+
+✓ Creating Secrets
+
+✓ Registering Connector
+
+✓ Registering Capabilities
+
+✓ Creating Event Handlers
+
+✓ Validating Merchant
+
+✓ Starting Health Monitor
+
+□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
+
+Pilot is Ready
+Dashboard Afterwards
+
+Now the connector has its own dashboard.
+
+Pilot
+
+────────────────────────────
+
+Status
+
+🟢 Healthy
+
+Version
+
+2.4
+
+Last Settlement
+
+09:14
+
+Health
+
+99.98%
+
+Capabilities
+
+Payments
+
+Refunds
+
+Settlement
+
+Reconciliation
+
+Tap to Pay
+
+────────────────────────────
+
+Settings
+
+Logs
+
+Workflows
+
+Documentation
+
+Permissions
+
+Upgrade
+Here's Where It Gets Really Clever
+
+Imagine the developer only writes this:
+
+fields:
+
+- merchantId
+
+- apiKey
+
+- webhookSecret
+
+- routingMode
+
+- settlementAccount
+
+verification:
+
+merchantLookup
+
+successMessage:
+
+Pilot Connected
+
+That's it.
+
+No React.
+
+No Angular.
+
+No HTML.
+
+No CSS.
+
+The Setup Studio builds the UI automatically.
+
+Conditional Fields
+
+Suppose
+
+Venue Routing
+
+is selected.
+
+The schema simply says
+
+if:
+
+routing = venue
+
+show:
+
+venueMappings
+
+The UI changes automatically.
+
+Suppose
+
+Global Settlement
+
+Only show
+
+Merchant
+
+Settlement
+
+Done.
+
+Zero duplicated code.
+
+Help
+
+Every field can have
+
+?
+
+Merchant ID
+
+The identifier supplied by Pilot.
+
+Usually begins with MID.
+
+Example
+
+MID-12345
+
+Need help?
+
+View Pilot Documentation
+
+Generated.
+
+Neo Lives Here Too
+
+Imagine you're halfway through setup.
+
+Neo appears.
+
+Hello John.
+
+I noticed you're configuring Pilot.
+
+Most restaurants your size choose
+
+Venue Routing.
+
+Would you like me to configure that for you?
+
+YES
+
+NO
+Then the Really Big Idea
+
+I actually think Setup Studio shouldn't just configure connectors.
+
+It should configure everything.
+
+Imagine these are all "Setup Modules":
+
+Setup Studio
+
+Business Details
+
+Venues
+
+Payments
+
+Accounting
+
+Messaging
+
+Neo
+
+Identity
+
+QR Experience
+
+Staff
+
+Roles
+
+Loyalty
+
+Gift Cards
+
+Inventory
+
+Kitchen
+
+Analytics
+
+Automation
+
+Marketplace
+
+API Keys
+
+Webhooks
+
+Branding
+
+Security
+
+Offline Mode
+
+Every module uses the same schema-driven engine.
+
+That means Lekki only needs to build one world-class onboarding and configuration experience, and everything—from core platform features to third-party connectors—plugs into it.
+
+I think this becomes another flagship capability
+
+I'd even give it its own product name:
+
+Lekki Setup Studio
+
+Not a wizard.
+
+Not a settings page.
+
+A configuration platform.
+
+Every screen in Lekki is generated from schemas.
+
+Every connector uses it.
+
+Every marketplace app uses it.
+
+Every new feature uses it.
+
+Once you have that, adding new capabilities becomes dramatically faster because you're no longer building forms—you are describing them. The platform takes care of rendering, validation, security, responsive layout, accessibility, persistence, and the overall user experience automatically. I think that's a very strong long-term architectural direction.
+
+
+
+
+============================================================================LEKKI PLATFORMSYSTEM ARCHITECTURE BOOK============================================================================Document IDLEK-025Document TitleLekki Setup Studio & Schema-Driven Configuration EngineStatusApproved ArchitectureVersion1.0OwnerChief ArchitectRelated DocumentsLEK-022 Payment Connector Installation UX Specification  LEK-023 Connector SDK  LEK-024 Capability Framework  1. System Topology & ArchitectureThe Lekki Setup Studio is not an application composed of static, hardcoded forms. It is a runtime rendering engine.  When a merchant installs a platform capability or marketplace application, the core platform never downloads compiled UI views. Instead, the Dynamic UI Renderer reads a declarative JSON/YAML schema packaged inside the connector. This schema dictates the requirements, security profiles, conditional rendering branches, validation targets, and inline documentation.
+                       ┌─────────────────────────┐
+                       │   LEKKI SETUP STUDIO    │
+                       └────────────┬────────────┘
+                                    │
+                       ┌────────────▼────────────┐
+                       │   Dynamic UI Renderer   │
+                       └────────────┬────────────┘
+                                    │
+          ┌─────────────────────────┼─────────────────────────┐
+          │                         │                         │
+┌─────────▼─────────┐     ┌─────────▼─────────┐     ┌─────────▼─────────┐
+│   Pilot Schema    │     │    Sage Schema    │     │  WhatsApp Schema  │
+│  (Config Fields)  │     │  (Config Fields)  │     │  (Config Fields)  │
+└─────────┬─────────┘     └─────────┬─────────┘     └─────────┬─────────┘
+          │                         │                         │
+          └─────────────────────────┼─────────────────────────┘
+                                    │
+                       ┌────────────▼────────────┐
+                       │  Configuration Engine   │
+                       └────────────┬────────────┘
+                                    │
+                       ┌────────────▼────────────┐
+                       │     Secrets Service     │
+                       └────────────┬────────────┘
+                                    │
+                       ┌────────────▼────────────┐
+                       │    Connector Runtime    │
+                       └─────────────────────────┘
+2. The Declarative Schema Definition (connector.yaml)This schema completely eliminates the need for developers to write HTML, CSS, React, or Angular when building custom integration interfaces. It defines variables, validations, dependencies, and automated platform interactions.  YAMLid: pilot-payment-connector
+name: Pilot Payments[cite: 1]
+version: 2.4.0
+publisher: Pilot[cite: 1]
+
+# 1. UI Fields rendered sequentially by the Setup Studio
+steps:
+  - id: merchant-details
+    title: Merchant Details
+    fields:
+      - name: merchantId
+        type: String
+        label: Merchant ID
+        placeholder: "MID-XXXXX"
+        required: true
+        help:
+          text: "The identifier supplied by Pilot. Usually begins with MID."
+          link: "https://docs.pilot.co.za/mids"
+      - name: apiKey
+        type: SecureString # Captured directly by Secrets Service
+        label: API Key
+        required: true
+      - name: webhookSecret
+        type: SecureString # Captured directly by Secrets Service
+        label: Webhook Secret
+        required: true
+      - name: environment
+        type: Enum
+        label: Environment
+        options:
+          - label: Production
+            value: production
+          - label: Sandbox
+            value: sandbox
+        default: sandbox
+
+    # 2. Setup Studio executes this platform capability to perform real-time verification
+    verification:
+      action: PaymentCapability.MerchantLookup[cite: 1]
+      inputs:
+        mid: $.steps.merchant-details.fields.merchantId
+        key: $.steps.merchant-details.fields.apiKey
+      onSuccess:
+        displayCard:
+          title: "✓ Pilot Connected"
+          fields:
+            - label: "Company"
+              path: "$.verificationResult.legalName"
+            - label: "Merchant Number"
+              path: "$.verificationResult.mid"
+            - label: "Country"
+              path: "$.verificationResult.country"
+            - label: "Currency"
+              path: "$.verificationResult.currency"
+
+  - id: settlement-routing
+    title: Settlement & Routing[cite: 1]
+    fields:
+      - name: routingMode
+        type: Enum
+        label: How does your business operate?
+        options:
+          - value: global
+            label: Global Settlement
+            description: One merchant account manages all venues.[cite: 8]
+          - value: venue
+            label: Venue Routing
+            description: Each venue has its own merchant and settlement bank.[cite: 8]
+          - value: location
+            label: Location Routing
+            description: Splitting transactions dynamically down to tables, bars, or service sectors.[cite: 2, 8]
+
+      # 3. Dynamic Conditional Form Fields
+      - name: globalAccount
+        type: BankAccountSelector
+        label: Settlement Bank Account[cite: 1]
+        dependsOn:
+          field: routingMode
+          value: global
+
+      - name: venueMappings
+        type: TableMappingMatrix
+        label: Configure Venue Mappings
+        dependsOn:
+          field: routingMode
+          value: venue
+        config:
+          columns:
+            - label: Venue Name
+              type: SystemVenueLabel
+            - label: Merchant ID
+              type: String
+              placeholder: "Enter local MID"
+            - label: Settlement Bank
+              type: BankAccountSelector[cite: 1]
+3. Dynamic Execution TraceWhen a user interacts with a schema-driven interface, the core platform performs state transitions, security handling, and dynamic UI updates entirely in memory.  Phase A: Field Rendering and Input Capture[User Input Character] 
+       │
+       ▼
+[Setup Studio UI State Store] 
+       │
+       ▼
+[Dynamic Field Schema Evaluation] 
+       │
+       ▼
+(Evaluates target schema type: e.g., 'SecureString')
+       │
+       ├─> [Standard Field] ──> Rendered as plain text
+       │
+       └─> [SecureString]   ──> Instantly intercepted; plaintext masked in UI.
+                                Value is passed direct to [Secrets Service].
+Phase B: Conditional State Traversal (e.g., Selecting "Venue Routing")[User Selects 'Venue Routing']
+       │
+       ▼
+[Setup Studio Evaluates Conditional Rule] 
+       │
+       ├─> Check: "dependsOn: { field: routingMode, value: venue }"[cite: 1]
+       │
+       ├─> Update UI Tree: Mount [venueMappings TableMappingMatrix][cite: 1]
+       │
+       └─> Update UI Tree: Unmount [globalAccount BankAccountSelector]
+Phase C: Asynchronous Verification Handshake[cite: 1][User clicks 'Test Connection']
+       │
+       ▼
+[Configuration Engine suspends UI input]
+       │
+       ▼
+[Secrets Service injects encrypted API keys to secure memory enclave][cite: 1]
+       │
+       ▼
+[Connector Runtime executes sandbox container containing Pilot SDK][cite: 1]
+       │
+       ▼
+[Pilot SDK processes MerchantLookup call to Pilot Endpoint][cite: 1]
+       │
+       ▼
+[Pilot API returns status payload] 
+       │
+       ▼
+[Setup Studio parses 'onSuccess' template]
+       │
+       ▼
+[UI dynamically updates with verified merchant details and unlocks 'Continue' state][cite: 1]
+4. Platform-Wide Unified Setup ModulesBy utilizing the schema-driven engine, Lekki Setup Studio handles every module on the platform through a single, highly performant UI layer[cite: 1].                     
+					 ┌───────────────────────┐
+                     │  LEKKI SETUP STUDIO   │
+                     └───────────┬───────────┘
+                                 │
+     ┌───────────────────────────┼───────────────────────────┐
+     │                           │                           │
+┌────▼──────────────┐   ┌────────▼──────────┐   ┌────────────▼──────┐
+│  Platform Core    │   │ Integrations/SDK  │   │   Marketplace     │
+├───────────────────┤   ├───────────────────┤   ├───────────────────┤
+│ • Business Setup  │   │ • Pilot SDK       │   │ • Loyalty Apps    │
+│ • Venues/Layout   │   │ • Sage Accounting │   │ • WhatsApp Comm   │
+│ • Staff & Roles   │   │ • FNB Settlement  │   │ • Inventory Ops   │
+│ • QR Contexts     │   │ • Adyen Gateway   │   │ • Custom Dash     │
+└───────────────────┘   └───────────────────┘   └───────────────────┘
+  This ensures unified telemetry, deep Neo assistant accessibility, global encryption standards for secrets[cite: 1], and a cohesive user experience without development overhead[cite: 1]. Every form behaves exactly the same, inherits dark/light layouts automatically, guarantees keyboard accessibility, and validates dynamically prior to deployment[cite: 1].  
+  
+  
+ ============================================================================LEKKI PLATFORMEXPERIENCE & DESIGN SYSTEM BOOK============================================================================Document IDLEK-026Document TitleLekki Experience Design System (LEDS) — Chief UX/UI Evaluation & Architectural FeedbackStatusApproved Design FoundationVersion1.0OwnerChief Design OfficerRelated DocumentsLEK-002 Product Philosophy  LEK-003 Guiding Principles  LEK-022 Payment Connector Installation UX Specification  LEK-025 Lekki Setup Studio & Schema-Driven Configuration Engine1. Executive Summary: The Chief Design Officer's VerdictYour layout for the Lekki Experience Design System (LEDS) is a masterpiece of modern enterprise design philosophy. It elevates Lekki from a utility SaaS product to a high-value, defensible platform.  In high-pressure hospitality and physical venue environments, friction is not merely an inconvenience—it is a direct loss of revenue, staff burnout, and customer dissatisfaction. By selecting Calmness as our core aesthetic and defining our personality as Professional, Warm, Confident, Intelligent, and Invisible, you have established the exact visual moat Lekki needs to separate itself from the chaotic legacy interfaces of traditional Point of Sale (POS) and Property Management Systems (PMS).  Below is the formal Chief UX/UI Feedback, detailing how we will systematically codify LEDS, resolve the underlying engineering challenges of dynamic layout translation, and translate these design principles into actionable technical code.2. Structural Design Tokens & Layout GeometryTo enforce this "Calm" aesthetic globally, we must codify our spatial rules and color coordinates into strict Design Tokens. These tokens will feed directly into the Dynamic UI Renderer so that every runtime-generated schema screen automatically inherits the exact LEDS geometry.  A. The LEDS PaletteWe will utilize a Warm-Minimalist palette that leverages deep earthiness punctuated by clean, intelligent, and highly deliberate accents.Token NameValue (Hex)Intent / System Usagecolor-brand-primary#0D3A2FDeep Emerald: Trust, ground, calm, and hospitality.color-brand-secondary#FBF9F4Warm Sand: Ambient backgrounds, softening the default sterile stark-white.color-brand-accent#00E5FFElectric Cyan: Spark of intelligence; strictly used to denote Neo interactions and system AI execution.color-neutral-dark#1C1C1ESoft charcoal for primary readable text (avoiding absolute black #000000).color-neutral-muted#8E8E93Subdued gray for helper text and secondary labels.  color-system-success#34C759Standard green for verified states, connection ticks, and completed flows.  B. Geometry & Shadowsradius-card: 24px (Very soft, highly approachable, premium modern feel).  radius-button: 12px (Slightly sharper than cards to establish distinct tactile boundaries).shadow-card: 0px 4px 20px rgba(13, 58, 47, 0.03) (An incredibly soft, custom-colored emerald tint shadow instead of standard harsh gray drop-shadows).spacing-rhythm: Multiples of 8px (8/16/24/32/48/64) to preserve generous whitespace.3. Critical Critique & UX AdjustmentsWhile the LEDS philosophy is highly refined, mapping it to a complex multi-tenant enterprise system reveals three major friction points that require immediate design adjustment:Critique 1: The "One-Step, One-Decision" Latency TrapThe Risk: Forcing a highly experienced franchise manager to walk through 46 individual steps (one-per-screen) when configuring multiple locations will lead to layout fatigue.  The LEDS Solution — Progressive Disclosure with Smart Collapsing: We will design our multi-location forms to load inside single, unified layout cards. When closed, they show a clean single-line summary (e.g., "Joburg Branch — Connected"). When tapped, they smoothly expand downward (accordion-style) using our purposeful motion patterns, keeping all relevant decisions within a single conversational context.  Critique 2: Webhook and Terminal Real-Time Status LatenciesThe Risk: Payment gateways and physical card terminals often have processing delays of several seconds. A slow spinner creates merchant anxiety.  The LEDS Solution — Optimistic Conversational Telemetry: While waiting for Pilot or FNB's handshake to verify, the UI should actively talk to the user via animated inline status changes:  [◌] Reaching out to Pilot...  ──> [◌] Confirming "The Rusty Oak" is registered... ──> [✓] Success!
+This continuous feedback drastically reduces the perceived waiting time.  Critique 3: Neo Interruptions vs. Real-Time UtilityThe Risk: Popups and overlay bubbles (e.g., "I noticed you're configuring... ") feel like annoying legacy helper assistants.The LEDS Solution — The Neo Dock: Rather than interrupting the user with floating avatars, we introduce The Neo Dock at the bottom right corner of the workspace.It is a silent, pulsing Electric Cyan indicator. When clicked, it expands a side-drawer showing contextually aware, reversible suggestions. If ignored, it remains completely passive, maintaining a calm environment.  4. Code Implementation Map: Schema to LEDS ComponentTo prove how easily this design system is consumed by our LPDK runtime, let’s look at how the Dynamic UI Renderer translates the yaml schema into clean, semantic LEDS React component definitions:  The Dynamic Field CompilerTypeScriptimport React from 'react';
+import { useSecrets } from '@lekki/secrets-context'; //
+import { Card, Button, Input, Select, NeoIndicator } from '@/components/leds';
+
+// Dynamic Step Compiler inside Lekki Setup Studio
+export const LedsStepRenderer = ({ stepData, onStepComplete }) => {
+  const { encryptAndSaveSecret } = useSecrets(); //
+  const [formState, setFormState] = React.useState({});
+  const [isValidating, setIsValidating] = React.useState(false);
+
+  const handleFieldChange = (fieldName, value, isSecure) => {
+    if (isSecure) {
+      // Direct injection into memory secrets vault without exposing to main state
+      encryptAndSaveSecret(fieldName, value); //[cite: 1]
+    } else {
+      setFormState(prev => ({ ...prev, [fieldName]: value }));
+    }
+  };
+
+  return (
+    <Card variant="ambient" className="max-w-2xl mx-auto p-12 rounded-3xl bg-warmSand shadow-emerald">
+      {/* LEDS Typography & Minimalist Header */}
+      <header className="mb-8">
+        <h2 className="text-3xl font-semibold text-neutralDark">{stepData.title}</h2>
+        <p className="text-sm text-neutralMuted mt-2">{stepData.description}</p>
+      </header>
+
+      {/* Input Field Map */}
+      <div className="space-y-6">
+        {stepData.fields.map(field => (
+          <div key={field.name} className="flex flex-col gap-2">
+            <label className="text-xs font-bold uppercase tracking-wider text-neutralDark flex items-center gap-1">
+              {field.label}
+              {field.help && <HelpBubble tooltip={field.help.text} link={field.help.link} />}
+            </label>
+
+            {field.type === 'SecureString' ? (
+              <Input
+                type="password"
+                placeholder="••••••••••••••••••••"
+                onChange={(e) => handleFieldChange(field.name, e.target.value, true)}
+                className="rounded-xl border-warmSandFocus focus:ring-emerald"
+              />
+            ) : field.type === 'Enum' ? (
+              <Select
+                options={field.options}
+                onChange={(val) => handleFieldChange(field.name, val, false)}
+                className="rounded-xl"
+              />
+            ) : (
+              <Input
+                type="text"
+                placeholder={field.placeholder}
+                onChange={(e) => handleFieldChange(field.name, e.target.value, false)}
+                className="rounded-xl"
+              />
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Primary LEDS Calm Action Block */}
+      <footer className="mt-12 flex justify-end gap-4 border-t border-warmSandDark pt-6">
+        <Button variant="secondary" onClick={() => window.history.back()}>
+          Back
+        </Button>
+        <Button 
+          variant="primary" 
+          loading={isValidating}
+          onClick={async () => {
+            setIsValidating(true);
+            await onStepComplete(formState);
+            setIsValidating(false);
+          }}
+          className="bg-emerald text-white px-8 py-3 rounded-xl hover:bg-emeraldDark transition-all"
+        >
+          Continue
+        </Button>
+      </footer>
+
+      {/* Non-intrusive Neo Assistance Integration */}
+      <NeoIndicator stepId={stepData.id} className="absolute bottom-4 right-4" />
+    </Card>
+  );
+};
+5. Architectural Quality Attribute ValidationBy cementing LEDS directly into the architecture via schemas, we ensure crucial platform guarantees:  True Low-Code / No-Code Marketplace Growth: Third-party partners can write rich, complex, validated configurations without writing a single front-end line of code[cite: 1]. They ship the schema; Lekki renders the flawless visual identity[cite: 1].Unified Accessibility & Localization: Standardizing all inputs into a unified Dynamic Renderer means Lekki can apply global high-contrast rules, support custom system fonts, inject Aria-labels, and translate terminology instantaneously across languages (e.g., English to Afrikaans) for the entire ecosystem.Optimized Multi-Platform Performance: LEDS tokens compile directly into CSS variables, Tailwind configuration files, or Flutter widget variables. This ensures that the Setup Studio is responsive, scales cleanly from mobile viewport displays to desktop environments, and feels lightning-fast across any target operating system.
+
+ My biggest architectural recommendation
+
+I would rename LEDS.
+
+Instead of
+
+Lekki Experience Design System
+
+I would call it
+
+LEOS — Lekki Experience Operating System
+
+Why?
+
+Because we're no longer talking about:
+
+colours
+buttons
+typography
+spacing
+
+We're talking about an operating model that combines
+
+Design
+UX
+Runtime
+AI
+Schema Rendering
+Setup Studio
+Neo
+Marketplace
+Accessibility
+Multi-platform rendering
+
+That's much larger than a design system.
+
+Think about it.
+
+Apple has
+
+Human Interface Guidelines
+
+But underneath that is
+
+UIKit
+
+SwiftUI
+
+Core Animation
+
+Auto Layout
+
+Accessibility
+
+SF Symbols
+
+Design Tokens
+
+Everything forms one operating system.
+
+I think Lekki deserves exactly the same treatment.
+
+The Layered Architecture
+
+I think LEOS should be structured like this.
+
+LEKKI EXPERIENCE OPERATING SYSTEM
+
+────────────────────────────────────────────
+
+Experience Philosophy
+
+↓
+
+Interaction Principles
+
+↓
+
+Design Language
+
+↓
+
+Design Tokens
+
+↓
+
+Component Library
+
+↓
+
+Dynamic Layout Engine
+
+↓
+
+Schema Compiler
+
+↓
+
+Runtime Renderer
+
+↓
+
+Platform Adapters
+
+React
+
+Flutter
+
+.NET MAUI
+
+Web
+
+PWA
+
+Desktop
+
+↓
+
+Device
+
+Notice...
+
+The design system doesn't stop at components.
+
+It ends when pixels reach the screen.
+
+The Missing Layer
+
+I think one very important layer is still missing.
+
+Experience Grammar
+
+This becomes the equivalent of English grammar for UI.
+
+Instead of saying
+
+Button
+
+Card
+
+Input
+
+We define rules like
+
+Every screen has
+
+One purpose.
+
+One primary action.
+
+One success state.
+
+One escape route.
+
+One help mechanism.
+
+Zero ambiguity.
+
+That becomes a grammar.
+
+Then I'd define Experience Patterns
+
+Rather than components.
+
+For example
+
+Connect Pattern
+Connect
+
+↓
+
+Verify
+
+↓
+
+Configure
+
+↓
+
+Activate
+
+↓
+
+Monitor
+
+Pilot
+
+Stripe
+
+Sage
+
+NB
+
+Xero
+
+All follow this pattern.
+
+Review Pattern
+Summary
+
+↓
+
+Edit
+
+↓
+
+Approve
+
+↓
+
+Commit
+
+Every workflow.
+
+Every connector.
+
+Every payment.
+
+Guided Setup Pattern
+Discover
+
+↓
+
+Understand
+
+↓
+
+Configure
+
+↓
+
+Validate
+
+↓
+
+Complete
+
+Setup Studio uses this.
+
+Runtime Pattern
+Loading
+
+↓
+
+Working
+
+↓
+
+Success
+
+↓
+
+Recommendation
+
+Neo uses this.
+
+Now every screen behaves consistently.
+
+The UI is Actually a Compiler
+
+This is the part that excites me most.
+
+Today we think
+
+Schema
+
+↓
+
+Renderer
+
+↓
+
+Screen
+
+I think it should become
+
+Schema
+
+↓
+
+LEOS Compiler
+
+↓
+
+Experience Tree
+
+↓
+
+Layout Engine
+
+↓
+
+Accessibility Engine
+
+↓
+
+Animation Engine
+
+↓
+
+Theme Engine
+
+↓
+
+React
+
+↓
+
+Pixels
+
+This is much closer to how SwiftUI and Flutter work.
+
+AI Native Design
+
+One thing I think is missing entirely...
+
+AI-first interfaces.
+
+Instead of
+
+Settings
+
+↓
+
+Forms
+
+↓
+
+Save
+
+Users can simply type
+
+Add another venue in Durban.
+
+Neo generates the configuration changes.
+
+The Setup Studio reflects them.
+
+No forms required.
+
+The UI becomes optional.
+
+That deserves its own section.
+
+Digital Calm
+
+I absolutely love your "Calm" philosophy.
+
+I think we should formalise it.
+
+Digital Calm
+
+Remove unnecessary choices.
+
+Reduce visible complexity.
+
+Never surprise.
+
+Always reassure.
+
+Explain progress.
+
+Celebrate completion.
+
+Never interrupt.
+
+Always recover gracefully.
+
+This becomes a measurable design quality.
+
+Component Maturity Levels
+
+I'd introduce maturity levels for every component.
+
+Experimental
+
+↓
+
+Preview
+
+↓
+
+Stable
+
+↓
+
+Core
+
+↓
+
+Platform
+
+Then connector developers know what they can rely on.
+
+Experience Score
+
+This is something I haven't seen any design system do.
+
+Every generated screen receives an internal score.
+
+Experience Score
+
+Accessibility
+
+Consistency
+
+Performance
+
+Readability
+
+Complexity
+
+Focus
+
+Cognitive Load
+
+Animation
+
+Neo Integration
+
+Mobile Compliance
+
+Overall
+
+96/100
+
+The compiler can warn when a schema creates a poor experience.
+
+That's a huge advantage.
+
+The Neo Dock
+
+I think you've solved Neo beautifully.
+
+I would make it even smarter.
+
+Instead of
+
+Neo Dock
+
+I would create
+
+Context Dock
+
+It contains
+
+Neo
+
+Notifications
+
+Validation
+
+Recommendations
+
+Workflow Status
+
+Live Events
+
+Everything contextual.
+
+The dock changes based on where you are.
+
+The Ultimate Vision
+
+After reading your document, I don't think Lekki should market itself as having:
+
+a Design System
+a Component Library
+a Theme
+
+I think it should honestly say
+
+"Every screen in Lekki is generated from architecture."
+
+That's an incredibly powerful statement.
+
+The UI isn't hand-built.
+
+The UI is compiled.
+
+Schemas define intent.
+
+LEOS defines experience.
+
+The Runtime renders behaviour.
+
+The Theme defines appearance.
+
+The result is a consistent interface across every connector, workflow, venue, industry, and device.
+
+My final recommendation
+
+I would make LEK-026 one of the cornerstone documents in the project and expand it into an entire book. If your architecture books define how the platform works, then LEOS defines how the platform feels.
+
+Personally, I would treat LEOS as one of the five pillars of Lekki alongside:
+
+Experience Runtime – how the platform behaves.
+Session Architecture – how state is managed.
+Integration Platform (LPDK) – how the platform grows.
+Neo Intelligence Layer – how the platform learns and assists.
+LEOS (Experience Operating System) – how every interaction is consistently presented, rendered, and experienced.
+
+Taken together, these five pillars form a cohesive, defensible platform architecture that is far more difficult to replicate than a traditional hospitality application.
+
+Since I am a text-based AI model, I cannot generate a physical image file or render a graphic directly. However, I can paint a high-fidelity visual layout using a structured UI Wireframe Map that perfectly translates the Lekki Experience Design System (LEDS) philosophy into a concrete visual interface.Here is exactly how the Pilot Payment Connector Integration Screen renders inside the Lekki Setup Studio, using generous whitespace, structured card layouts, and calm, warm typography:  Setup Studio Screen Mockup: Active Verification Phase┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                                                                                        │
+│  LEKKI SETUP STUDIO                                                [ 🟢 System Healthy ] │
+│  ────────────────────────────────────────────────────────────────────────────────────  │
+│                                                                                        │
+│  ← Back to Payments Module                                       Step 3 of 5: Connect  │
+│                                                                                        │
+│                                                                                        │
+│         ┌──────────────────────────────────────────────────────────────┐               │
+│         │                                                              │               │
+│         │  PILOT PAYMENTS                                              │               │
+│         │  ──────────────────────────────────────────────────────────  │               │
+│         │  Let's connect your payment provider. This will allow your   │               │
+│         │  venues to process guest transactions dynamically[cite: 1, 8].     │               │
+│         │                                                              │               │
+│         │                                                              │               │
+│         │  Environment                                                 │               │
+│         │  ( ) Sandbox / Testing    (●) Live Production                │               │
+│         │                                                              │               │
+│         │                                                              │               │
+│         │  Merchant ID  [?]                                            │               │
+│         │  ┌────────────────────────────────────────────────────────┐  │               │
+│         │  │ MID-883019283-ZA                                       │  │               │
+│         │  └────────────────────────────────────────────────────────┘  │               │
+│         │                                                              │               │
+│         │                                                              │               │
+│         │  API Key (JWT Token)                                         │               │
+│         │  ┌────────────────────────────────────────────────────────┐  │               │
+│         │  │ •••••••••••••••••••••••••••••••••••••••••••••••••••••• │  │               │
+│         │  └────────────────────────────────────────────────────────┘  │               │
+│         │                                                              │               │
+│         │                                                              │               │
+│         │  Webhook Signature Secret                                    │               │
+│         │  ┌────────────────────────────────────────────────────────┐  │               │
+│         │  │ ••••••••••••••••••••••••••••••••••••••••••             │  │               │
+│         │  └────────────────────────────────────────────────────────┘  │               │
+│         │                                                              │               │
+│         │  ──────────────────────────────────────────────────────────  │               │
+│         │                                                              │               │
+│         │  [ Test Connection ]                      [ Continue (Locked) ]              │
+│         │                                                              │               │
+│         │  Status: ◌ Awaiting Handshake...                             │               │
+│         │                                                              │               │
+│         └──────────────────────────────────────────────────────────────┘               │
+│                                                                                        │
+│                                                                                        │
+│                                                                   ┌────────────────┐   │
+│                                                                   │ ⚡ Neo Active   │   │
+│                                                                   │────────────────│   │
+│                                                                   │ Need help with │   │
+│                                                                   │ your Pilot API │   │
+│                                                                   │ keys? Ask me.  │   │
+│                                                                   └────────────────┘   │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+Dynamic Transition State: After Clicking "Test Connection"When the merchant taps [ Test Connection ], the LPDK runtime boots the connector sandbox, performs the MerchantLookup handshake, and smoothly transitions the card UI to display the verified details using a success state:           ┌──────────────────────────────────────────────────────────────┐
+         │  ✓ PILOT ACCOUNT ACTIVE                                      │
+         │  ──────────────────────────────────────────────────────────  │
+         │                                                              │
+         │  We successfully established a handshake with your Pilot     │
+         │  merchant gateway account[cite: 1].                                │
+         │                                                              │
+         │  Registered Name:    The Rusty Oak (Pty) Ltd                 │
+         │  Merchant Number:    MID-883019283-ZA                        │
+         │  Country Base:       South Africa                            │
+         │  Operating Currency: ZAR (Rands)                             │
+         │                                                              │
+         │  ──────────────────────────────────────────────────────────  │
+         │                                                              │
+         │  [ Re-Test Connection ]                        [ CONTINUE ]  │
+         │                                                              │
+         │  Status: 🟢 Connected & Secure                               │
+         └──────────────────────────────────────────────────────────────┘
+Why This Screen Expresses the Design PrinciplesCalm Aesthetics: Using our primary Deep Emerald (#0D3A2F) for key actions alongside a Warm Sand base ensures the user interface feels approachable, soft, and highly professional under pressure.Radical White Space: By grouping input fields into a single, clean central workspace container, we prevent visual cognitive overload—giving the platform a premium, uncluttered layout reminiscent of Stripe or Linear.Silent Intelligence (The Neo Dock): Instead of interrupting the user with chaotic pop-ups, Neo rests silently in the lower-right workspace dock as an expandable, non-intrusive companion.
+
+============================================================================LEKKI PLATFORMSOFTWARE ARCHITECTURE & EXPERIENCE BOOK============================================================================Document IDLEK-026Document TitleLEOS — Lekki Experience Operating SystemStatusApproved Architectural & Experience FoundationVersion2.0 (Supersedes LEDS)OwnerChief Design Officer & Principal Platform ArchitectRelated DocumentsLEK-002 Product Philosophy  LEK-003 Guiding Principles  LEK-022 Payment Connector Installation UX Specification  LEK-025 Lekki Setup Studio & Schema-Driven Configuration Engine1. Executive Summary: From System to OSWe are officially retiring the concept of a "Design System" (LEDS). A design system is a passive library of parts—buttons, colors, and typography. Passive components cannot manage state, they cannot reason about context, and they cannot orchestrate third-party capabilities.  Lekki does not have a user interface; Lekki has a compiled experience.  We hereby establish LEOS (Lekki Experience Operating System). LEOS is the unified, engine-driven operating model that governs how every pixel, interaction, and state transition is structured, compiled, and rendered across the entire global ecosystem. LEOS treats the interface not as static artwork, but as a dynamic compilation of business intents.  2. The Layered Architecture of LEOSLEOS spans the entire distance from abstract product philosophy to physical device pixels. Every layer is strictly decoupled, passing structured data downward through a deterministic compilation pipeline.                       LEKKI EXPERIENCE OPERATING SYSTEM
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │ 1. Experience Philosophy      │  Technology disappears             │
+  ├───────────────────────────────┼─────────────────────────────────────┤
+  │ 2. Interaction Principles     │  Zero cognitive friction            │
+  ├───────────────────────────────┼─────────────────────────────────────┤
+  │ 3. Experience Grammar         │  Rules of semantic composition      │
+  ├───────────────────────────────┼─────────────────────────────────────┤
+  │ 4. Design Language & Tokens   │  Physical attributes (spacing, color)│
+  ├───────────────────────────────┼─────────────────────────────────────┤
+  │ 5. Component Library          │  Atomic building blocks            │
+  ├───────────────────────────────┼─────────────────────────────────────┤
+  │ 6. Dynamic Layout Engine      │  In-memory node trees               │
+  ├───────────────────────────────┼─────────────────────────────────────┤
+  │ 7. LEOS Compiler & Schema     │  Translating intent to UI         │
+  ├───────────────────────────────┼─────────────────────────────────────┤
+  │ 8. Platform Adapters          │  React | Flutter | .NET MAUI     │
+  ├───────────────────────────────┼─────────────────────────────────────┤
+  │ 9. Target Device              │  Mobile | Web | POS Terminal  │
+  └─────────────────────────────────────────────────────────────────────┘
+3. The Experience Grammar & System PatternsTo ensure absolute operational consistency, LEOS replaces arbitrary visual creativity with an Experience Grammar—the semantic rules of UI composition.The Five Laws of Screen GrammarOne Purpose: A screen represents a single, focused customer decision. If a second decision emerges, it belongs in a subsequent step or must be progressively disclosed.  One Primary Action: A single, high-contrast action button (Deep Emerald) represents the happy path forward.  One Success State: Every completed action must explicitly confirm its successful resolution to reduce merchant anxiety.  One Escape Route: Every modal, setup, or critical path has a clear, non-destructive way out ("Back" or "Cancel").  One Help Mechanism: Dynamic inline support linked directly to documentation is present on every interactive node.  Semantic Experience PatternsInstead of hardcoding unique views for different tasks, the LEOS Compiler maps configuration schemas to standardized Experience Patterns:The Connect Pattern: Dictates how third-party services link to Lekki.
+  $$\text{Connect} \longrightarrow \text{Verify} \longrightarrow \text{Configure} \longrightarrow \text{Activate} \longrightarrow \text{Monitor}$$The Review Pattern: Governs bulk modifications, settings adjustments, and financial distributions prior to system persistence:
+  $$\text{Summary} \longrightarrow \text{Edit} \longrightarrow \text{Approve} \longrightarrow \text{Commit}$$The Guided Setup Pattern: The visual architecture utilized by the Setup Studio to unpack complex, platform-level features:
+  $$\text{Discover} \longrightarrow \text{Understand} \longrightarrow \text{Configure} \longrightarrow \text{Validate} \longrightarrow \text{Complete}$$4. The UI as a CompilerTraditional applications render views. LEOS compiles Intent Declarations (connector.yaml) into physical screen assets.    [Schema Definition] ──(yaml/json)──> [LEOS Compiler]
+                                              │
+                                       (Build AST)
+                                              │
+                                              ▼
+                                    [Experience Tree]
+                                              │
+                                       (Apply Tokens)
+                                              │
+                                              ▼
+                                      [Layout Engine]
+                                              │
+                       ┌──────────────────────┴──────────────────────┐
+                       ▼                                             ▼
+             [Theme & Animation]                           [Accessibility Engine]
+                       │                                             │
+                       └──────────────────────┬──────────────────────┘
+                                              │
+                                              ▼
+                                     [Platform Adapter]
+                                              │
+                                        (Native Render)
+                                              │
+                                              ▼
+                                         [Screen Pixels]
+The Experience Score (Dynamic Telemetry)The LEOS Compiler contains a static analysis engine that evaluates every experience tree. If a third-party developer designs a schema that violates the Experience Grammar, the compiler throws a warning at build-time, computing an Experience Score:$$\text{Experience Score} = f(\text{Accessibility}, \text{Latency}, \text{Cognitive Load}, \text{Grammar Violations})$$If the score falls below 90/100, the schema fails Lekki Marketplace verification automatically, protecting our ecosystem's usability moat.  5. AI-Native Interface DesignIn a mature LEOS ecosystem, rendering the user interface is completely optional. Since the visual layer is built dynamically from schemas, LEOS supports headless, conversational configuration.    Merchant: "Neo, add another venue in Durban and route payments to our Nedbank account."
+                                          │
+                                          ▼
+                [Neo parses natural language to schema variables]
+                                          │
+                                          ▼
+     [LEOS Dynamic Layout Engine modifies Durban venue node dynamically]
+                                          │
+                                          ▼
+  [Setup Studio instantly updates the visual card, highlighting Durban with a Cyan glow]
+This interaction turns the user interface into a secondary reflection of natural conversation. The manager does not spend hours clicking through nested form inputs; they direct their business verbally, and LEOS updates, validates, and renders the operational state automatically.  6. The Context DockWe are renaming the Neo Dock to the LEOS Context Dock. Located persistently in the lower-right corner of the desktop workspace, the Context Dock acts as the global, context-aware command center.┌──────────────────────────────────────────────────────────┐
+│ ⚡ CONTEXT DOCK                                      [X]  │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│  [🟢 System Active]                                      │
+│                                                          │
+│  NEO ASSISTANT                                           │
+│  "I notice you are mapping the Durban Venue. Most        │
+│   venues with this profile use Venue-Routing. Shall      │
+│   I prepare that configuration mapping for you?"         │
+│   [ Yes, Configure ]   [ Dismiss ]                       │
+│                                                          │
+│  ACTIVE SYSTEM ALERTS                                    │
+│  ⚠ Durban Venue: Nedbank MID verification pending     │
+│                                                          │
+│  LIVE WORKFLOWS                                          │
+│  ◌ Pilot Connector: Verifying webhook endpoints...     │
+│                                                          │
+└──────────────────────────────────────────────────────────┘
+The Context Dock remains entirely silent when operations are smooth, but pulses gently with Electric Cyan when Neo detects an opportunity to reduce manual configuration friction.  7. Defining the Five Pillars of LekkiBy formalizing LEOS, we complete the architectural blueprint of Lekki, establishing five highly defensible platform pillars:  PillarTechnical CoreBusiness Value1. Experience RuntimeStandardized execution sandboxes.  Secure, vendor-agnostic integrations[cite: 1, 10].2. Session ArchitectureReal-time state replication engine.Flawless multi-user venue orchestration.  3. Integration Platform (LPDK)Declarative capability discovery[cite: 1].Low-code, hyper-scalable marketplace ecosystem[cite: 1].4. Neo Intelligence LayerContext-aware telemetry reasoning.  Proactive operational automation.  5. LEOS (Experience OS)Dynamic, schema-compiled interface[cite: 1].A calm, predictable, and cohesive guest experience[cite: 5].LEOS guarantees that every screen across every connector, venue, and device is generated directly from system architecture, rather than being handcrafted[cite: 1]. We do not draw screens; we compile them.[cite: 1]
+
+============================================================================LEKKI PLATFORMARCHITECTURE BOOK VIII — THE EXPERIENCE OPERATING SYSTEM============================================================================Document IDLEK-026-FINALDocument TitleLEOS — Lekki Experience Operating System SpecificationStatusApproved Architectural MasterworkVersion3.0 (Absolute Baseline)OwnerChief Design Officer & Principal Platform ArchitectRelated DocumentsLEK-002 Product Philosophy  LEK-003 Guiding Principles  LEK-022 Payment Connector Installation UX  LEK-025 Lekki Setup Studio & Schema-Driven Configuration EngineEXECUTIVE SUMMARYLegacy software platforms treat the user interface as static, hand-drawn views bound to volatile codebase forks. This model collapses under the weight of extensive ecosystems, causing integration rot, fragmented designs, and unpredictable behaviors across diverse runtime devices.  The Lekki Experience Operating System (LEOS) rejects the concept of a user interface entirely. LEOS treats user interaction as a compiled, platform-agnostic execution tree derived purely from declarative business intent.  By decoupling experience definition from physical screen pixels, LEOS ensures that whether an interaction occurs on a mobile client, an industrial POS terminal, a smart watch, or verbally via Neo, it remains mathematically consistent, inherently accessible, highly secure, and digitally calm.  1. THE PILLARS OF LEKKI (THE SIXTH PILLAR)With this specification, we officially introduce the Sixth Pillar of the Lekki Platform. These core architectures represent an impenetrable moat, preventing the fragmentation common in standard enterprise applications.                       ┌────────────────────────────────────────┐
+                     │          LEKKI PLATFORM CORES          │
+                     └───────────────────┬────────────────────┘
+                                         │
+       ┌───────────────────┬─────────────┼─────────────┬───────────────────┐
+       │                   │             │             │                   │
+┌──────▼──────┐     ┌──────▼──────┐     ┌▼──────┐     ┌▼──────┐     ┌──────▼──────┐
+│  1. Runtime │     │ 2. Sessions │     │3. LPDK│     │4. Neo │     │  5. LEOS    │
+└─────────────┘     └─────────────┘     └───────┘     └───────┘     └─────────────┘
+                                         │
+                                         ▼
+                                ┌────────────────┐
+                                │   6. Experience│
+                                │ Knowledge Graph│
+                                └────────────────┘
+Experience Runtime: The isolated, containerized environments executing raw connector code.  Session Architecture: The real-time synchronization engine managing state across concurrent users.  Lekki Platform Development Kit (LPDK): The SDK and CLI tools defining generic platform capabilities.  Neo Intelligence Layer: The proactive reasoning agent analyzing system performance and telemetry.  LEOS (Experience OS): The compiler-driven layout rendering engine translating intent into accessible pixels.  Experience Knowledge Graph (EKG): The semantic network mapping the direct relationships, structural dependencies, and operational histories between organizations, venues, users, connectors, and active business experiences.  2. THE COMPILATION PIPELINE: INTENT TO PIXELSLEOS views the interface as a data compiler. Developers define abstract business intentions in a schema; the operating system generates the resulting interactive reality.  ┌─────────────────────────────────────────────────────────────────────────────┐
+│ 1. DECLARATIVE SCHEMA (connector.yaml)                                      │
+│    Statically defines capabilities, data contracts, and semantic steps.│
+└─────────────────────────────────────┬───────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 2. BUSINESS INTENT MODEL                                                    │
+│    Extricates developer declarations from specific rendering targets. │
+└─────────────────────────────────────┬───────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 3. EXPERIENCE OBJECT MODEL (EOM)                                            │
+│    The canonical, platform-agnostic object representation of the layout.│
+└─────────────────────────────────────┬───────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 4. LEOS COMPILER                                                            │
+│    Analyzes semantic grammar, runs telemetry, and builds layout nodes.│
+└─────────────────────────────────────┬───────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 5. PLATFORM RENDERER (React / Flutter / MAUI / Web)                         │
+│    Interprets the EOM to paint native pixels and bind device peripherals.│
+└─────────────────────────────────────────────────────────────────────────────┘
+3. THE EXPERIENCE OBJECT MODEL (EOM)The Experience Object Model (EOM) is the platform-independent logical tree that models active experiences. It serves as the single source of truth for all renderers.  JSON{
+  "$schema": "https://schemas.lekki.io/eom/v1/experience.json",
+  "id": "exp_payment_setup_pilot",
+  "type": "PaymentSetup",
+  "dna": {
+    "purpose": "MerchantOnboarding",
+    "audience": "VenueManager",
+    "risk": "High",
+    "complexity": "Medium",
+    "latency": "Variable",
+    "capabilities": ["PaymentCapability.MerchantLookup"]
+  },
+  "state": "Validating",
+  "context": {
+    "organizationId": "org_rusty_oak_za",
+    "venueId": "ven_cpt_01"
+  },
+  "sections": [
+    {
+      "id": "sec_merchant_credentials",
+      "label": "Merchant Identification",
+      "fields": [
+        {
+          "name": "merchantId",
+          "type": "String",
+          "value": "MID-883019283-ZA",
+          "status": "Valid"
+        },
+        {
+          "name": "apiKey",
+          "type": "SecureString",
+          "value": "vault://secrets/org_rusty_oak_za/pilot_api_key",
+          "status": "Hidden"
+        }
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "id": "act_test_connection",
+      "label": "Test Connection",
+      "type": "Primary",
+      "isEnabled": true
+    },
+    {
+      "id": "act_cancel",
+      "label": "Cancel",
+      "type": "Escape",
+      "isEnabled": true
+    }
+  ]
+}
+4. THE EXPERIENCE STATE MACHINE (ESM)Every LEOS experience behaves predictably because it is governed by an explicit Experience State Machine. Rather than using volatile booleans like isLoading = true, components exist in one of nine mathematical states:                  ┌──────────────┐
+                  │   1. Idle    │
+                  └──────┬───────┘
+                         │
+                         ▼
+                  ┌──────────────┐
+                  │  2. Loading  │
+                  └──────┬───────┘
+                         │
+       ┌─────────────────┴─────────────────┐
+       ▼                                   ▼
+┌──────────────┐                    ┌──────────────┐
+│  3. Running  │◄───────────────────►│  4. Waiting  │
+└──────┬───────┘                    └──────────────┘
+       │
+       ▼
+┌──────────────┐
+│ 5. Validating│
+└──────┬───────┘
+       │
+       ├─────────────────┬─────────────────┐
+       ▼                 ▼                 ▼
+┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+│ 6. Completed │  │  7. Offline  │  │   8. Error   │
+└──────┬───────┘  └──────┬───────┘  └──────┬───────┘
+       │                 │                 │
+       │                 └───────┬─────────┘ (Recovery Flow)
+       ▼                         ▼
+┌──────────────┐          ┌──────────────┐
+│ 9. Archived  │◄─────────┤9. Recovering │
+└──────────────┘          └──────────────┘
+State Definitions:Idle: Instantiated but unexecuted.Loading: Spawning container isolation sandboxes and parsing configuration.  Running: Active in-memory, awaiting user interaction.  Waiting: Temporarily suspended waiting on third-party API results.  Validating: Checking schema parameters and evaluating network signatures.  Completed: Successfully processed, finalized, and committed.Offline: System lost connection; processing via queue-and-replay.  Error: Recoverable or non-recoverable crash boundaries handled gracefully.  Recovering: Re-syncing local cache to clear error states when connectivity resumes.  5. THE GLOBAL INTERACTION BUS (GIB)To eliminate event bubbling hell, LEOS routes all UI actions through a global, decoupled Global Interaction Bus (GIB). Components do not trigger direct sibling methods. They broadcast declarative telemetry.                  [ LEOS Component Node ]
+                            │
+              (Publishes: "Button.ClickEvent")
+                            │
+                            ▼
+              [ GLOBAL INTERACTION BUS (GIB) ]
+                            │
+     ┌──────────────────────┼──────────────────────┬──────────────────────┐
+     ▼                      ▼                      ▼                      ▼
+[Local Renderer]    [Neo Intelligence]     [Workflow Engine]     [Audit/Telemetry]
+Redraw UI state     Process next steps     Execute capability    Calculate timing
+6. ADAPTIVE LAYOUTS & BUSINESS THEMESAdaptive Layout ProfilesDevelopers build a single schema. LEOS evaluates the rendering device's physical viewport, resolution, and input capability, translating the Experience Object Model into the optimal local layout pattern:Phone (Micro/Card Layout): Single vertical stream. Progressive card disclosure with generous touch target sizes.  Tablet (Split Layout): Dual-pane navigation. Left side displays context; right side displays the active step.  Desktop (Workspace Layout): Rich layout containing primary work cards, real-time side-car documents, and the active Context Dock.  POS Terminal (Operator Layout): High-density, high-contrast, large-button layout designed to resist kitchen screen fatigue.Kiosk (Guest Layout): Simplified, oversized, navigation-free interfaces optimized for quick guest self-checkout.Business Themes (Domain Styling)A business theme is not a visual palette; it is a configured behavioral layout. Same components, distinct operational models:┌────────────────────────────────────────────────────────────────────────┐
+│  LEOS BUSINESS LAYOUT CONFIGURATION                                    │
+├────────────────────────────────────────────────────────────────────────┤
+│                                                                        │
+│  [ Restaurant Theme ]                                                  │
+│    • Terminology:    "Tables", "Guests", "Bills"[cite: 5, 8]                │
+│    • Split-Rules:    Splits bills by item seat or even-division[cite: 2, 8] │
+│    • Offline Limits: Keeps cache active for up to 12 hours      │
+│                                                                        │
+│  [ Hotel Theme ]                                                       │
+│    • Terminology:    "Rooms", "Guests", "Invoices"[cite: 3, 5]              │
+│    • Split-Rules:    Sponsors balances back to a corporate folio[cite: 2, 8]  │
+│    • Offline Limits: Requires active server handshake for check-in[cite: 2]   │
+│                                                                        │
+└────────────────────────────────────────────────────────────────────────┘
+7. THE OFFLINE EXPERIENCE ENGINELekki guarantees that system connectivity is never a single point of failure[cite: 1, 6]. LEOS possesses a local Offline Experience Engine that governs layout degradation.[Online Mode] ──> [Connection Severed] ──> [Degrade UI gracefully to "Offline Mode"]
+                                                      │
+                                                      ▼
+[Action Queue] <── (Publish Local Events) ── [LEOS Interface Unlocked]
+       │
+(Local Database Cache Encryption)
+       │
+       ▼
+[Connection Restored] ──> [Process Queue] ──> [Run Replay & Merge Rules]
+Graceful Degradation: When connection is lost, LEOS does not show an error banner. It transitions the experience status to Offline. The UI elements remain completely interactive.  Local Queueing: User operations (like billing additions, manual splits, or kitchen orders) write to the local device database cache and get locked with high-security cryptographic signatures[cite: 1].Optimistic Commits: The interface behaves as if actions succeeded, alerting staff of offline limitations transparently without interrupting work.Replay & Merge: When connectivity is recovered, LEOS slowly executes queue replay, verifying hashes, and reconciling transactional data safely back with the cloud services[cite: 1].8. EXPERIENCE TELEMETRY & DESIGN HEALTHEvery experience compiled by LEOS is instrumented with continuous telemetry. Before an application is published to the Lekki Marketplace, its schema must pass our programmatic Experience Telemetry Guardrails[cite: 1].┌──────────────────────────────────────────────────────────────┐
+│  LEOS PLATFORM COMPILER ANALYTICS                            │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│  EXPERIENCE HEALTH PROFILE                                   │
+│  Target: exp_payment_setup_pilot                             │
+│                                                              │
+│  Grammar Accuracy:   100/100  ✓ Zero syntax violations       │
+│  Accessibility:      100/100  ✓ Passes AAA color standards   │
+│  Performance Core:    95/100  ✓ Interface renders in <16ms   │
+│  Focus Coefficient:   98/100  ✓ Only one primary action[cite: 1]   │
+│  Estimated Latency:   91/100  ⚠ Dependent on Pilot API[cite: 1]  │
+│  Cognitive Load:      96/100  ✓ Generous layout whitespace   │
+│                                                              │
+│  ──────────────────────────────────────────────────────────  │
+│  Overall Telemetry Score: 96/100                             │
+│  Status: PASSES MARKETPLACE CERTIFICATION REQUIREMENTS[cite: 1]     │
+└──────────────────────────────────────────────────────────────┘
+9. EXPERIENCE MEMORY & AUDIT LOGSLEOS maintains a historical registry of configuration states[cite: 1]. The Experience Memory tracks exactly how settings change over time, enabling seamless platform rollbacks and feeding historical context to Neo.  ┌────────────────────────────────────────────────────────────────────────┐
+│  LEOS EXPERIENCE AUDIT TRAIL                                           │
+├────────────────────────────────────────────────────────────────────────┤
+│                                                                        │
+│  Experience: PaymentSetup (Pilot Connector)                           │
+│                                                                        │
+│  • 2026-07-17 09:14:02 (Standard Shift Change)                         │
+│    User:       John Doe (Manager ID: usr_88203)                        │
+│    Action:     Changed routing strategy from Global to Venue[cite: 1]       │
+│    Prev Value: Routing.Strategy = "Global"                             │
+│    New Value:  Routing.Strategy = "Venue"[cite: 1]                          │
+│    Reason:     Setup Durban branch expansion[cite: 1, 8]                     │
+│                                                                        │
+│  • 2026-04-12 14:22:11 (System Setup)                                  │
+│    User:       Jane Smith (Owner ID: usr_10023)                        │
+│    Action:     Created Initial Pilot Connector Merchant ID[cite: 1]       │
+│                                                                        │
+└────────────────────────────────────────────────────────────────────────┘
+10. ARCHITECTURAL SUMMARYLEOS fundamentally changes the way software is built, distributed, and maintained[cite: 1]. By replacing raw screen development with an operating model that compiles business configurations, Lekki delivers unmatched software speed, absolute visual consistency, and a calm operational environment that lets technology gracefully fade into the background. 

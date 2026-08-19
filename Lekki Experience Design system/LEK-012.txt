@@ -1,0 +1,748 @@
+# ============================================================================
+# LEKKI PLATFORM
+# SOFTWARE ARCHITECTURE BOOK
+# ============================================================================
+
+Document ID
+    LEK-012
+
+Document Title
+    Venue Architecture
+
+Status
+    Approved Foundation
+
+Version
+    1.0
+
+Owner
+    Chief Architect
+
+Classification
+    Core Domain
+
+Related Documents
+
+    LEK-005 Ubiquitous Language
+    LEK-007 Domain Driven Design
+    LEK-010 Organisation Architecture
+    LEK-011 Experience Profiles
+    LEK-013 Guest Session Architecture
+
+==============================================================================
+PURPOSE
+==============================================================================
+
+The Venue is one of the primary aggregates within the Lekki domain model.
+
+A Venue represents a real-world place where guests interact with an
+organisation.
+
+Regardless of industry, every guest interaction occurs within a Venue.
+
+Restaurants.
+
+Hotels.
+
+Festivals.
+
+Golf Estates.
+
+Casinos.
+
+Conference Centres.
+
+Airports.
+
+Wine Farms.
+
+Future industries.
+
+The Venue provides a common operational model for all of them.
+
+==============================================================================
+
+THE ROLE OF A VENUE
+==============================================================================
+
+A Venue is responsible for
+
+Hosting Guests
+
+Hosting Sessions
+
+Hosting Locations
+
+Providing Services
+
+Operating Staff
+
+Executing Workflows
+
+Collecting Payments
+
+Generating Analytics
+
+Producing Operational Events
+
+The Venue does not own Guests.
+
+The Venue temporarily serves Guests.
+
+==============================================================================
+
+VENUE MODEL
+
+Platform
+    ↓
+Organisation
+    ↓
+Venue
+    ↓
+Location
+    ↓
+Session
+    ↓
+Participant
+    ↓
+Orders
+    ↓
+Bills
+    ↓
+Payments
+
+==============================================================================
+
+VENUE IDENTITY
+==============================================================================
+
+Every Venue has
+
+Venue ID
+
+Organisation ID
+
+Experience Profile
+
+Display Name
+
+Legal Name
+
+Timezone
+
+Country
+
+Currency
+
+Tax Configuration
+
+Language
+
+Status
+
+Operational Mode
+
+Branding
+
+Opening Hours
+
+Geo Location
+
+QR Namespace
+
+==============================================================================
+
+VENUE STATES
+==============================================================================
+
+A Venue operates within one operational state.
+
+Draft
+
+Configuration is incomplete.
+
+Ready
+
+Configured but not accepting guests.
+
+Open
+
+Operational.
+
+Busy
+
+High operational load.
+
+Offline
+
+Operating locally.
+
+Maintenance
+
+Temporarily unavailable.
+
+Closed
+
+Operations finished.
+
+Archived
+
+No longer operational.
+
+Neo continuously monitors venue state.
+
+==============================================================================
+
+VENUE CAPABILITIES
+==============================================================================
+
+Capabilities available to a Venue are determined by
+
+Experience Profile
+
+Subscription
+
+Organisation Configuration
+
+Feature Flags
+
+Hardware
+
+Compliance Requirements
+
+Examples
+
+Restaurant
+
+Ordering
+
+Kitchen
+
+Bill Splitting
+
+Hotel
+
+Reservations
+
+Room Service
+
+Festival
+
+Ticket Validation
+
+Vendor Marketplace
+
+==============================================================================
+
+VENUE CONFIGURATION
+==============================================================================
+
+Each Venue manages
+
+Opening Hours
+
+Menus or Services
+
+Locations
+
+Payment Providers
+
+Receipt Templates
+
+Notification Templates
+
+Languages
+
+Staff Assignments
+
+Operational Policies
+
+QR Assignments
+
+Hardware
+
+Neo Behaviour
+
+Venue configuration inherits from the Organisation where possible.
+
+==============================================================================
+
+LOCATIONS
+==============================================================================
+
+Locations represent physical interaction points.
+
+Examples
+
+Restaurant Table
+
+Hotel Room
+
+Festival Zone
+
+Golf Halfway House
+
+VIP Lounge
+
+Conference Hall
+
+Parking Area
+
+Bar Counter
+
+Drive Through
+
+Locations have
+
+Capacity
+
+Availability
+
+Status
+
+QR Assignment
+
+Coordinates
+
+Accessibility
+
+Operational Metadata
+
+==============================================================================
+
+STAFF
+==============================================================================
+
+Staff belong to Organisations but operate within Venues.
+
+Staff Roles include
+
+Manager
+
+Supervisor
+
+Waiter
+
+Reception
+
+Kitchen
+
+Housekeeping
+
+Security
+
+Cashier
+
+Operations
+
+Each role grants capabilities rather than page access.
+
+==============================================================================
+
+VENUE SERVICES
+==============================================================================
+
+Services define what Guests may consume.
+
+Examples
+
+Meals
+
+Accommodation
+
+Parking
+
+Spa
+
+Golf
+
+Wine Tasting
+
+Merchandise
+
+Equipment Hire
+
+Conference Facilities
+
+Transport
+
+Services are configurable.
+
+Not hard coded.
+
+==============================================================================
+
+OPERATIONAL DAY
+==============================================================================
+
+A Venue follows an operational lifecycle.
+
+Preparation
+
+↓
+
+Open Venue
+
+↓
+
+Guest Arrival
+
+↓
+
+Live Operations
+
+↓
+
+Settlement
+
+↓
+
+Reporting
+
+↓
+
+Venue Close
+
+↓
+
+Reconciliation
+
+↓
+
+Analytics
+
+↓
+
+Neo Review
+
+==============================================================================
+
+VENUE EVENTS
+==============================================================================
+
+Example events
+
+VenueOpened
+
+VenueClosed
+
+VenueBusy
+
+VenueOffline
+
+LocationUnavailable
+
+MenuPublished
+
+ServiceUnavailable
+
+ConfigurationChanged
+
+EmergencyDeclared
+
+EmergencyResolved
+
+These events become inputs for Analytics and Neo.
+
+==============================================================================
+
+OFFLINE OPERATION
+==============================================================================
+
+Every Venue must tolerate connectivity loss.
+
+Offline capabilities include
+
+QR Resolution
+
+Menu Cache
+
+Session Cache
+
+Order Queue
+
+Payment Queue
+
+Configuration Cache
+
+Staff Authentication Cache
+
+Background Synchronisation
+
+The guest experience should continue uninterrupted.
+
+==============================================================================
+
+PAYMENT ARCHITECTURE
+==============================================================================
+
+Venues may configure one or more payment providers.
+
+Examples
+
+NB
+
+Pilot
+
+GAAP
+
+Stripe
+
+Adyen
+
+Apple Pay
+
+Google Pay
+
+Tap-to-Pay
+
+Provider selection should be transparent to Guests.
+
+==============================================================================
+
+HARDWARE
+==============================================================================
+
+Lekki should minimise hardware dependencies.
+
+Supported devices
+
+Android
+
+iPhone
+
+Tablets
+
+PWA
+
+Tap-to-Pay Devices
+
+Kitchen Displays
+
+Receipt Printers
+
+Barcode Scanners
+
+Future IoT Devices
+
+Hardware expands capabilities.
+
+It should never define architecture.
+
+==============================================================================
+
+NEO INSIDE THE VENUE
+==============================================================================
+
+Neo acts as the Venue Operations Manager.
+
+Neo understands
+
+Operational health
+
+Peak periods
+
+Average service times
+
+Staff utilisation
+
+Popular products
+
+Guest satisfaction
+
+Revenue trends
+
+Configuration issues
+
+Neo recommends actions.
+
+Managers approve them.
+
+==============================================================================
+
+ANALYTICS
+==============================================================================
+
+Each Venue generates operational intelligence.
+
+Metrics include
+
+Guest Count
+
+Active Sessions
+
+Average Spend
+
+Revenue
+
+Payment Success
+
+Wait Time
+
+Table Turnover
+
+Occupancy
+
+Vendor Performance
+
+Staff Performance
+
+Offline Time
+
+Neo Confidence Score
+
+==============================================================================
+
+SECURITY
+==============================================================================
+
+Venue isolation includes
+
+Encrypted communication
+
+Role-based access
+
+Audit logging
+
+Device registration
+
+Session management
+
+Payment tokenisation
+
+Data isolation
+
+Zero Trust networking
+
+==============================================================================
+
+SCALABILITY
+==============================================================================
+
+The architecture must support
+
+Single coffee shop
+
+↓
+
+Restaurant group
+
+↓
+
+Hotel chain
+
+↓
+
+International franchise
+
+↓
+
+Global enterprise
+
+The Venue model remains unchanged regardless of scale.
+
+==============================================================================
+
+ARCHITECTURAL DECISIONS
+==============================================================================
+
+ADR-012-001
+
+Venue is the operational boundary.
+
+ADR-012-002
+
+Guests visit Venues.
+
+They do not belong to them.
+
+ADR-012-003
+
+Locations are generic.
+
+Experience Profiles provide terminology.
+
+ADR-012-004
+
+Venue capabilities are configured.
+
+Not developed separately.
+
+ADR-012-005
+
+Neo continuously observes every Venue.
+
+==============================================================================
+
+SUCCESS CRITERIA
+==============================================================================
+
+A newly created Venue should be operational within minutes.
+
+The Venue should
+
+Generate QR Codes
+
+Configure Services
+
+Accept Guests
+
+Operate Offline
+
+Collect Payments
+
+Generate Reports
+
+Receive Neo Recommendations
+
+without software development.
+
+==============================================================================
+
+FUTURE EVOLUTION
+==============================================================================
+
+Future Venue enhancements may include
+
+Digital Twins
+
+IoT Sensors
+
+Occupancy Detection
+
+Smart Tables
+
+Indoor Navigation
+
+Wearable Integration
+
+Autonomous Checkout
+
+Robotics
+
+Dynamic Capacity Management
+
+Predictive Maintenance
+
+The Venue architecture should already accommodate these innovations.
+
+==============================================================================
+
+ARCHITECT'S NOTES
+==============================================================================
+
+The Venue is the heartbeat of Lekki.
+
+Every guest interaction, operational process, payment, recommendation and
+business insight ultimately flows through a Venue.
+
+By designing the Venue as a configurable operational boundary rather than a
+restaurant-specific concept, Lekki becomes capable of supporting virtually any
+physical experience business.
+
+This decision is foundational to the long-term vision of Lekki as a universal
+Experience Platform.
+
+==============================================================================
+END OF DOCUMENT
+==============================================================================

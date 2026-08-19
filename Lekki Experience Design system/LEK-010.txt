@@ -1,0 +1,807 @@
+# ============================================================================
+# LEKKI PLATFORM
+# SOFTWARE ARCHITECTURE BOOK
+# ============================================================================
+
+Document ID
+    LEK-010
+
+Document Title
+    Organization, Tenant & Multi-Tenant Architecture
+
+Status
+    Approved Foundation
+
+Version
+    1.0
+
+Owner
+    Chief Architect
+
+Classification
+    Core Platform
+
+Related Documents
+
+    LEK-004 Business Model
+    LEK-005 Ubiquitous Language
+    LEK-006 Platform Principles
+    LEK-007 Domain Driven Design
+    LEK-009 Capability Model
+    LEK-011 Experience Profiles
+
+==============================================================================
+PURPOSE
+==============================================================================
+
+This document defines how businesses are represented within Lekki.
+
+It establishes the platform's multi-tenant architecture, ownership model,
+data isolation strategy, onboarding flow and inheritance rules.
+
+Every commercial customer operates within an Organisation.
+
+Every Organisation owns one or more Venues.
+
+Every Venue delivers one or more Experiences.
+
+Guests move between Organisations.
+
+Data does not.
+
+==============================================================================
+ARCHITECTURAL OBJECTIVE
+==============================================================================
+
+Lekki must operate as one global platform while ensuring that every customer
+feels as though they own their own private system.
+
+The platform should provide
+
+Shared infrastructure
+
+Shared software
+
+Shared innovation
+
+Shared security
+
+while maintaining
+
+Complete business isolation
+
+Independent configuration
+
+Independent reporting
+
+Independent billing
+
+Independent branding
+
+==============================================================================
+CORE HIERARCHY
+==============================================================================
+
+The business hierarchy is intentionally simple.
+
+Platform
+
+↓
+
+Organisation
+
+↓
+
+Venue
+
+↓
+
+Location
+
+↓
+
+Experience
+
+↓
+
+Session
+
+↓
+
+Participant
+
+↓
+
+Order
+
+↓
+
+Bill
+
+↓
+
+Payment
+
+Everything belongs somewhere in this hierarchy.
+
+==============================================================================
+THE PLATFORM
+==============================================================================
+
+There is only one Lekki Platform.
+
+The platform owns
+
+Identity
+
+Authentication
+
+Neo
+
+Core Infrastructure
+
+Updates
+
+Monitoring
+
+Marketplace
+
+Global Configuration
+
+Documentation
+
+Platform administrators operate above all Organisations.
+
+==============================================================================
+ORGANISATION
+==============================================================================
+
+Definition
+
+A legal business entity.
+
+Examples
+
+ABC Hospitality
+
+Ocean Hotels
+
+Lekki Festivals
+
+Cape Wine Estates
+
+Responsibilities
+
+Commercial subscription
+
+Branding
+
+Business rules
+
+Venues
+
+Staff
+
+Reporting
+
+Neo configuration
+
+Payment configuration
+
+Integrations
+
+Organisation is the highest business boundary.
+
+==============================================================================
+TENANT
+==============================================================================
+
+A Tenant is the technical implementation of an Organisation.
+
+Business users should rarely see the word Tenant.
+
+Engineers use Tenant when discussing
+
+Data isolation
+
+Security
+
+Infrastructure
+
+Deployment
+
+Monitoring
+
+Every Organisation maps to exactly one Tenant.
+
+==============================================================================
+VENUE
+==============================================================================
+
+A Venue is a physical operating location.
+
+Examples
+
+Cape Town Restaurant
+
+Sandton Hotel
+
+Main Festival Grounds
+
+Durban Stadium
+
+Airport Lounge A12
+
+Each Venue inherits configuration from its Organisation but may override
+specific settings where permitted.
+
+==============================================================================
+LOCATION
+==============================================================================
+
+Locations exist inside Venues.
+
+Examples
+
+Restaurant Table
+
+Hotel Room
+
+Festival Zone
+
+VIP Area
+
+Conference Hall
+
+Casino Floor
+
+Gate
+
+Parking Area
+
+The platform treats all Locations equally.
+
+Only Experience Profiles change terminology.
+
+==============================================================================
+CONFIGURATION HIERARCHY
+==============================================================================
+
+Configuration is inherited downward.
+
+Platform
+
+↓
+
+Organisation Defaults
+
+↓
+
+Venue Overrides
+
+↓
+
+Experience Overrides
+
+↓
+
+Location Overrides
+
+Lower levels inherit unless explicitly overridden.
+
+This reduces duplication while preserving flexibility.
+
+==============================================================================
+EXAMPLE
+==============================================================================
+
+Platform Language
+
+English
+
+↓
+
+Organisation Default
+
+English + Afrikaans
+
+↓
+
+Venue
+
+English only
+
+↓
+
+VIP Experience
+
+English + French
+
+↓
+
+Location
+
+No Override
+
+Final Result
+
+English + French
+
+Inheritance should always be predictable.
+
+==============================================================================
+ORGANISATION ONBOARDING
+==============================================================================
+
+Every Organisation follows the same onboarding process.
+
+Step 1
+
+Create Organisation
+
+Step 2
+
+Verify Business
+
+Step 3
+
+Choose Industry
+
+Step 4
+
+Select Experience Profile
+
+Step 5
+
+Configure Branding
+
+Step 6
+
+Configure Payment Provider
+
+Step 7
+
+Import Data
+
+Step 8
+
+Generate QR Codes
+
+Step 9
+
+Review
+
+Step 10
+
+Go Live
+
+Neo assists throughout the process.
+
+==============================================================================
+NEO'S ROLE
+==============================================================================
+
+Neo becomes the onboarding manager.
+
+Neo should
+
+Ask questions
+
+Recommend defaults
+
+Validate configuration
+
+Explain terminology
+
+Import spreadsheets
+
+Detect inconsistencies
+
+Recommend improvements
+
+Generate QR assignments
+
+Produce launch readiness reports
+
+Neo should minimise manual setup.
+
+==============================================================================
+IMPORT STRATEGY
+==============================================================================
+
+Customers should never be forced to capture large amounts of data manually.
+
+Supported imports include
+
+CSV
+
+Excel
+
+Future ERP imports
+
+POS imports
+
+Accounting imports
+
+Typical imported data
+
+Menus
+
+Products
+
+Services
+
+Locations
+
+Staff
+
+Opening Hours
+
+Pricing
+
+Inventory References
+
+Neo validates imported information before activation.
+
+==============================================================================
+DATA OWNERSHIP
+==============================================================================
+
+Every piece of business data has one owner.
+
+Platform owns
+
+Identity
+
+Neo
+
+Marketplace
+
+Platform Configuration
+
+Organisation owns
+
+Venues
+
+Staff
+
+Business Configuration
+
+Products
+
+Services
+
+Reporting
+
+Guest owns
+
+Identity
+
+Preferences
+
+Devices
+
+Authentication
+
+Payment Tokens
+
+Ownership must always be unambiguous.
+
+==============================================================================
+DATA ISOLATION
+==============================================================================
+
+Organisations must never access each other's business data.
+
+Isolation applies to
+
+Orders
+
+Bills
+
+Payments
+
+Analytics
+
+Staff
+
+Products
+
+Neo Reports
+
+Configuration
+
+Audit Logs
+
+Platform administrators may access tenant data only through authorised
+support workflows with full auditing.
+
+==============================================================================
+BRANDING
+==============================================================================
+
+Every Organisation controls its own branding.
+
+Examples
+
+Logo
+
+Primary Colours
+
+Typography
+
+Language
+
+Terms of Service
+
+Privacy Policy
+
+Email Templates
+
+Notification Templates
+
+Neo Personality Adjustments
+
+Branding should never require software changes.
+
+==============================================================================
+PAYMENT CONFIGURATION
+==============================================================================
+
+Payment Providers are configured at Organisation level.
+
+Possible providers
+
+NB
+
+Pilot
+
+GAAP
+
+Stripe
+
+Adyen
+
+Future Providers
+
+Venues may override payment configuration where required.
+
+Guests should experience one consistent payment flow regardless of provider.
+
+==============================================================================
+PERMISSIONS
+==============================================================================
+
+Permissions inherit similarly to configuration.
+
+Platform Roles
+
+↓
+
+Organisation Roles
+
+↓
+
+Venue Roles
+
+↓
+
+Experience Roles
+
+↓
+
+Temporary Session Permissions
+
+Permission evaluation should be deterministic.
+
+==============================================================================
+MULTI-VENUE ORGANISATIONS
+==============================================================================
+
+One Organisation may operate many Venues.
+
+Example
+
+Ocean Hotels
+
+Cape Town
+
+Durban
+
+Johannesburg
+
+Pretoria
+
+Each Venue
+
+Operates independently
+
+Reports independently
+
+Can be managed independently
+
+while contributing to Organisation-wide analytics.
+
+==============================================================================
+EXPERIENCE PROFILE ASSIGNMENT
+==============================================================================
+
+Every Venue must have one active Experience Profile.
+
+Examples
+
+Restaurant
+
+Hotel
+
+Festival
+
+Conference
+
+Golf Estate
+
+Future profiles may be introduced without architectural modification.
+
+Changing an Experience Profile should not require software deployment.
+
+==============================================================================
+QR GENERATION
+==============================================================================
+
+QR Codes belong to Locations.
+
+Each QR uniquely resolves
+
+Organisation
+
+Venue
+
+Location
+
+Experience Profile
+
+Capabilities
+
+Optional Campaign
+
+Optional Language
+
+The guest never configures context manually.
+
+==============================================================================
+SUBSCRIPTION MODEL
+==============================================================================
+
+Subscriptions belong to Organisations.
+
+Possible billing dimensions
+
+Base Platform
+
+Number of Venues
+
+Premium Modules
+
+Neo Intelligence
+
+Marketplace Services
+
+Enterprise Integrations
+
+Transactions
+
+Pricing strategy should remain configurable.
+
+==============================================================================
+OBSERVABILITY
+==============================================================================
+
+Each Organisation should expose operational metrics.
+
+Examples
+
+Active Guests
+
+Sessions
+
+Orders
+
+Payments
+
+Venue Health
+
+Offline Status
+
+Neo Recommendations
+
+Platform administrators monitor the platform.
+
+Organisations monitor their business.
+
+==============================================================================
+ARCHITECTURAL DECISIONS
+==============================================================================
+
+ADR-010-001
+
+One global platform.
+
+Many Organisations.
+
+Reason
+
+Simplifies deployment and continuous innovation.
+
+ADR-010-002
+
+Organisation is the commercial boundary.
+
+Reason
+
+Matches real-world business ownership.
+
+ADR-010-003
+
+Venue inherits from Organisation.
+
+Reason
+
+Reduces duplicated configuration.
+
+ADR-010-004
+
+Guests are global identities.
+
+Reason
+
+One application across every venue.
+
+ADR-010-005
+
+Configuration always preferred over custom software.
+
+Reason
+
+Supports unlimited venue types.
+
+==============================================================================
+SUCCESS CRITERIA
+==============================================================================
+
+A new Organisation should be capable of
+
+Creating an account
+
+Importing existing data
+
+Configuring branding
+
+Connecting payments
+
+Generating QR Codes
+
+Training staff
+
+Launching operations
+
+within hours rather than weeks.
+
+Neo should reduce onboarding effort to the absolute minimum.
+
+==============================================================================
+ARCHITECT'S NOTES
+==============================================================================
+
+The Organisation model is the commercial backbone of Lekki.
+
+It defines how customers purchase the platform, how data is protected, how
+configuration flows through the hierarchy, and how the SaaS model scales from
+a single coffee shop to a global hospitality group.
+
+Every future capability—from Neo to payments to analytics—must respect this
+hierarchy. If a feature cannot clearly identify its Organisation, Venue and
+ownership boundaries, its design should be reconsidered.
+
+==============================================================================
+END OF DOCUMENT
+==============================================================================

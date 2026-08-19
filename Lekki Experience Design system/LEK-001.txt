@@ -1,0 +1,426 @@
+# ============================================================================
+# LEKKI PLATFORM
+# SOFTWARE ARCHITECTURE BOOK
+# ============================================================================
+
+Document ID
+    LEK-001
+
+Document Title
+    Vision
+
+Status
+    Draft
+
+Version
+    0.1
+
+Owner
+    Product Architecture
+
+Last Updated
+    July 2026
+
+Related Documents
+
+    LEK-000 Project Overview
+    LEK-002 Product Philosophy
+    LEK-003 Guiding Principles
+    LEK-010 Business Architecture
+
+==============================================================================
+EXECUTIVE SUMMARY
+==============================================================================
+
+Lekki exists to become the operating system for physical guest experiences.
+
+The vision is intentionally much larger than hospitality.
+
+Restaurants happen to be where the journey starts.
+
+They are not where it ends.
+
+Lekki is designed to become the common interaction layer between people and
+venues regardless of industry.
+
+Guests should never have to learn new software simply because they entered a
+different venue.
+
+The venue changes.
+
+The experience adapts.
+
+The application remains the same.
+
+This simple idea drives every architectural decision within the platform.
+
+------------------------------------------------------------------------------
+THE LONG-TERM VISION
+------------------------------------------------------------------------------
+
+Every day millions of people enter physical venues.
+
+Restaurants.
+
+Hotels.
+
+Festivals.
+
+Sporting events.
+
+Airports.
+
+Golf estates.
+
+Wine farms.
+
+Casinos.
+
+Conference centres.
+
+Theme parks.
+
+Today each venue asks guests to learn something new.
+
+Different application.
+
+Different payment flow.
+
+Different loyalty programme.
+
+Different account.
+
+Different menu.
+
+Different terminology.
+
+Different support.
+
+Every interaction creates unnecessary cognitive effort.
+
+Lekki exists to remove that friction.
+
+------------------------------------------------------------------------------
+OUR BELIEF
+------------------------------------------------------------------------------
+
+People should learn software once.
+
+Not every time they visit a new venue.
+
+The platform should recognise context automatically.
+
+Technology should adapt to people.
+
+People should not adapt to technology.
+
+------------------------------------------------------------------------------
+WHAT LEKKI IS
+------------------------------------------------------------------------------
+
+Lekki is a configurable experience platform.
+
+It provides reusable capabilities.
+
+These capabilities include
+
+• Identity
+
+• Authentication
+
+• Guest Sessions
+
+• Venue Awareness
+
+• QR Experiences
+
+• Orders
+
+• Billing
+
+• Payments
+
+• Notifications
+
+• Loyalty
+
+• Artificial Intelligence
+
+• Analytics
+
+• Integrations
+
+• Administration
+
+These capabilities are assembled differently for different venue types.
+
+The platform remains the same.
+
+------------------------------------------------------------------------------
+WHAT LEKKI IS NOT
+------------------------------------------------------------------------------
+
+Lekki is not simply
+
+A restaurant POS.
+
+A hotel PMS.
+
+An event ticketing system.
+
+A payment gateway.
+
+A loyalty platform.
+
+A booking system.
+
+A reporting platform.
+
+Instead it integrates with these systems while providing a consistent guest
+experience.
+
+------------------------------------------------------------------------------
+VENUE AGNOSTIC BY DESIGN
+------------------------------------------------------------------------------
+
+One of the most important decisions made during the conception of Lekki was
+that no component should assume it belongs to a restaurant.
+
+Restaurants have tables.
+
+Hotels have rooms.
+
+Festivals have zones.
+
+Golf estates have halfway houses.
+
+Stadiums have seating sections.
+
+Airports have lounges.
+
+Rather than building separate products for every industry, Lekki models these
+as configurable venue locations.
+
+The business language changes.
+
+The architecture does not.
+
+------------------------------------------------------------------------------
+THE QR CODE AS CONTEXT
+------------------------------------------------------------------------------
+
+Traditional QR systems link to pages.
+
+Lekki QR codes define context.
+
+Scanning a QR code tells the platform
+
+Which organisation the guest is visiting.
+
+Which venue they entered.
+
+Which experience profile should be activated.
+
+Which language to display.
+
+Which services are available.
+
+Whether ordering is allowed.
+
+Whether payments are enabled.
+
+Whether booking is required.
+
+The QR code is therefore not merely an address.
+
+It is the beginning of an adaptive experience.
+
+------------------------------------------------------------------------------
+ONE APPLICATION
+------------------------------------------------------------------------------
+
+A guest should only ever need one application.
+
+That application should work across every participating venue.
+
+The guest's identity belongs to the guest.
+
+Not to the venue.
+
+When the guest scans a QR code the application adapts automatically.
+
+No additional installation should ever be required.
+
+------------------------------------------------------------------------------
+CONFIGURATION OVER CUSTOM DEVELOPMENT
+------------------------------------------------------------------------------
+
+Historically software vendors create new products whenever they enter a new
+industry.
+
+Lekki rejects this model.
+
+Instead we configure behaviour.
+
+Restaurants configure menus.
+
+Hotels configure services.
+
+Festivals configure vendors.
+
+Conference venues configure sessions.
+
+The underlying platform remains unchanged.
+
+Configuration replaces duplication.
+
+------------------------------------------------------------------------------
+THE ROLE OF ARTIFICIAL INTELLIGENCE
+------------------------------------------------------------------------------
+
+Artificial Intelligence should reduce operational effort.
+
+It should never reduce accountability.
+
+Neo exists to assist.
+
+Not to replace.
+
+Neo becomes
+
+An onboarding assistant.
+
+An operational advisor.
+
+A reporting assistant.
+
+An analytics consultant.
+
+A venue expert.
+
+Neo recommends.
+
+Humans approve.
+
+This principle protects trust while still providing automation.
+
+------------------------------------------------------------------------------
+OFFLINE RELIABILITY
+------------------------------------------------------------------------------
+
+Connectivity cannot be assumed.
+
+Restaurants lose Internet.
+
+Festivals overload cellular networks.
+
+Hotels experience infrastructure failures.
+
+Operations must continue.
+
+Offline capability is therefore considered a platform guarantee rather than
+an optional feature.
+
+Synchronization should occur automatically when connectivity returns.
+
+Guests should never lose work because of network failures.
+
+------------------------------------------------------------------------------
+OPEN ECOSYSTEM
+------------------------------------------------------------------------------
+
+Lekki should integrate with existing business systems.
+
+Businesses have already invested heavily in
+
+POS Systems
+
+Accounting Platforms
+
+Payment Providers
+
+Inventory Systems
+
+Booking Platforms
+
+Access Control
+
+Reporting Systems
+
+Lekki should enhance these investments rather than forcing replacement.
+
+------------------------------------------------------------------------------
+SCALABILITY
+------------------------------------------------------------------------------
+
+The platform should support
+
+A single coffee shop.
+
+A regional restaurant group.
+
+An international hotel chain.
+
+A music festival.
+
+A stadium with fifty thousand guests.
+
+The architecture should not fundamentally change as scale increases.
+
+------------------------------------------------------------------------------
+OUR DEFINITION OF SUCCESS
+------------------------------------------------------------------------------
+
+Success is not measured by feature count.
+
+Success is measured by simplicity.
+
+A guest should walk into any participating venue.
+
+Scan.
+
+Interact.
+
+Order.
+
+Pay.
+
+Leave.
+
+Without needing assistance.
+
+If the guest notices the software, we have already failed.
+
+------------------------------------------------------------------------------
+ARCHITECTURAL TEST
+------------------------------------------------------------------------------
+
+Every future feature should answer the following questions.
+
+Does this reduce friction?
+
+Does this improve the guest experience?
+
+Does this improve operational efficiency?
+
+Can this be configured?
+
+Will this work across multiple venue types?
+
+Can Neo assist with this?
+
+Will this scale?
+
+If the answer is "no" to most of these questions, the feature should be
+reconsidered.
+
+------------------------------------------------------------------------------
+VISION STATEMENT
+------------------------------------------------------------------------------
+
+To become the world's most trusted platform for physical guest experiences by
+allowing every venue to deliver intelligent, seamless and configurable
+interactions through a single adaptive application.
+
+------------------------------------------------------------------------------
+END OF DOCUMENT

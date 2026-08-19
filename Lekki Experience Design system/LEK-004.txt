@@ -1,0 +1,528 @@
+# ============================================================================
+# LEKKI PLATFORM
+# SOFTWARE ARCHITECTURE BOOK
+# ============================================================================
+
+Document ID
+    LEK-004
+
+Document Title
+    Business Model & Platform Strategy
+
+Status
+    Draft
+
+Version
+    1.0
+
+Owner
+    Product Architecture
+
+Classification
+    Foundational
+
+Related Documents
+
+    LEK-000 Project Overview
+    LEK-001 Vision
+    LEK-002 Product Philosophy
+    LEK-003 Guiding Principles
+    LEK-010 Domain Architecture
+    LEK-020 Organization Model
+
+==============================================================================
+EXECUTIVE SUMMARY
+==============================================================================
+
+Lekki is not a restaurant application.
+
+Lekki is not a hotel application.
+
+Lekki is not a festival application.
+
+Lekki is a configurable Software-as-a-Service (SaaS) platform that enables
+businesses operating physical venues to create intelligent guest experiences
+without developing custom software.
+
+The commercial strategy is intentionally broader than hospitality.
+
+Restaurants represent the first implementation of the platform because they
+provide an ideal environment to validate the architecture, operational model,
+guest experience and commercial viability.
+
+Every design decision must support future expansion into additional industries
+without requiring a rewrite of the core platform.
+
+==============================================================================
+BUSINESS VISION
+==============================================================================
+
+Lekki exists to become the preferred operating platform for physical guest
+experiences.
+
+Wherever people interact with businesses in a physical environment,
+Lekki should be capable of managing that interaction.
+
+The long-term objective is to provide a common digital layer between guests
+and venues regardless of industry.
+
+This creates a network effect.
+
+The more venues that adopt Lekki,
+the more valuable the platform becomes to guests.
+
+The more guests that adopt Lekki,
+the more valuable the platform becomes to venue operators.
+
+==============================================================================
+THE PLATFORM ECONOMY
+==============================================================================
+
+Traditional hospitality software creates isolated customers.
+
+Every restaurant installs its own system.
+
+Every hotel purchases another system.
+
+Every venue creates another customer account.
+
+Every guest repeats onboarding.
+
+Every payment experience differs.
+
+Lekki changes this model.
+
+Instead of isolated software installations,
+every organisation joins the same platform.
+
+Guests move freely between organisations.
+
+Businesses benefit from shared innovation.
+
+The platform grows stronger as adoption increases.
+
+==============================================================================
+WHO IS THE CUSTOMER?
+==============================================================================
+
+There are two different customers.
+
+Commercial Customer
+
+The business purchasing Lekki.
+
+Examples
+
+Restaurant Owner
+
+Hotel Group
+
+Festival Organiser
+
+Wine Estate
+
+Golf Club
+
+Casino
+
+Conference Centre
+
+Airport Lounge
+
+Guest Customer
+
+The individual interacting with the venue.
+
+The guest does not purchase Lekki.
+
+The guest experiences Lekki.
+
+Every decision must balance the needs of both customers.
+
+==============================================================================
+WHO OWNS THE RELATIONSHIP?
+==============================================================================
+
+Businesses own their customer relationships.
+
+Lekki owns the platform.
+
+Guest identity belongs to the guest.
+
+Business data belongs to the organisation.
+
+Transaction history belongs to the organisation.
+
+Platform capabilities belong to Lekki.
+
+This separation is critical.
+
+==============================================================================
+THE ORGANISATION MODEL
+==============================================================================
+
+Every customer begins by creating an Organisation.
+
+Examples
+
+ABC Hospitality
+
+Ocean Hotels
+
+Sunset Festivals
+
+Blue Mountain Wines
+
+The organisation represents the legal entity.
+
+Within an organisation multiple venues may exist.
+
+Example
+
+Ocean Hotels
+
+Cape Town Hotel
+
+Durban Hotel
+
+Johannesburg Hotel
+
+Each venue operates independently while sharing
+organisation-wide policies.
+
+==============================================================================
+THE VENUE MODEL
+==============================================================================
+
+A venue is any physical location where guests interact with the organisation.
+
+Examples include
+
+Restaurant
+
+Hotel
+
+Festival
+
+Stadium
+
+Golf Club
+
+Conference Centre
+
+Casino
+
+Coffee Shop
+
+Winery
+
+Airport Lounge
+
+Future venue types should require configuration only.
+
+Not architectural change.
+
+==============================================================================
+EXPERIENCE PROFILES
+==============================================================================
+
+One of Lekki's most important innovations is the Experience Profile.
+
+An Experience Profile defines
+
+Terminology
+
+Available Modules
+
+Guest Journey
+
+Payment Behaviour
+
+Ordering Behaviour
+
+Venue Layout
+
+Capabilities
+
+Examples
+
+Restaurant Profile
+
+Hotel Profile
+
+Festival Profile
+
+Conference Profile
+
+Golf Club Profile
+
+The core platform remains unchanged.
+
+Only the profile changes.
+
+==============================================================================
+SOFTWARE AS A SERVICE
+==============================================================================
+
+Lekki will be delivered as SaaS.
+
+Customers subscribe to the platform.
+
+Infrastructure is managed centrally.
+
+Updates are delivered continuously.
+
+Customers always run supported versions.
+
+Benefits include
+
+Lower onboarding effort
+
+Rapid feature delivery
+
+Improved security
+
+Central analytics
+
+Lower operational cost
+
+==============================================================================
+COMMERCIAL MODEL
+==============================================================================
+
+The preferred pricing strategy is value-based.
+
+Pricing should avoid charging per staff member.
+
+Seasonal businesses frequently increase staffing levels.
+
+Charging per user discourages adoption.
+
+Preferred pricing options
+
+Per Organisation
+
+Per Venue
+
+Platform Tier
+
+Premium AI Services
+
+Enterprise Integrations
+
+Transaction Services
+
+Marketplace Services
+
+Additional capabilities may become optional modules.
+
+==============================================================================
+THE ROLE OF NEO
+==============================================================================
+
+Neo is a commercial differentiator.
+
+Neo should not simply answer questions.
+
+Neo should actively improve business performance.
+
+Neo assists with
+
+Onboarding
+
+Venue Configuration
+
+Reporting
+
+Analytics
+
+Recommendations
+
+Operational Optimisation
+
+Training
+
+Documentation
+
+Neo becomes an intelligent operational partner.
+
+==============================================================================
+MARKETPLACE STRATEGY
+==============================================================================
+
+Long term,
+Lekki should evolve into an ecosystem.
+
+Possible future marketplace offerings
+
+Integration Partners
+
+Experience Templates
+
+Reporting Packs
+
+Neo Skills
+
+Industry Modules
+
+Loyalty Providers
+
+Payment Providers
+
+Reservation Systems
+
+Developers should be able to extend the platform
+without modifying the platform itself.
+
+==============================================================================
+INTEGRATION STRATEGY
+==============================================================================
+
+Lekki should integrate before replacing.
+
+Priority integrations include
+
+Payment Providers
+
+POS Systems
+
+Accounting Systems
+
+Inventory
+
+Identity Providers
+
+CRM
+
+Business Intelligence
+
+Open APIs encourage adoption.
+
+Closed ecosystems discourage adoption.
+
+==============================================================================
+NETWORK EFFECT
+==============================================================================
+
+The long-term competitive advantage is not features.
+
+It is the network.
+
+Guests become familiar with Lekki.
+
+Businesses benefit from guest familiarity.
+
+Developers benefit from one platform.
+
+Partners benefit from one integration model.
+
+Every new participant increases the value
+for every existing participant.
+
+==============================================================================
+WHAT LEKKI SELLS
+==============================================================================
+
+Lekki does not sell software.
+
+Lekki sells
+
+Operational efficiency.
+
+Guest convenience.
+
+Reduced friction.
+
+Intelligent automation.
+
+Faster onboarding.
+
+Business insight.
+
+Platform consistency.
+
+Future readiness.
+
+Technology is simply the mechanism.
+
+==============================================================================
+SUCCESS MEASURES
+==============================================================================
+
+Commercial success should be measured by
+
+Organisations onboarded
+
+Venues active
+
+Guest adoption
+
+Guest retention
+
+Average onboarding time
+
+Configuration effort
+
+Neo adoption
+
+Payment success rate
+
+Offline reliability
+
+Integration adoption
+
+Platform stability
+
+Guest satisfaction
+
+==============================================================================
+STRATEGIC OBJECTIVES
+==============================================================================
+
+Five-Year Objectives
+
+Become venue agnostic.
+
+Support multiple industries.
+
+Operate internationally.
+
+Maintain one platform.
+
+Maintain one application.
+
+Provide industry-leading onboarding.
+
+Become recognised for operational intelligence.
+
+Reduce implementation time to hours instead of weeks.
+
+Become the preferred integration platform for
+physical guest experiences.
+
+==============================================================================
+BUSINESS MODEL SUMMARY
+==============================================================================
+
+Lekki is building a platform.
+
+Not an application.
+
+Applications solve today's problem.
+
+Platforms solve tomorrow's problems.
+
+Every architectural decision should increase
+the long-term value of the platform.
+
+If a decision only benefits one venue type,
+it should be challenged.
+
+If a decision benefits every future customer,
+it strengthens the platform.
+
+This distinction defines Lekki's competitive advantage.
+
+==============================================================================
+END OF DOCUMENT
+==============================================================================

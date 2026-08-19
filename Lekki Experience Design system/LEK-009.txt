@@ -1,0 +1,654 @@
+# ============================================================================
+# LEKKI PLATFORM
+# SOFTWARE ARCHITECTURE BOOK
+# ============================================================================
+
+Document ID
+    LEK-009
+
+Document Title
+    Platform Capability Model
+
+Status
+    Approved Foundation
+
+Version
+    1.0
+
+Owner
+    Chief Architect
+
+Classification
+    Core Architecture
+
+Related Documents
+
+    LEK-004 Business Model
+    LEK-006 Platform Architecture Principles
+    LEK-007 Domain Driven Design
+    LEK-008 Event Driven Architecture
+    LEK-010 Organisation Architecture
+
+==============================================================================
+PURPOSE
+==============================================================================
+
+This document defines every major business capability provided by the Lekki
+platform.
+
+A Capability is something the platform knows how to do.
+
+Capabilities are independent of
+
+Programming language
+
+Microservices
+
+Databases
+
+User Interfaces
+
+Technology
+
+Capabilities describe business value.
+
+Software simply implements them.
+
+This distinction allows the platform to evolve without changing its business
+architecture.
+
+==============================================================================
+WHAT IS A CAPABILITY?
+==============================================================================
+
+A Capability is a reusable business function.
+
+Examples
+
+Authenticate a Guest
+
+Create a Session
+
+Manage Billing
+
+Process Payments
+
+Generate Analytics
+
+Configure a Venue
+
+Capabilities should be reusable across every venue type.
+
+Restaurant
+
+Hotel
+
+Festival
+
+Casino
+
+Conference
+
+Airport Lounge
+
+Golf Estate
+
+Capabilities should not contain industry assumptions.
+
+==============================================================================
+CAPABILITY HIERARCHY
+==============================================================================
+
+The Lekki Platform is divided into six capability layers.
+
+Layer 1
+
+Platform Foundation
+
+Layer 2
+
+Business Management
+
+Layer 3
+
+Guest Experience
+
+Layer 4
+
+Operations
+
+Layer 5
+
+Intelligence
+
+Layer 6
+
+Integration
+
+Each layer builds upon the previous one.
+
+==============================================================================
+LAYER 1
+PLATFORM FOUNDATION
+==============================================================================
+
+Purpose
+
+Provide core platform services.
+
+Capabilities
+
+Identity
+
+Authentication
+
+Authorisation
+
+Organisation Management
+
+Tenant Management
+
+Configuration
+
+Feature Flags
+
+Localization
+
+Security
+
+Audit Logging
+
+Observability
+
+API Gateway
+
+Platform Health
+
+No customer functionality exists without this layer.
+
+==============================================================================
+LAYER 2
+BUSINESS MANAGEMENT
+==============================================================================
+
+Purpose
+
+Allow organisations to operate venues.
+
+Capabilities
+
+Organisation Administration
+
+Venue Management
+
+Location Management
+
+Staff Management
+
+Experience Profiles
+
+Business Rules
+
+Opening Hours
+
+Branding
+
+Subscription Management
+
+Licensing
+
+QR Assignment
+
+Business Configuration
+
+==============================================================================
+LAYER 3
+GUEST EXPERIENCE
+==============================================================================
+
+Purpose
+
+Support guest interactions.
+
+Capabilities
+
+Guest Identity
+
+QR Discovery
+
+Venue Discovery
+
+Session Management
+
+Participant Management
+
+Ordering
+
+Bookings
+
+Messaging
+
+Notifications
+
+Feedback
+
+Loyalty
+
+Preferences
+
+Personalisation
+
+Language Selection
+
+This layer defines the customer experience.
+
+==============================================================================
+LAYER 4
+OPERATIONS
+==============================================================================
+
+Purpose
+
+Operate the venue.
+
+Capabilities
+
+Kitchen Workflow
+
+Service Workflow
+
+Task Assignment
+
+Inventory Integration
+
+Order Routing
+
+Billing
+
+Payments
+
+Refunds
+
+Settlement
+
+Shift Management
+
+Operational Reporting
+
+Operational Notifications
+
+==============================================================================
+LAYER 5
+INTELLIGENCE
+==============================================================================
+
+Purpose
+
+Improve decision making.
+
+Capabilities
+
+Neo Assistant
+
+Analytics
+
+Recommendations
+
+Predictions
+
+Business Optimisation
+
+Operational Health
+
+Trend Analysis
+
+Configuration Suggestions
+
+Anomaly Detection
+
+Training Assistance
+
+Documentation Assistance
+
+Knowledge Management
+
+Neo lives entirely within this layer.
+
+==============================================================================
+LAYER 6
+INTEGRATIONS
+==============================================================================
+
+Purpose
+
+Connect external systems.
+
+Capabilities
+
+Payment Providers
+
+POS
+
+Accounting
+
+CRM
+
+ERP
+
+Inventory
+
+Identity Providers
+
+Messaging Providers
+
+Booking Systems
+
+Business Intelligence
+
+Webhooks
+
+Public APIs
+
+Future Integrations
+
+The platform should never depend upon a single vendor.
+
+==============================================================================
+CAPABILITY CHARACTERISTICS
+==============================================================================
+
+Every capability should satisfy the following principles.
+
+Own one responsibility.
+
+Publish events.
+
+Subscribe to relevant events.
+
+Remain independently deployable.
+
+Avoid direct database access to other capabilities.
+
+Expose well-defined contracts.
+
+Support observability.
+
+Be configurable.
+
+Support Neo.
+
+==============================================================================
+CAPABILITY MATURITY
+==============================================================================
+
+Capabilities evolve over time.
+
+Level 1
+
+Exists
+
+Level 2
+
+Configurable
+
+Level 3
+
+Observable
+
+Level 4
+
+Event Driven
+
+Level 5
+
+Neo Assisted
+
+Level 6
+
+Self Optimising
+
+The long-term objective is for every capability to eventually become
+Neo-assisted.
+
+==============================================================================
+CAPABILITY DEPENDENCIES
+==============================================================================
+
+Capabilities should depend on as few others as possible.
+
+Preferred
+
+Identity
+
+↓
+
+Session
+
+↓
+
+Ordering
+
+↓
+
+Billing
+
+↓
+
+Payments
+
+Avoid
+
+Payments
+
+↓
+
+Ordering
+
+↓
+
+Venue
+
+↓
+
+Identity
+
+Business flow should remain intuitive.
+
+==============================================================================
+OPTIONAL CAPABILITIES
+==============================================================================
+
+Not every venue requires every capability.
+
+Restaurant
+
+Ordering
+
+Kitchen
+
+Billing
+
+Hotel
+
+Reservations
+
+Rooms
+
+Housekeeping
+
+Festival
+
+Vendors
+
+Zones
+
+Ticket Validation
+
+Golf Club
+
+Course Bookings
+
+Halfway House
+
+Competitions
+
+Experience Profiles determine which capabilities become active.
+
+==============================================================================
+CAPABILITY DISCOVERY
+==============================================================================
+
+Every capability should answer
+
+What problem do I solve?
+
+Who owns me?
+
+Which events do I publish?
+
+Which events do I consume?
+
+Which APIs do I expose?
+
+Which data do I own?
+
+Can Neo observe me?
+
+Can I operate offline?
+
+How am I configured?
+
+==============================================================================
+FUTURE CAPABILITIES
+==============================================================================
+
+The platform should support future expansion.
+
+Examples
+
+Digital Keys
+
+Facial Recognition
+
+Smart Tables
+
+IoT Devices
+
+Wearables
+
+Augmented Reality
+
+AI Concierge
+
+Dynamic Pricing
+
+Robot Service
+
+Autonomous Checkout
+
+New capabilities should plug into the platform rather than requiring
+architectural redesign.
+
+==============================================================================
+CAPABILITY GOVERNANCE
+==============================================================================
+
+Every new capability requires
+
+Business justification
+
+Architecture review
+
+Domain ownership
+
+Published documentation
+
+API contract
+
+Event catalogue
+
+Neo integration assessment
+
+Security review
+
+Observability plan
+
+Capabilities are long-lived platform assets.
+
+Treat them accordingly.
+
+==============================================================================
+PLATFORM MAP
+==============================================================================
+
+                          +----------------------+
+                          |   Identity Platform  |
+                          +----------+-----------+
+                                     |
+                          +----------v-----------+
+                          | Organisation Layer   |
+                          +----------+-----------+
+                                     |
+                          +----------v-----------+
+                          | Venue Management     |
+                          +----------+-----------+
+                                     |
+                          +----------v-----------+
+                          | Guest Sessions       |
+                          +----------+-----------+
+                                     |
+                 +-------------------+-------------------+
+                 |                   |                   |
+        +--------v------+   +--------v------+   +--------v------+
+        |   Ordering    |   |    Booking    |   | Notifications |
+        +--------+------+   +--------+------+   +--------+------+
+                 |                   |                   |
+                 +---------+---------+-------------------+
+                           |
+                    +------v-------+
+                    |   Billing    |
+                    +------+-------+
+                           |
+                    +------v-------+
+                    |   Payments   |
+                    +------+-------+
+                           |
+                    +------v-------+
+                    | Analytics &  |
+                    |     Neo      |
+                    +------+-------+
+                           |
+                    +------v-------+
+                    | Integrations |
+                    +--------------+
+
+==============================================================================
+ARCHITECT'S NOTES
+==============================================================================
+
+Capabilities are the true building blocks of Lekki.
+
+Microservices may change.
+
+Frameworks may change.
+
+Cloud providers may change.
+
+Capabilities should remain stable.
+
+When planning any new feature, the first question should never be:
+
+"What service should we build?"
+
+Instead ask:
+
+"Which capability does this belong to?"
+
+If the answer is unclear, the design is probably unclear.
+
+A well-defined capability model ensures that Lekki continues to grow without
+becoming a collection of disconnected features.
+
+==============================================================================
+END OF DOCUMENT
+==============================================================================

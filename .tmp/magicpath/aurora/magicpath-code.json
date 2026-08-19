@@ -1,0 +1,29 @@
+{
+  "mode": "edit",
+  "componentId": "430603440092221440",
+  "projectId": "430602166831558656",
+  "selectedRevisionId": "430603440092221441",
+  "jobId": "430579524154048512-external-agent-430603913809502208",
+  "generatedName": "warm-pond-6582",
+  "name": "Aurora Atelier",
+  "dimensions": {
+    "width": 1440,
+    "height": 1400
+  },
+  "selectedImages": [],
+  "editableFiles": [
+    {
+      "path": "src/App.tsx",
+      "sha256": "3d551e5e44e2ed25b0e536ca5f2765be9670e93dbbc71372544230e7470eaa71"
+    },
+    {
+      "path": "src/components/generated/AuroraAtelier.tsx",
+      "sha256": "82a651ac3ec3622cf61510dfa4e975ddc9c4c65ca0a199470cbd1f589362e6ae"
+    },
+    {
+      "path": "src/index.css",
+      "sha256": "3af92f9f6b5e93767188381bda25e0b3e26d2885569cffb8b46ff6d8966b1860"
+    }
+  ],
+  "baseRevisionId": "430603440092221441"
+}

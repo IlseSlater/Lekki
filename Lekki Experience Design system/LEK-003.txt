@@ -1,0 +1,453 @@
+# ============================================================================
+# LEKKI PLATFORM
+# SOFTWARE ARCHITECTURE BOOK
+# ============================================================================
+
+Document ID
+    LEK-003
+
+Document Title
+    Guiding Principles
+
+Status
+    Draft
+
+Version
+    1.0
+
+Owner
+    Product Architecture
+
+Classification
+    Foundational
+
+Related Documents
+
+    LEK-000 Project Overview
+    LEK-001 Vision
+    LEK-002 Product Philosophy
+    LEK-010 Business Architecture
+
+==============================================================================
+EXECUTIVE SUMMARY
+==============================================================================
+
+Every successful software platform eventually reaches a point where individual
+features become less important than the principles used to build them.
+
+When principles remain consistent, products remain consistent.
+
+When principles change depending on circumstance, complexity increases.
+
+The purpose of this document is to establish the permanent principles that
+guide every future decision within Lekki.
+
+These principles are intended to outlive technologies, frameworks and
+individual contributors.
+
+If a future feature conflicts with these principles, the feature should be
+challenged before implementation.
+
+==============================================================================
+PRINCIPLE 1
+GUEST FIRST
+==============================================================================
+
+Every decision begins with the guest experience.
+
+The guest is the reason the platform exists.
+
+Managers, administrators and staff are equally important, but their tools
+exist to support the guest journey.
+
+Questions to ask
+
+• Does this reduce guest effort?
+
+• Does this remove confusion?
+
+• Does this reduce waiting?
+
+• Does this improve confidence?
+
+If the answer is no, the feature requires further justification.
+
+------------------------------------------------------------------------------
+Decision Rule
+
+Always optimise for the guest first.
+
+==============================================================================
+
+PRINCIPLE 2
+ONE PLATFORM
+==============================================================================
+
+Lekki is one platform.
+
+Not many applications.
+
+Restaurants.
+
+Hotels.
+
+Festivals.
+
+Golf clubs.
+
+Casinos.
+
+Conference centres.
+
+Cruise ships.
+
+They all share one platform.
+
+Only the configuration changes.
+
+------------------------------------------------------------------------------
+Decision Rule
+
+Never create a new application because a venue type differs.
+
+Create a new Experience Profile instead.
+
+==============================================================================
+
+PRINCIPLE 3
+VENUE AGNOSTIC
+==============================================================================
+
+Nothing in the architecture should assume
+
+Restaurant
+
+Hotel
+
+Festival
+
+Coffee Shop
+
+Any venue-specific terminology should exist only inside an Experience Profile.
+
+The platform itself remains neutral.
+
+------------------------------------------------------------------------------
+Examples
+
+Restaurant
+
+Table
+
+Hotel
+
+Room
+
+Festival
+
+Zone
+
+Golf Club
+
+Halfway House
+
+Architecture
+
+Venue Location
+
+------------------------------------------------------------------------------
+Decision Rule
+
+Generalise before specialising.
+
+==============================================================================
+
+PRINCIPLE 4
+CONFIGURE DON'T CODE
+==============================================================================
+
+Configuration scales.
+
+Custom software does not.
+
+Whenever a customer requests a feature ask
+
+Can this become configuration?
+
+Can another customer benefit?
+
+Can Neo configure this automatically?
+
+------------------------------------------------------------------------------
+Decision Rule
+
+Configuration should always be preferred over custom development.
+
+==============================================================================
+
+PRINCIPLE 5
+DOCUMENT BEFORE BUILDING
+==============================================================================
+
+Architecture exists before implementation.
+
+Every feature should answer
+
+Why?
+
+Who benefits?
+
+What problem is solved?
+
+What alternatives were rejected?
+
+Future engineers should understand every decision without interviewing
+the original team.
+
+------------------------------------------------------------------------------
+Decision Rule
+
+Undocumented features should not be considered complete.
+
+==============================================================================
+
+PRINCIPLE 6
+OFFLINE IS A GUARANTEE
+==============================================================================
+
+Connectivity is unreliable.
+
+Operations are not.
+
+Guests should continue interacting.
+
+Staff should continue serving.
+
+Managers should continue operating.
+
+Synchronization should occur automatically whenever possible.
+
+------------------------------------------------------------------------------
+Decision Rule
+
+Offline support is part of reliability.
+
+Not an optional enhancement.
+
+==============================================================================
+
+PRINCIPLE 7
+AI ASSISTS
+HUMANS DECIDE
+==============================================================================
+
+Neo exists to improve decisions.
+
+Neo does not replace responsibility.
+
+Neo may
+
+Recommend
+
+Predict
+
+Analyse
+
+Explain
+
+Prepare
+
+Optimise
+
+Humans approve.
+
+------------------------------------------------------------------------------
+Decision Rule
+
+High-impact business decisions always require human approval.
+
+==============================================================================
+
+PRINCIPLE 8
+INTEGRATE FIRST
+==============================================================================
+
+Businesses already own software.
+
+Accounting.
+
+POS.
+
+Payments.
+
+Inventory.
+
+Reservations.
+
+CRM.
+
+Lekki should complement existing investments before replacing them.
+
+------------------------------------------------------------------------------
+Decision Rule
+
+Prefer open integration over platform lock-in.
+
+==============================================================================
+
+PRINCIPLE 9
+ONE IDENTITY
+==============================================================================
+
+Guests own their identity.
+
+Not venues.
+
+The guest signs in once.
+
+Their history follows them.
+
+Their preferences follow them.
+
+Their payment methods follow them.
+
+Venue data remains isolated.
+
+------------------------------------------------------------------------------
+Decision Rule
+
+Identity is global.
+
+Business data is tenant-specific.
+
+==============================================================================
+
+PRINCIPLE 10
+QR PROVIDES CONTEXT
+==============================================================================
+
+A QR code is not merely a hyperlink.
+
+It represents context.
+
+Organisation
+
+Venue
+
+Location
+
+Experience
+
+Language
+
+Permissions
+
+Capabilities
+
+Everything downstream adapts automatically.
+
+------------------------------------------------------------------------------
+Decision Rule
+
+Never ask the guest questions the QR already answered.
+
+==============================================================================
+
+PRINCIPLE 11
+SIMPLE WINS
+==============================================================================
+
+Complex software impresses developers.
+
+Simple software delights customers.
+
+Every screen.
+
+Every workflow.
+
+Every interaction.
+
+Should become simpler over time.
+
+------------------------------------------------------------------------------
+Decision Rule
+
+Whenever two solutions exist, choose the simpler one.
+
+==============================================================================
+
+PRINCIPLE 12
+BUILD FOR TEN YEARS
+==============================================================================
+
+Quick solutions become permanent.
+
+Temporary workarounds become architecture.
+
+Every decision should be evaluated as though the platform will still be
+running ten years from today.
+
+------------------------------------------------------------------------------
+Decision Rule
+
+Optimise for longevity rather than immediate convenience.
+
+==============================================================================
+
+ARCHITECTURAL CHECKLIST
+==============================================================================
+
+Every pull request.
+
+Every feature.
+
+Every architecture review.
+
+Should answer the following questions.
+
+✓ Does this improve the guest experience?
+
+✓ Is it venue agnostic?
+
+✓ Can it be configured?
+
+✓ Is it documented?
+
+✓ Can Neo assist?
+
+✓ Does it scale?
+
+✓ Does it integrate?
+
+✓ Does it simplify operations?
+
+✓ Does it increase reliability?
+
+✓ Would we still build it this way in five years?
+
+If multiple answers are "No", the proposal should be reconsidered.
+
+==============================================================================
+
+THE CONSTITUTION OF LEKKI
+==============================================================================
+
+Technology changes.
+
+Programming languages change.
+
+Frameworks change.
+
+Cloud providers change.
+
+These principles should not.
+
+They represent the foundation upon which every future version of Lekki
+will be built.
+
+If we remain faithful to these principles, the platform will remain
+consistent, understandable and trusted for many years to come.
+
+==============================================================================
+END OF DOCUMENT
+==============================================================================

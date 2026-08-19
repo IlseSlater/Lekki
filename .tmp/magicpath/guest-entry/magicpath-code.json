@@ -1,0 +1,29 @@
+{
+  "mode": "edit",
+  "componentId": "430606259323015168",
+  "projectId": "430602166831558656",
+  "selectedRevisionId": "430606259323015169",
+  "jobId": "430579524154048512-external-agent-430613832126328832",
+  "generatedName": "happy-autumn-5932",
+  "name": "LEOS Guest Entry",
+  "dimensions": {
+    "width": 430,
+    "height": 920
+  },
+  "selectedImages": [],
+  "editableFiles": [
+    {
+      "path": "src/App.tsx",
+      "sha256": "e9f21a4757f3211477cfec7ddb9860d17bbe8decc3e545587282172054b2e283"
+    },
+    {
+      "path": "src/components/generated/LEOSGuestEntry.tsx",
+      "sha256": "d23a7edd94e1be526bfebe00e8ef64fbdbd4aa8682c141436a6f3f948a9bd2e3"
+    },
+    {
+      "path": "src/index.css",
+      "sha256": "f49b4d0e5e6eb4b7dc11f53bbccefa6299ddb49dc6b0c303178030f966823619"
+    }
+  ],
+  "baseRevisionId": "430606259323015169"
+}

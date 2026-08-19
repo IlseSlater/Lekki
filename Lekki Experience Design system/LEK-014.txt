@@ -1,0 +1,655 @@
+# ============================================================================
+# LEKKI PLATFORM
+# SOFTWARE ARCHITECTURE BOOK
+# ============================================================================
+
+Document ID
+    LEK-014
+
+Document Title
+    Identity & Authentication Architecture
+
+Status
+    Approved Foundation
+
+Version
+    1.0
+
+Owner
+    Chief Architect
+
+Classification
+    Core Platform
+
+Related Documents
+
+    LEK-005 Ubiquitous Language
+    LEK-007 Domain Driven Design
+    LEK-010 Organisation Architecture
+    LEK-013 Guest Session Architecture
+    LEK-018 Payment Architecture
+
+==============================================================================
+PURPOSE
+==============================================================================
+
+Identity is one of the most valuable assets within the Lekki platform.
+
+Rather than each organisation maintaining separate customer accounts,
+Lekki provides a unified identity platform.
+
+Guests authenticate once.
+
+Their identity follows them across every participating organisation.
+
+Businesses continue owning their operational data.
+
+Guests own their digital identity.
+
+==============================================================================
+
+CORE PRINCIPLES
+==============================================================================
+
+Identity belongs to the Guest.
+
+Not the Venue.
+
+Not the Organisation.
+
+Not the Device.
+
+Authentication is global.
+
+Authorisation is contextual.
+
+Guest history is portable.
+
+Business data remains isolated.
+
+==============================================================================
+
+IDENTITY MODEL
+==============================================================================
+
+Every identity contains
+
+Identity ID
+
+Guest Profile
+
+Authentication Methods
+
+Verified Contact Information
+
+Devices
+
+Preferences
+
+Languages
+
+Accessibility Preferences
+
+Payment Tokens
+
+Loyalty Memberships
+
+Consent Records
+
+Neo Profile
+
+==============================================================================
+
+IDENTITY HIERARCHY
+==============================================================================
+
+Platform
+
+↓
+
+Identity
+
+↓
+
+Guest
+
+↓
+
+Sessions
+
+↓
+
+Orders
+
+↓
+
+Bills
+
+↓
+
+Payments
+
+Identity exists independently of any Venue.
+
+==============================================================================
+
+AUTHENTICATION METHODS
+==============================================================================
+
+Lekki should support multiple authentication mechanisms.
+
+Passkeys (Preferred)
+
+Magic Link
+
+Email
+
+Mobile OTP
+
+Social Login
+
+Apple
+
+Google
+
+Microsoft
+
+Enterprise Identity Providers
+
+Guest Anonymous Session
+
+Future biometric authentication
+
+Authentication methods should be additive.
+
+Never mutually exclusive.
+
+==============================================================================
+
+PASSKEY FIRST
+==============================================================================
+
+Passkeys should become the preferred authentication method.
+
+Advantages
+
+No passwords.
+
+Phishing resistant.
+
+Device secure.
+
+Fast sign-in.
+
+Cross-device support.
+
+Native browser support.
+
+Excellent PWA compatibility.
+
+The platform should encourage Passkeys by default.
+
+==============================================================================
+
+DEVICE REGISTRATION
+==============================================================================
+
+Every trusted device receives
+
+Device ID
+
+Registration Timestamp
+
+Platform
+
+Operating System
+
+Security Status
+
+Push Token
+
+Last Activity
+
+Trusted devices simplify future authentication.
+
+==============================================================================
+
+IDENTITY VERIFICATION
+==============================================================================
+
+Some capabilities require stronger verification.
+
+Examples
+
+Payment
+
+Age Restricted Products
+
+Large Transactions
+
+Business Administration
+
+Identity verification levels
+
+Level 0
+
+Anonymous
+
+Level 1
+
+Authenticated
+
+Level 2
+
+Verified Contact
+
+Level 3
+
+Government Identity
+
+Level 4
+
+Business Verification
+
+Capabilities define required verification.
+
+==============================================================================
+
+GUEST PROFILE
+==============================================================================
+
+Guest profiles contain
+
+Preferred Name
+
+Display Name
+
+Pronouns
+
+Language
+
+Country
+
+Currency Preference
+
+Accessibility Requirements
+
+Dietary Preferences
+
+Favourite Venues
+
+Notification Preferences
+
+Marketing Preferences
+
+The profile belongs to the Guest.
+
+==============================================================================
+
+PERSONAL PREFERENCES
+==============================================================================
+
+Preferences should travel with the Guest.
+
+Examples
+
+Dark Mode
+
+Language
+
+Accessibility
+
+Favourite Payment Method
+
+Receipt Preference
+
+Notification Timing
+
+Neo Communication Style
+
+Businesses may personalise experiences.
+
+They do not own preferences.
+
+==============================================================================
+
+PAYMENT TOKENS
+==============================================================================
+
+Payment credentials belong to the Guest.
+
+Lekki stores
+
+Payment Tokens
+
+Provider References
+
+Billing Preferences
+
+Never raw card information.
+
+Tokenisation is mandatory.
+
+==============================================================================
+
+AUTHORISED DEVICES
+==============================================================================
+
+Guests may manage trusted devices.
+
+Capabilities include
+
+Rename Device
+
+Remove Device
+
+Temporary Device
+
+Suspend Device
+
+View Sign-In History
+
+Revoke Access
+
+==============================================================================
+
+STAFF IDENTITY
+==============================================================================
+
+Staff identities differ from Guest identities.
+
+Staff belong to Organisations.
+
+Guests belong to the Platform.
+
+Staff permissions derive from Roles.
+
+Guest permissions derive from Sessions.
+
+==============================================================================
+
+SESSION AUTHENTICATION
+==============================================================================
+
+Identity enables Session participation.
+
+Guests may
+
+Create Sessions
+
+Join Sessions
+
+Transfer Sessions
+
+Own Sessions
+
+Pay Bills
+
+Receive Notifications
+
+Authentication should not interrupt the guest journey.
+
+==============================================================================
+
+CONSENT MANAGEMENT
+==============================================================================
+
+Identity stores
+
+Privacy Consent
+
+Marketing Consent
+
+Location Consent
+
+Analytics Consent
+
+Communication Preferences
+
+Consent history must be auditable.
+
+==============================================================================
+
+LOYALTY
+==============================================================================
+
+Loyalty is attached to Identity.
+
+Not Organisations.
+
+Examples
+
+Global Lekki Rewards
+
+Organisation Rewards
+
+Partner Rewards
+
+Campaign Rewards
+
+Guests carry loyalty between supported organisations.
+
+==============================================================================
+
+IDENTITY EVENTS
+==============================================================================
+
+Identity publishes events.
+
+Examples
+
+IdentityCreated
+
+GuestAuthenticated
+
+PasskeyRegistered
+
+DeviceTrusted
+
+DeviceRemoved
+
+EmailVerified
+
+ProfileUpdated
+
+ConsentChanged
+
+PaymentMethodAdded
+
+These events feed Neo and Analytics.
+
+==============================================================================
+
+NEO PERSONALISATION
+==============================================================================
+
+Neo understands Identity.
+
+Neo remembers
+
+Preferred Language
+
+Favourite Venues
+
+Dietary Preferences
+
+Accessibility
+
+Communication Style
+
+Previous Interactions
+
+Neo improves over time.
+
+Not by storing more data.
+
+By understanding behaviour.
+
+==============================================================================
+
+SECURITY MODEL
+==============================================================================
+
+Identity Platform follows Zero Trust principles.
+
+Every request evaluates
+
+Authentication
+
+Device Trust
+
+Session
+
+Permissions
+
+Risk Score
+
+Location
+
+Behaviour
+
+Authentication is continuous.
+
+Not one-time.
+
+==============================================================================
+
+PRIVACY
+==============================================================================
+
+Identity should follow Privacy by Design.
+
+Principles
+
+Data Minimisation
+
+Encryption
+
+Purpose Limitation
+
+Right to Erasure
+
+Data Portability
+
+Consent Tracking
+
+Transparent Processing
+
+Privacy is a platform capability.
+
+==============================================================================
+
+OFFLINE AUTHENTICATION
+==============================================================================
+
+Trusted devices may authenticate offline.
+
+Capabilities include
+
+Cached Credentials
+
+Passkey Validation
+
+Offline Session Tokens
+
+Queued Identity Events
+
+Limited Offline Permissions
+
+Security policies determine offline duration.
+
+==============================================================================
+
+ARCHITECTURAL DECISIONS
+==============================================================================
+
+ADR-014-001
+
+Identity belongs to the Platform.
+
+ADR-014-002
+
+Businesses never own Guest identities.
+
+ADR-014-003
+
+Passkeys are the preferred authentication method.
+
+ADR-014-004
+
+Authentication is global.
+
+Authorisation is contextual.
+
+ADR-014-005
+
+Payment methods belong to Guests.
+
+==============================================================================
+
+SUCCESS CRITERIA
+==============================================================================
+
+Guests should be able to
+
+Sign in once.
+
+Visit any participating Venue.
+
+Join Sessions instantly.
+
+Pay securely.
+
+Receive personalised experiences.
+
+Carry preferences across Organisations.
+
+Never create duplicate accounts.
+
+==============================================================================
+
+FUTURE EVOLUTION
+==============================================================================
+
+Future capabilities include
+
+Digital Identity Wallet
+
+Government Identity Integration
+
+Biometric Authentication
+
+Digital Driver's Licences
+
+Verifiable Credentials
+
+Age Verification Tokens
+
+Cross-Border Identity
+
+Decentralised Identity (DID)
+
+AI Risk Scoring
+
+==============================================================================
+
+ARCHITECT'S NOTES
+==============================================================================
+
+Identity is far more than authentication.
+
+Identity is the relationship between a Guest and the Lekki platform.
+
+By separating identity from Organisations, Lekki creates a persistent digital
+companion that follows Guests throughout their journey, while respecting
+business ownership boundaries and privacy requirements.
+
+This approach enables frictionless onboarding, seamless payments,
+personalised experiences and intelligent assistance from Neo, all without
+locking Guests into a single business.
+
+Identity is the foundation upon which trust is built.
+
+==============================================================================
+END OF DOCUMENT
+==============================================================================

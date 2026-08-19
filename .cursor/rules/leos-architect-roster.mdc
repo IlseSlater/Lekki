@@ -1,0 +1,26 @@
+---
+description: LEOS Specialist Architecture Framework — when to invoke domain skills
+alwaysApply: false
+---
+
+# Specialist Architecture Framework
+
+Invoke matching skills under `.cursor/skills/` (see README). All inherit **THE LEOS PLATFORM CONSTITUTION**.
+
+| Signal | Invoke |
+|--------|--------|
+| Platform / Pack boundary · ADR · LEK | `@chief-architect` · `@platform-architect` · `@pack-architect` |
+| Guest Shell · QR · HCI 3 questions | `@experience-architect` |
+| Studio dual-pane · 1Q/1A · gold CTA | `@studio-architect` |
+| Task boards · Mint/Coral/Blue · sticky CTA | `@operate-architect` |
+| Grow calm metrics | `@growth-architect` |
+| LVES tokens · layout | `@ux-architect` |
+| Motion 160/220/280/360 | `@motion-architect` |
+| WCAG AA | `@accessibility-architect` |
+| PaymentCapability · basis-points · no SDK leak | `@payments-architect` |
+| Outbox · audit · truth | `@data-architect` |
+| Identity · RBAC · vault | `@security-architect` |
+| Neo · Context Dock | `@ai-architect` |
+| Playwright · evidence · HCI gate | `@qa-architect` |
+
+Do **not** invent LEKs or expand LEO. EO still owns delivery sequencing.

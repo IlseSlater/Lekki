@@ -1,0 +1,29 @@
+{
+  "mode": "edit",
+  "componentId": "430606258958143488",
+  "projectId": "430602166831558656",
+  "selectedRevisionId": "430606258958143489",
+  "jobId": "430579524154048512-external-agent-430613733845393408",
+  "generatedName": "proud-stream-8564",
+  "name": "LEOS Studio Onboarding",
+  "dimensions": {
+    "width": 1440,
+    "height": 1080
+  },
+  "selectedImages": [],
+  "editableFiles": [
+    {
+      "path": "src/App.tsx",
+      "sha256": "2728e717bffcf3a6df52db4f0ccf4900ff4e473b26ced642085665d2f13c8435"
+    },
+    {
+      "path": "src/components/generated/LEOSStudioOnboarding.tsx",
+      "sha256": "ed8ebe7b250760196d36f54e074d10eb0f15d1d13328758dfaacd2a237588b53"
+    },
+    {
+      "path": "src/index.css",
+      "sha256": "3af92f9f6b5e93767188381bda25e0b3e26d2885569cffb8b46ff6d8966b1860"
+    }
+  ],
+  "baseRevisionId": "430606258958143489"
+}

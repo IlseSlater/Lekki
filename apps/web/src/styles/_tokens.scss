@@ -1,0 +1,95 @@
+/* LEKKI Visual Language v2 — warm light · gold only brand color
+   Personality: warm, calm, human, premium, confident, effortless.
+   Gold is reserved for logo, primary actions, progress, confirmations.
+*/
+
+:root {
+  /* Brand Gold */
+  --leos-gold: #d7a14a;
+  --leos-gold-hover: #c98f33;
+  --leos-gold-light: #e8c178;
+  --leos-gold-dark: #a96f20;
+  --leos-gold-soft: rgba(215, 161, 74, 0.14);
+
+  /* Surfaces */
+  --leos-warm-white: #faf7f2;
+  --leos-surface: #ffffff;
+  --leos-surface-secondary: #f4efe8;
+  --leos-warm-sand: #faf7f2;
+  --leos-warm-sand-dark: #e7e2db;
+  --leos-warm-sand-focus: #eee7de;
+  --leos-surface-ambient: #faf7f2;
+
+  /* Text — never pure black */
+  --leos-ink: #1b2230;
+  --leos-ink-body: #525866;
+  --leos-ink-secondary: #6b7280;
+  --leos-ink-muted: #8f96a3;
+  --leos-ink-caption: #8a9099;
+  --leos-neutral-dark: #1b2230;
+  --leos-neutral-muted: #6b7280;
+  --leos-neutral-subtle: #8f96a3;
+  --leos-on-brand: #ffffff;
+
+  /* Borders — never darker than this */
+  --leos-border: #e7e2db;
+  --leos-border-card: #eee7de;
+
+  /* Semantic (supporting — not brand) */
+  --leos-success: #4f8a6b;
+  --leos-success-bg: rgba(79, 138, 107, 0.12);
+  --leos-warning: #d9a441;
+  --leos-warning-bg: rgba(217, 164, 65, 0.14);
+  --leos-danger: #c65b52;
+  --leos-danger-bg: rgba(198, 91, 82, 0.12);
+  --leos-info: #4f7daf;
+  --leos-info-bg: rgba(79, 125, 175, 0.12);
+
+  /* Icons */
+  --leos-icon: #6b7280;
+  --leos-icon-active: #d7a14a;
+  --leos-icon-disabled: #cfc7bb;
+
+  /* Geometry */
+  --leos-radius-card: 20px;
+  --leos-radius-button: 12px;
+  --leos-radius-input: 12px;
+  --leos-radius-pill: 999px;
+
+  /* Spacing */
+  --leos-space-xs: 0.5rem;
+  --leos-space-sm: 0.75rem;
+  --leos-space-md: 1rem;
+  --leos-space-lg: 1.5rem;
+  --leos-space-xl: 2rem;
+  --leos-space-2xl: 3rem;
+
+  /* Elevation — warm light, not floating black */
+  --leos-shadow: 0 10px 30px rgba(45, 30, 15, 0.08);
+  --leos-shadow-card: 0 10px 30px rgba(45, 30, 15, 0.08);
+  --leos-shadow-soft: 0 4px 16px rgba(45, 30, 15, 0.06);
+
+  /* Gradients */
+  --leos-gradient-hero: linear-gradient(180deg, #faf7f2 0%, #f2e4cf 100%);
+  --leos-gradient-gold: linear-gradient(135deg, #e8c178 0%, #d7a14a 100%);
+
+  /* Motion — fade, flow, rise, settle */
+  --leos-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --leos-duration: 220ms;
+
+  /* Typography */
+  --leos-font-sans: 'Sora', 'Inter', system-ui, -apple-system, sans-serif;
+  --leos-font-display: 'Fraunces', Georgia, serif;
+
+  /* Touch */
+  --leos-touch-min: 44px;
+
+  /* —— Compatibility aliases (old emerald / cyan → gold system) —— */
+  --leos-emerald: var(--leos-gold);
+  --leos-emerald-dark: var(--leos-gold-hover);
+  --leos-emerald-soft: var(--leos-gold-soft);
+  --leos-on-emerald: var(--leos-on-brand);
+  --leos-electric-cyan: var(--leos-gold);
+  --leos-electric-cyan-soft: var(--leos-gold-soft);
+  --leos-shadow-emerald: var(--leos-shadow);
+}

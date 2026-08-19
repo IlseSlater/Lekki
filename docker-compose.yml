@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: leos-postgres
+    environment:
+      POSTGRES_USER: lekki
+      POSTGRES_PASSWORD: lekki
+      POSTGRES_DB: leos
+    ports:
+      - '5432:5432'
+    volumes:
+      - leos_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U lekki -d leos']
+      interval: 3s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  leos_pgdata:

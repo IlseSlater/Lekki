@@ -1,0 +1,25 @@
+{
+  "mode": "edit",
+  "componentId": "430605987733450752",
+  "projectId": "430602166831558656",
+  "selectedRevisionId": "430609396549160960",
+  "baseRevisionId": "430609396549160960",
+  "jobId": "430579524154048512-external-agent-430613919325896704",
+  "generatedName": "fairly-storm-9961",
+  "name": "LEOS Studio Home",
+  "selectedImages": [],
+  "editableFiles": [
+    {
+      "path": "src/App.tsx",
+      "sha256": "4fa3a070a9be62eb76650ba9791299e6dfa3c3a35c14455033b859193b7e3b2a"
+    },
+    {
+      "path": "src/components/generated/LEOSStudioHome.tsx",
+      "sha256": "450b6428f00ff53e4c35a10d0facfa018f04f011d5867995747ee88ebdf4396d"
+    },
+    {
+      "path": "src/index.css",
+      "sha256": "42103b1e08f53fb0341f2ad8743bedfca72110f2b29ab364f76885eeb8b97f9c"
+    }
+  ]
+}

@@ -1,0 +1,369 @@
+# ============================================================================
+# LEKKI PLATFORM
+# SOFTWARE ARCHITECTURE BOOK
+# ============================================================================
+
+Document ID
+    LEK-000
+
+Document Title
+    Project Overview
+
+Status
+    Draft
+
+Version
+    0.1
+
+Owner
+    Product Architecture
+
+Last Updated
+    July 2026
+
+Related Documents
+
+    LEK-001 Vision
+    LEK-002 Product Philosophy
+    LEK-003 Guiding Principles
+    LEK-010 Business Architecture
+
+==============================================================================
+EXECUTIVE SUMMARY
+==============================================================================
+
+Lekki is a next-generation venue platform designed to transform how guests,
+staff and venue operators interact during a shared physical experience.
+
+Unlike traditional hospitality software that is built specifically for a
+restaurant, hotel or event, Lekki has been designed from the beginning to be
+Venue Agnostic.
+
+A venue is simply a place where people interact.
+
+That place may be
+
+• Restaurant
+• Coffee Shop
+• Sports Bar
+• Music Festival
+• Conference
+• Hotel
+• Casino
+• Winery
+• Golf Estate
+• Stadium
+• Theme Park
+• Airport Lounge
+
+Lekki provides one platform capable of adapting itself to every venue through
+configuration rather than custom software development.
+
+The objective is not to build another POS system.
+
+The objective is to build the operating system for physical guest experiences.
+
+------------------------------------------------------------------------------
+MISSION
+------------------------------------------------------------------------------
+
+Remove friction from every guest interaction.
+
+Guests should never need to wonder
+
+    "What app do I need?"
+
+    "Where do I pay?"
+
+    "Who do I ask?"
+
+    "Which menu do I use?"
+
+The venue should identify itself immediately after scanning a QR code and the
+entire experience should adapt automatically.
+
+------------------------------------------------------------------------------
+VISION
+------------------------------------------------------------------------------
+
+One application.
+
+Every venue.
+
+Any experience.
+
+------------------------------------------------------------------------------
+BACKGROUND
+------------------------------------------------------------------------------
+
+Lekki evolved from an existing production restaurant platform.
+
+During development it became clear that most of the business logic was not
+actually restaurant specific.
+
+Examples include
+
+• Guest sessions
+• Orders
+• Payments
+• Notifications
+• QR Codes
+• Live updates
+• User identities
+• Analytics
+• Staff workflows
+
+Only the terminology changed.
+
+A restaurant has tables.
+
+A hotel has rooms.
+
+A festival has zones.
+
+A stadium has sections.
+
+The interaction pattern remains almost identical.
+
+Instead of building individual products for every industry, Lekki abstracts
+the common behaviour into a configurable platform.
+
+------------------------------------------------------------------------------
+THE PROBLEM
+------------------------------------------------------------------------------
+
+Today's venue software suffers from several common problems.
+
+Every industry purchases different software.
+
+Guests install different applications.
+
+Payment experiences differ.
+
+Staff require extensive training.
+
+Integrations are duplicated.
+
+Customer identities are fragmented.
+
+Venue operators become locked into one vendor.
+
+Lekki aims to solve these problems through a unified architecture.
+
+------------------------------------------------------------------------------
+THE LEKKI APPROACH
+------------------------------------------------------------------------------
+
+Lekki is based on six core ideas.
+
+1.
+Identity should belong to the guest.
+
+Not the venue.
+
+A guest should use one account across every venue.
+
+2.
+Experiences should be configured.
+
+Not developed.
+
+3.
+The QR code provides context.
+
+The application changes automatically.
+
+4.
+Offline capability is mandatory.
+
+Not optional.
+
+5.
+Artificial Intelligence should assist people.
+
+Not replace them.
+
+6.
+Existing business systems should integrate.
+
+Not be replaced immediately.
+
+------------------------------------------------------------------------------
+PRODUCT PHILOSOPHY
+------------------------------------------------------------------------------
+
+Lekki believes software should disappear.
+
+The guest should think about dinner.
+
+Not technology.
+
+The waiter should think about service.
+
+Not software.
+
+Managers should think about running their business.
+
+Not configuring systems.
+
+Technology exists to reduce cognitive load.
+
+------------------------------------------------------------------------------
+TARGET USERS
+------------------------------------------------------------------------------
+
+Primary Users
+
+• Guests
+• Staff
+• Managers
+• Owners
+• Administrators
+
+Secondary Users
+
+• Accountants
+• Event Organisers
+• Franchise Groups
+• Finance Teams
+• Support Staff
+• Integrators
+
+------------------------------------------------------------------------------
+PLATFORM CAPABILITIES
+------------------------------------------------------------------------------
+
+The platform provides capabilities rather than applications.
+
+Capabilities include
+
+• Authentication
+
+• QR Experiences
+
+• Guest Sessions
+
+• Orders
+
+• Billing
+
+• Payments
+
+• Notifications
+
+• Loyalty
+
+• Analytics
+
+• Artificial Intelligence
+
+• Integrations
+
+• Reporting
+
+• Administration
+
+Each capability can be enabled or disabled depending on the venue profile.
+
+------------------------------------------------------------------------------
+DESIGN PHILOSOPHY
+------------------------------------------------------------------------------
+
+Every architectural decision should satisfy at least one of these objectives.
+
+Reduce friction.
+
+Increase automation.
+
+Improve guest experience.
+
+Reduce staff training.
+
+Reduce implementation effort.
+
+Improve scalability.
+
+Increase platform flexibility.
+
+Preserve business knowledge.
+
+------------------------------------------------------------------------------
+DOCUMENTATION STRATEGY
+------------------------------------------------------------------------------
+
+Documentation is considered part of the product.
+
+Every architectural decision must be documented.
+
+Every business rule must be documented.
+
+Every major design decision requires justification.
+
+Every feature should explain
+
+WHY it exists
+
+WHAT problem it solves
+
+HOW it works
+
+HOW it evolves
+
+This documentation should allow a new engineering team to understand the
+entire platform without requiring tribal knowledge.
+
+------------------------------------------------------------------------------
+PROJECT PRINCIPLES
+------------------------------------------------------------------------------
+
+The following principles govern the project.
+
+Venue Agnostic
+
+Configure Don't Code
+
+Documentation First
+
+Architecture Before Implementation
+
+Offline First
+
+AI Assisted
+
+Integration Friendly
+
+Cloud Native
+
+Security By Design
+
+Guest First
+
+------------------------------------------------------------------------------
+SUCCESS CRITERIA
+------------------------------------------------------------------------------
+
+A successful implementation of Lekki will allow
+
+A guest to install one application.
+
+Visit any participating venue.
+
+Scan one QR code.
+
+Immediately receive the correct experience.
+
+Order.
+
+Interact.
+
+Pay.
+
+Leave.
+
+Without learning new software.
+
+That is the benchmark against which every future feature should be measured.
+
+------------------------------------------------------------------------------
+END OF DOCUMENT
+------------------------------------------------------------------------------

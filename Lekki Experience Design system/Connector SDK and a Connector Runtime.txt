@@ -1,0 +1,572 @@
+I think this is where Lekki can become much bigger than just another SaaS product.
+
+I wouldn't hardcode integrations.
+
+I would build a Connector SDK and a Connector Runtime, exactly like Shopify Apps, Stripe Apps or VS Code Extensions.
+
+This means Lekki doesn't own all connectors. Partners, banks, accounting vendors, payment providers, and even customers can build them.
+
+The Architecture
+                 LEKKI PLATFORM
+
+                   Marketplace
+                        │
+       ┌────────────────┼────────────────┐
+       │                │                │
+ Payment Connector   Accounting      Messaging
+     Connector        Connector       Connector
+       │                │                │
+       └────────────────┼────────────────┘
+                        │
+               Connector Runtime
+                        │
+             Event & Workflow Engine
+                        │
+                  Lekki Platform
+
+The Runtime is what executes connectors.
+
+The Marketplace is just where they are discovered.
+
+What is a Connector?
+
+A connector is simply a packaged integration.
+
+Think of it like a plugin.
+
+Example
+
+Pilot Connector
+
+Contains
+
+Authentication
+
+API Client
+
+Webhook Handlers
+
+Actions
+
+Triggers
+
+Configuration UI
+
+Documentation
+
+Version
+
+Icon
+
+Permissions
+
+Restaurants simply install it.
+
+Every Connector Has a Manifest
+
+Something like
+
+name: Pilot Payments
+
+version: 1.2
+
+publisher: Pilot
+
+category: Payments
+
+permissions:
+
+- Payments.Read
+- Payments.Write
+- Refunds.Write
+
+supports:
+
+- Payment
+- Refund
+- Settlement
+
+events:
+
+- PaymentCompleted
+- RefundCompleted
+
+actions:
+
+- CreatePayment
+- RefundPayment
+- CheckSettlement
+
+webhooks:
+
+- payment.success
+- payment.failed
+
+configuration:
+
+- MerchantId
+- APIKey
+- Environment
+
+The platform immediately knows how to use it.
+
+Connector SDK
+
+I'd release an SDK.
+
+Example
+
+Lekki Connector SDK
+
+Authentication
+
+Connector Base Class
+
+Webhook Verification
+
+Logging
+
+Retry Framework
+
+Health Monitoring
+
+Configuration API
+
+Secrets API
+
+Testing Tools
+
+Deployment CLI
+
+A partner installs the SDK.
+
+Writes very little code.
+
+Publishes.
+
+Done.
+
+Connector Lifecycle
+
+Developer
+
+↓
+
+Create Connector
+
+↓
+
+Run Tests
+
+↓
+
+Package Connector
+
+↓
+
+Submit Marketplace
+
+↓
+
+Review
+
+↓
+
+Approve
+
+↓
+
+Publish
+
+↓
+
+Restaurant installs
+
+Exactly like an App Store.
+
+Example
+
+FNB Bank builds
+
+FNB Connector
+
+Features
+
+Tap to Pay
+
+Refunds
+
+Settlement
+
+Merchant Accounts
+
+Statements
+
+Reconciliation
+
+Open Banking
+
+FNB owns it.
+
+FNB maintains it.
+
+Restaurants install it.
+
+Connector Permissions
+
+Just like mobile apps.
+
+Example
+
+Requires
+
+Read Payments
+
+Create Payments
+
+Refund Payments
+
+Read Customers
+
+Receive Webhooks
+
+Restaurant approves.
+
+Connector can only do those things.
+
+Configuration
+
+Restaurant installs
+
+Pilot
+
+Configuration screen appears
+
+Merchant Number
+
+API Key
+
+Environment
+
+Settlement Account
+
+Webhook Secret
+
+Click
+
+Test Connection
+
+Green Tick
+
+Done.
+
+Connector UI
+
+Interesting idea...
+
+Connectors can expose configuration pages.
+
+Example
+
+Pilot
+
+Settings
+
+Merchant
+
+Devices
+
+Settlement
+
+Reporting
+
+Webhook Logs
+
+Transactions
+
+No code in Lekki.
+
+Connector provides it.
+
+Triggers
+
+Connector may publish events.
+
+Example
+
+Settlement Completed
+
+↓
+
+Connector
+
+↓
+
+Publishes
+
+SettlementCompleted
+
+↓
+
+Workflow Engine
+
+↓
+
+Accounting
+
+↓
+
+Neo
+
+↓
+
+Reporting
+
+Everything becomes event-driven.
+
+Actions
+
+Workflows call actions.
+
+Payment Completed
+
+↓
+
+Pilot
+
+Create Settlement
+
+↓
+
+Notify Xero
+
+↓
+
+Email Finance
+Health
+
+Every connector has
+
+Connected
+
+Latency
+
+Errors
+
+Retries
+
+Version
+
+Usage
+
+Authentication
+
+Rate Limits
+
+Neo monitors them.
+
+Versioning
+
+Marketplace
+
+Pilot
+
+1.0
+
+1.1
+
+1.2
+
+2.0
+
+Upgrade Available
+
+Restaurant decides when to upgrade.
+
+Marketplace
+
+Looks similar to
+
+Payments
+
+Accounting
+
+Communication
+
+CRM
+
+Inventory
+
+Marketing
+
+AI
+
+Government
+
+Hospitality
+
+Finance
+
+Each connector has
+
+Description
+
+Publisher
+
+Screenshots
+
+Version
+
+Reviews
+
+Downloads
+
+Verified Badge
+
+Support
+
+Documentation
+
+Permissions
+
+Very similar to Shopify.
+
+Verification
+
+I'd have
+
+Official
+
+Built by Lekki
+
+Verified
+
+Built by Partner
+
+NB
+
+Pilot
+
+Sage
+
+Microsoft
+
+Stripe
+
+Community
+
+Built by anyone.
+
+Needs approval.
+
+Revenue Model
+
+Here's where it gets interesting.
+
+Suppose Sage builds
+
+Sage Connector
+
+They sell it
+
+$20/month
+
+Revenue
+
+Customer
+
+↓
+
+Lekki Marketplace
+
+↓
+
+80%
+
+Sage
+
+↓
+
+20%
+
+Lekki
+
+Exactly like Shopify.
+
+Future
+
+Eventually
+
+Marketplace
+
+↓
+
+Connectors
+
+↓
+
+Workflow Templates
+
+↓
+
+Experience Profiles
+
+↓
+
+Neo Skills
+
+↓
+
+Reporting Dashboards
+
+↓
+
+Themes
+
+↓
+
+Industry Packs
+
+The Marketplace becomes an ecosystem.
+
+What I Would Add (This Is the Part I'm Most Excited About)
+
+I think connectors shouldn't just expose APIs.
+
+They should expose business capabilities.
+
+For example, the Pilot connector shouldn't say:
+
+POST /payments
+
+Instead it declares:
+
+Capability
+
+Create Payment
+
+Capability
+
+Refund
+
+Capability
+
+Settlement
+
+Capability
+
+Merchant Lookup
+
+Then the Workflow Engine doesn't care whether it's Pilot, Stripe, Adyen, or NB.
+
+It simply asks:
+
+"I need someone who can Create Payment."
+
+The Runtime selects the installed connector that provides that capability.
+
+That means if a restaurant switches from Pilot to NB, their workflows don't change.
+
+Only the connector changes.
+
+I think that's a significant architectural improvement over most integration platforms. Instead of integrating with vendors, Lekki integrates with capabilities. Vendors implement those capabilities through connectors. That keeps the platform loosely coupled, makes workflows reusable, and makes it much easier for customers to change providers without redesigning their automations. I would absolutely make that one of the core design principles of the Integration Platform.

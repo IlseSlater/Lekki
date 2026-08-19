@@ -1,0 +1,40 @@
+{
+  "name": "lekki",
+  "version": "0.1.0",
+  "private": true,
+  "description": "LEOS — Lekki Experience Operating System",
+  "packageManager": "pnpm@11.13.1",
+  "scripts": {
+    "build": "pnpm -r run build",
+    "build:packages": "pnpm -r --filter \"./packages/**\" --filter \"./packs/**\" --filter \"./connectors/**\" run build",
+    "dev": "node scripts/dev.mjs",
+    "dev:runtime": "pnpm --filter @lekki/runtime-app dev",
+    "dev:web": "pnpm --filter @lekki/web start",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:seed": "tsx scripts/seed-demo.ts",
+    "db:up": "docker compose up -d postgres",
+    "db:down": "docker compose down",
+    "test": "pnpm -r run test",
+    "check:nouns": "node scripts/check-noun-separation.mjs",
+    "check:payfast": "pnpm --filter @lekki/connector-payfast run build && node --import tsx connectors/payfast/src/self-check.ts",
+    "proof": "pnpm run build:packages && node scripts/architectural-proof.mjs",
+    "e2e": "node scripts/e2e-heartbeat.mjs",
+    "e2e:smoke": "pnpm run db:up && pnpm run db:generate && pnpm run db:push && pnpm run db:seed && pnpm run build:packages && pnpm --filter @lekki/runtime-app build && node scripts/e2e-with-runtime.mjs"
+  },
+  "devDependencies": {
+    "@lekki/connector-payfast": "workspace:*",
+    "@lekki/pack-airport": "workspace:*",
+    "@lekki/pack-festival": "workspace:*",
+    "@lekki/pack-healthcare": "workspace:*",
+    "@lekki/pack-hotel": "workspace:*",
+    "@lekki/pack-restaurant": "workspace:*",
+    "prisma": "^6.9.0",
+    "tsx": "^4.19.4",
+    "typescript": "~5.8.3"
+  },
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  }
+}

@@ -1,0 +1,1200 @@
+# ============================================================================
+# LEKKI PLATFORM
+# SOFTWARE ARCHITECTURE BOOK
+# ============================================================================
+
+Document ID
+    LEK-022
+
+Document Title
+    Payment Connector Installation UX Specification
+
+Status
+    Draft 1.0
+
+Version
+    1.0
+
+Owner
+    Chief Product Officer
+
+Classification
+    UX / Product Design Specification
+
+Related Documents
+
+    LEK-018 Payment Architecture
+    LEK-021 Integration Engine
+    LEK-023 Connector SDK
+    LEK-024 Capability Framework
+
+==============================================================================
+PURPOSE
+==============================================================================
+
+This document defines the end-to-end onboarding experience for installing
+Payment Connectors within the Lekki Platform.
+
+The objective is to hide technical complexity while allowing highly flexible
+enterprise payment configurations.
+
+The onboarding experience should feel simple enough for a small restaurant,
+yet powerful enough for multi-national hospitality groups.
+
+The business should feel like they are configuring "Payments", not installing
+software.
+
+==============================================================================
+
+UX PRINCIPLES
+==============================================================================
+
+The onboarding experience should
+
+• Be guided
+• Require minimal technical knowledge
+• Validate continuously
+• Explain every decision
+• Never expose implementation details
+• Save progress automatically
+• Be reversible
+• Support single and multi-venue businesses
+
+==============================================================================
+
+ONBOARDING FLOW
+==============================================================================
+
+Organisation Setup
+
+↓
+
+Venue Setup
+
+↓
+
+Payments
+
+↓
+
+Choose Provider
+
+↓
+
+Install Connector
+
+↓
+
+Verify Merchant
+
+↓
+
+Configure Settlement
+
+↓
+
+Configure Routing
+
+↓
+
+Review
+
+↓
+
+Activate
+
+==============================================================================
+
+SCREEN 1
+
+PAYMENT PROVIDERS
+
+==============================================================================
+
+Title
+
+Choose your Payment Provider
+
+Description
+
+Select the provider you currently use or would like to use for accepting
+payments.
+
+Search
+
+[ Search Providers ]
+
+Categories
+
+Payments
+
+Popular
+
+Recommended
+
+Installed
+
+Connector Cards
+
+Pilot
+
+Stripe
+
+NB
+
+Adyen
+
+Yoco
+
+Ozow
+
+Peach Payments
+
+Each card displays
+
+Logo
+
+Publisher
+
+Verified Badge
+
+Capabilities
+
+Supported Countries
+
+Current Version
+
+Documentation
+
+Install Button
+
+==============================================================================
+
+SCREEN 2
+
+CONNECTOR OVERVIEW
+
+==============================================================================
+
+Title
+
+Pilot Payments
+
+Displays
+
+Description
+
+Publisher
+
+Version
+
+Capabilities
+
+Permissions Requested
+
+Documentation
+
+Support
+
+Release Notes
+
+Security Certification
+
+Required Information
+
+Merchant ID
+
+API Credentials
+
+Settlement Account
+
+Install
+
+Cancel
+
+==============================================================================
+
+SCREEN 3
+
+MERCHANT DETAILS
+
+==============================================================================
+
+Title
+
+Connect your Pilot Account
+
+Description
+
+Enter the details supplied by Pilot.
+
+Fields
+
+Merchant ID
+
+API Key
+
+Webhook Secret
+
+Environment
+
+Production
+
+Sandbox
+
+Help Links
+
+Where do I find my Merchant ID?
+
+Where do I find my API Key?
+
+Buttons
+
+Test Connection
+
+Continue
+
+==============================================================================
+
+VALIDATION
+
+==============================================================================
+
+After pressing
+
+Test Connection
+
+Lekki performs
+
+Decrypt Credentials
+
+↓
+
+Call Merchant Lookup
+
+↓
+
+Verify Merchant
+
+↓
+
+Retrieve Business Name
+
+↓
+
+Retrieve Status
+
+↓
+
+Retrieve Country
+
+↓
+
+Retrieve Currency
+
+If successful
+
+Display
+
+✓ Connected
+
+Merchant Name
+
+Merchant Status
+
+Settlement Currency
+
+==============================================================================
+
+SCREEN 4
+
+MERCHANT VERIFIED
+
+==============================================================================
+
+Success Card
+
+✓ Pilot Account Connected
+
+Business Name
+
+Merchant Number
+
+Country
+
+Settlement Currency
+
+Status
+
+Verified
+
+Continue
+
+==============================================================================
+
+SCREEN 5
+
+SETTLEMENT ACCOUNT
+
+==============================================================================
+
+Title
+
+Where should your funds be deposited?
+
+Description
+
+Choose the bank account where Pilot should settle your completed
+transactions.
+
+Fields
+
+Bank Name
+
+Account Holder
+
+Branch Code
+
+Account Number
+
+Account Type
+
+Settlement Currency
+
+Optional
+
+Settlement Reference
+
+Validate Bank Account
+
+==============================================================================
+
+SCREEN 6
+
+ROUTING STRATEGY
+
+==============================================================================
+
+Title
+
+How should payments be routed?
+
+Description
+
+Choose how your business wants payment transactions to be processed.
+
+Option 1
+
+Global Settlement
+
+Description
+
+All venues use one Merchant Account.
+
+Ideal For
+
+Single location
+
+Central finance
+
+Franchises
+
+Diagram
+
+Organisation
+
+↓
+
+Pilot Merchant
+
+↓
+
+Corporate Bank
+
+---------------------------------------------------------
+
+Option 2
+
+Venue Routing
+
+Description
+
+Each venue has its own Merchant Account.
+
+Diagram
+
+Cape Town
+
+↓
+
+Pilot MID 1
+
+↓
+
+Bank A
+
+Johannesburg
+
+↓
+
+Pilot MID 2
+
+↓
+
+Bank B
+
+---------------------------------------------------------
+
+Option 3
+
+Location Routing
+
+Description
+
+Different locations inside a venue use different Merchant Accounts.
+
+Diagram
+
+Restaurant
+
+↓
+
+MID 1
+
+Bar
+
+↓
+
+MID 2
+
+Room Service
+
+↓
+
+MID 3
+
+==============================================================================
+
+SCREEN 7
+
+ROUTING CONFIGURATION
+
+==============================================================================
+
+Depending on previous selection
+
+Global
+
+Organisation
+
+Merchant
+
+Settlement Account
+
+---------------------------------------------------------
+
+Venue Routing
+
+Table
+
+Venue
+
+Merchant ID
+
+Settlement Account
+
+Status
+
+Cape Town
+
+MID
+
+Account
+
+✓
+
+Johannesburg
+
+MID
+
+Account
+
+✓
+
+---------------------------------------------------------
+
+Location Routing
+
+Venue
+
+↓
+
+Locations
+
+↓
+
+Merchant
+
+↓
+
+Settlement
+
+Example
+
+Restaurant
+
+Dining Floor
+
+MID001
+
+Bank A
+
+VIP Lounge
+
+MID002
+
+Bank B
+
+Pool Bar
+
+MID003
+
+Bank C
+
+==============================================================================
+
+SCREEN 8
+
+REVIEW
+
+==============================================================================
+
+Summary
+
+Provider
+
+Pilot
+
+Merchant
+
+Verified
+
+Settlement
+
+FNB
+
+Routing
+
+Venue
+
+Venues
+
+8
+
+Locations
+
+46
+
+Capabilities Enabled
+
+Tap to Pay
+
+Refunds
+
+Settlement
+
+Reconciliation
+
+Webhooks
+
+Health Monitoring
+
+==============================================================================
+
+SCREEN 9
+
+ACTIVATION
+
+==============================================================================
+
+Progress
+
+Installing Connector
+
+↓
+
+Encrypting Credentials
+
+↓
+
+Registering Capabilities
+
+↓
+
+Creating Secrets
+
+↓
+
+Creating Event Subscriptions
+
+↓
+
+Configuring Workflows
+
+↓
+
+Verifying Health
+
+↓
+
+Connector Active
+
+==============================================================================
+
+SCREEN 10
+
+SUCCESS
+
+==============================================================================
+
+✓ Pilot Payments Ready
+
+Capabilities
+
+Accept Payments
+
+Refunds
+
+Settlement
+
+Reporting
+
+Reconciliation
+
+Buttons
+
+Open Dashboard
+
+Configure Workflows
+
+Install Another Connector
+
+==============================================================================
+
+BACKGROUND PLATFORM OPERATIONS
+
+==============================================================================
+
+The following operations occur automatically.
+
+1
+
+Encrypt Secrets
+
+↓
+
+Secrets API
+
+---------------------------------------------------------
+
+2
+
+Register Connector
+
+↓
+
+Connector Registry
+
+---------------------------------------------------------
+
+3
+
+Capability Discovery
+
+↓
+
+Create Payment
+
+Refund
+
+Settlement
+
+Merchant Lookup
+
+---------------------------------------------------------
+
+4
+
+Workflow Registration
+
+↓
+
+PaymentCompleted
+
+RefundCompleted
+
+SettlementCompleted
+
+---------------------------------------------------------
+
+5
+
+Health Monitoring
+
+↓
+
+Heartbeat
+
+↓
+
+Version
+
+↓
+
+Authentication
+
+↓
+
+Webhook Validation
+
+---------------------------------------------------------
+
+6
+
+Neo
+
+↓
+
+Connector Summary
+
+↓
+
+Recommendations
+
+↓
+
+Monitoring Enabled
+
+==============================================================================
+
+FIRST PAYMENT FLOW
+
+==============================================================================
+
+Guest
+
+↓
+
+Scan QR
+
+↓
+
+Session Created
+
+↓
+
+Order
+
+↓
+
+Payment Requested
+
+↓
+
+Runtime resolves Location
+
+↓
+
+Location resolves Merchant
+
+↓
+
+Merchant resolves Connector
+
+↓
+
+Connector creates Payment
+
+↓
+
+Pilot
+
+↓
+
+Settlement
+
+↓
+
+Workflow Engine
+
+↓
+
+Receipt
+
+↓
+
+Neo
+
+↓
+
+Analytics
+
+==============================================================================
+
+UX DESIGN PRINCIPLES
+
+==============================================================================
+
+The customer should never think about
+
+SDK
+
+Manifest
+
+Capabilities
+
+Secrets
+
+Events
+
+Runtime
+
+The customer should feel
+
+"I connected my payment provider."
+
+The platform performs every technical operation automatically.
+
+==============================================================================
+
+CHIEF UX PRINCIPLES
+
+==============================================================================
+
+Every screen answers one question only.
+
+1.
+Who will process your payments?
+
+2.
+Can we verify your account?
+
+3.
+Where should money go?
+
+4.
+How should money flow?
+
+5.
+Is everything correct?
+
+6.
+Activate.
+
+The onboarding should feel like opening a modern online bank account—
+fast, reassuring, guided and transparent—rather than configuring enterprise
+software.
+
+==============================================================================
+END OF DOCUMENT
+==============================================================================
+
+
+
+============================================================================LEKKI PLATFORMARCHITECTURE & UX VISUALIZATION BOOK============================================================================Document IDLEK-022-VISDocument TitleVisual Flow & System Topology: Payment Connector InstallationThis document visually renders the end-to-end Payment Connector Installation UX Specification (LEK-022). It maps the screen-by-screen merchant journey, models the underlying runtime operations, and tracks the step-by-step telemetry of the First Payment Flow.  1. The Onboarding FlowThis is the linear, progress-saved sequence a venue manager experiences during installation.    [1. Choose Provider] ────> [2. Connector Overview] ────> [3. Merchant Details]
+                                                                   │
+                                                                   ▼
+  [6. Routing Strategy] <─── [5. Settlement Account] <─── [4. Merchant Verified]
+           │
+           ▼
+  [7. Routing Config]   ────> [8. Review & Summary]  ────> [9. Platform Activation]
+                                                                   │
+                                                                   ▼
+                                                             [10. Success Screen]
+2. Screen-by-Screen Interactive VisualizationsScreen 1: Payment Providers┌────────────────────────────────────────────────────────────────────────────┐
+│  Setup Progress: [■■■░░░░░░░] 30% Connected                                │
+├────────────────────────────────────────────────────────────────────────────┤
+│                                                                            │
+│  CHOOSE YOUR PAYMENT PROVIDER                                              │
+│  Select the provider you currently use to collect payments.                │
+│                                                                            │
+│  [ Search Providers...                                                 ]   │
+│                                                                            │
+│  Categories: [✓ Payments]  [Accounting]  [Messaging]  [AI Skills]          │
+│                                                                            │
+│  ┌─────────────────────────┐  ┌─────────────────────────┐                  │
+│  │ PILOT PAYMENTS      [✓] │  │ STRIPE                  │                  │
+│  │ Publisher: Pilot Corp   │  │ Publisher: Stripe Inc   │                  │
+│  │ Version: v2.1.0 (Stable)│  │ Version: v3.4.0         │                  │
+│  │ Countries: ZA, UK       │  │ Countries: Global       │                  │
+│  │                         │  │                         │                  │
+│  │ [ Learn More ] [Install]│  │ [ Learn More ] [Install]│                  │
+│  └─────────────────────────┘  └─────────────────────────┘                  │
+│                                                                            │
+│  ┌─────────────────────────┐  ┌─────────────────────────┐                  │
+│  │ YOCO                    │  │ PEACH PAYMENTS          │                  │
+│  │ Publisher: Yoco Tech    │  │ Publisher: Peach Corp   │                  │
+│  │ Version: v1.12.0        │  │ Version: v2.0.1         │                  │
+│  │ Countries: ZA           │  │ Countries: ZA, KE       │                  │
+│  │                         │  │                         │                  │
+│  │ [ Learn More ] [Install]│  │ [ Learn More ] [Install]│                  │
+│  └─────────────────────────┘  └─────────────────────────┘                  │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+Screen 2: Connector Overview (Detailed Permissions Dialog)┌────────────────────────────────────────────────────────────────────────────┐
+│  ← Back to Providers                                                       │
+├────────────────────────────────────────────────────────────────────────────┤
+│                                                                            │
+│  PILOT PAYMENTS   [Verified Badge]                                         │
+│  Provides native, fast-clearing local card processing for Lekki venues.    │
+│                                                                            │
+│  ────────────────────────────────────────────────────────────────────────  │
+│  CAPABILITIES EXPOSED [?]                                                 │
+│  ✓ PaymentCapability.CreatePayment                                         │
+│  ✓ PaymentCapability.Refund                                                │
+│  ✓ PaymentCapability.Settlement                                            │
+│  ✓ PaymentCapability.MerchantLookup                                        │
+│                                                                            │
+│  PERMISSIONS REQUESTED                                                     │
+│  ⚠ Payments.Write   (Required to initiate client card charges)             │
+│  ⚠ Refunds.Write    (Required to process digital refunds)                  │
+│  ⚠ Webhooks.Access  (Required to listen to direct transactional status)    │
+│  ────────────────────────────────────────────────────────────────────────  │
+│                                                                            │
+│  Requirements: Merchant ID, API Credentials, Settlement Bank Account      │
+│                                                                            │
+│                        [ Cancel ]   [ Accept & Install ]                   │
+└────────────────────────────────────────────────────────────────────────────┘
+Screen 3: Merchant Details (Dynamic Entry)┌────────────────────────────────────────────────────────────────────────────┐
+│  Setup Progress: [■■■■■░░░░░] 50% Connected                                │
+├────────────────────────────────────────────────────────────────────────────┤
+│                                                                            │
+│  CONNECT YOUR PILOT ACCOUNT                                                │
+│  Please enter the details supplied to you in your Pilot Merchant Dashboard.│
+│                                                                            │
+│  Environment                                                               │
+│  ( ) Sandbox Mode  (●) Production Mode                                     │
+│                                                                            │
+│  Merchant ID                                                               │
+│  [ MID-883019283-ZA                                                    ]   │
+│  └─> Where do I find my Merchant ID?                                       │
+│                                                                            │
+│  API Key                                                                   │
+│  [ ••••••••••••••••••••••••••••••••••••••••••                          ]   │
+│  └─> Where do I find my API Key?                                           │
+│                                                                            │
+│  Webhook Secret                                                            │
+│  [ ••••••••••••••••••••••••••••••••••••••••••                          ]   │
+│                                                                            │
+│                                                                            │
+│                    [ Test Connection ]       [ Continue (Locked) ]         │
+└────────────────────────────────────────────────────────────────────────────┘
+Screen 4: Merchant Verified┌────────────────────────────────────────────────────────────────────────────┐
+│  Setup Progress: [■■■■■■░░░░] 60% Connected                                │
+├────────────────────────────────────────────────────────────────────────────┤
+│                                                                            │
+│                     ┌────────────────────────────────┐                     │
+│                     │      ✓ PILOT ACCOUNT ACTIVE    │                     │
+│                     │                                │                     │
+│                     │  Business:  "The Rusty Oak"    │                     │
+│                     │  MID Num:   MID-883019283-ZA   │                     │
+│                     │  Currency:  ZAR (South Africa) │                     │
+│                     │  Status:    Verified           │                     │
+│                     └────────────────────────────────┘                     │
+│                                                                            │
+│  The connection was validated successfully with Pilot's register.          │
+│  All credential validation details have been encrypted and saved.          │
+│                                                                            │
+│                                                          [ Continue ]      │
+└────────────────────────────────────────────────────────────────────────────┘
+Screen 5: Settlement Account┌────────────────────────────────────────────────────────────────────────────┐
+│  Setup Progress: [■■■■■■■░░░] 70% Connected                                │
+├────────────────────────────────────────────────────────────────────────────┤
+│                                                                            │
+│  WHERE SHOULD YOUR FUNDS BE DEPOSITED?                                     │
+│  Select your settlement account. This is where Pilot will pay out.         │
+│                                                                            │
+│  Bank Name                                                                 │
+│  [ First National Bank (FNB)                                           ]   │
+│                                                                            │
+│  Account Holder Name                                                       │
+│  [ The Rusty Oak (Pty) Ltd                                             ]   │
+│                                                                            │
+│  Account Number                Branch Code                                 │
+│  [ 62049918273               ] [ 250655   ]                                │
+│                                                                            │
+│  Account Type                  Settlement Currency                         │
+│  [ Business Current Account  ] [ ZAR (R)  ]                                │
+│                                                                            │
+│  [✓] Validate account with bank registry on submit                         │
+│                                                                            │
+│                                                          [ Continue ]      │
+└────────────────────────────────────────────────────────────────────────────┘
+Screen 6 & 7: Routing Strategy SelectionThese panels control the domain mapping:┌────────────────────────────────────────────────────────────────────────────┐
+│  HOW SHOULD PAYMENTS BE ROUTED?                                            │
+│  Determine which merchant configurations receive transacted guest funds.   │
+├────────────────────────────────────────────────────────────────────────────┤
+│                                                                            │
+│  ( ) GLOBAL SETTLEMENT                                                     │
+│      One business-wide bank account for all transactions.                  │
+│      [Organisation] ──> [Pilot MID] ──> [FNB Corporate Account]            │
+│                                                                            │
+│  (●) VENUE-SPECIFIC ROUTING                                                │
+│      Each branch of your business routes to its own merchant identifier.    │
+│      [Cape Town Venue] ──> [Pilot MID 1] ──> [Nedbank Account]             │
+│      [Joburg Venue]    ──> [Pilot MID 2] ──> [FNB Account]                 │
+│                                                                            │
+│  ( ) LOCATION-SPECIFIC SPLIT                                               │
+│      Individual locations within a single site route transactions.         │
+│      [Pool Bar]  ──> [MID-A] ──> [Acc 1]                                   │
+│      [Restaurant]──> [MID-B] ──> [Acc 2]                                   │
+│                                                                            │
+│                                                          [ Continue ]      │
+└────────────────────────────────────────────────────────────────────────────┘
+Screen 8: Review & Configuration Validation┌────────────────────────────────────────────────────────────────────────────┐
+│  REVIEW YOUR SETUP                                                         │
+├────────────────────────────────────────────────────────────────────────────┤
+│                                                                            │
+│  CORE INTEGRATION                                                          │
+│    Active Provider:  Pilot Payments [Verified]                             │
+│    Active Status:    Accounts Connected & Verified                         │
+│                                                                            │
+│  ROUTING SCHEME                                                            │
+│    Strategy:         Venue-Specific Routing                                │
+│    Configured:       2 Venues Operational                                  │
+│                      └─> Cape Town Branch (FNB Account ending 8273)        │
+│                      └─> Joburg Branch    (Std Bank Account ending 1102)   │
+│                                                                            │
+│  AUTOMATED SYSTEM REGISTER                                                 │
+│    ✓ Decoupled Capabilities Registered (CreatePayment, Refund, Settlement) │
+│    ✓ Secret API Vault Enclaves Initialized                                 │
+│    ✓ Event Webhook Queues Provisioned                                      │
+│                                                                            │
+│  [ Edit Configuration ]                                [ ACTIVATE SYSTEM ] │
+└────────────────────────────────────────────────────────────────────────────┘
+Screen 9: Platform Activation Progress (Lekki Platform Orchestrator)┌────────────────────────────────────────────────────────────────────────────┐
+│  SYSTEM PROVISIONING PIPELINE                                              │
+├────────────────────────────────────────────────────────────────────────────┤
+│                                                                            │
+│  [✓] Provisioning Secure Sandbox Enclave (Connector Runtime)               │
+│  [✓] Encrypting Credentials & Injecting to Secrets Vault                   │
+│  [✓] Discovering Capabilities (Mapping abstract CreatePayment/Refund API)  │
+│  [✓] Creating Automated Event Subscriptions (Event Bus Binding)            │
+│  [●] Registering Dynamic Health Probe & Latency Metric Handlers...         │
+│  [ ] Running Handshake Validation Routine                                  │
+│                                                                            │
+│  ────────────────────────────────────────────────────────────────────────  │
+│  Status: Finalizing microservices configuration...                         │
+│  ────────────────────────────────────────────────────────────────────────  │
+└────────────────────────────────────────────────────────────────────────────┘
+3. Background Operations TopologyWhile the user is moving through the UI, the Lekki Platform Development Kit (LPDK) handles several automated infrastructure steps:    Merchant UI Step 4: [Verify Credentials]
+                            │
+                            ▼
+ ┌────────────────────────────────────────────────────────────────────────┐
+ │ 1. ENCRYPT SECRETS                                                     │
+ │    Encrypt API Keys using AES-GCM-256 and store in Lekki Secrets Vault │
+ └──────────────────────────┬─────────────────────────────────────────────┘
+                            │
+                            ▼
+ ┌────────────────────────────────────────────────────────────────────────┐
+ │ 2. RUNTIME SANDBOX REGISTRATION                                        │
+ │    Lekki Runtime boots Pilot Connector inside an isolated sandbox      │
+ └──────────────────────────┬─────────────────────────────────────────────┘
+                            │
+                            ▼
+ ┌────────────────────────────────────────────────────────────────────────┐
+ │ 3. CAPABILITY DISCOVERY                                                │
+ │    Platform links PaymentCapability.CreatePayment to PilotConnector    │
+ └──────────────────────────┬─────────────────────────────────────────────┘
+                            │
+                            ▼
+ ┌────────────────────────────────────────────────────────────────────────┐
+ │ 4. EVENT WORKFLOW SUBSCRIPTIONS                                        │
+ │    Register Webhook channels to listen for incoming payment statuses   │
+ └──────────────────────────┬─────────────────────────────────────────────┘
+                            │
+                            ▼
+ ┌────────────────────────────────────────────────────────────────────────┐
+ │ 5. SYSTEM HEALTH PROBES                                                │
+ │    Boot background heartbeats (pinging status/API validation)          │
+ └────────────────────────────────────────────────────────────────────────┘
+4. End-to-End Execution Profile: First Payment FlowThis execution trace maps how a user transaction is routed without Lekki having to hardcode any vendor endpoints:  [Guest Mobile client] ──(1. Scan QR Code)──> [Lekki Session Manager]
+                                                    │
+                                             (2. Resolve Venue Location)
+                                                    │
+                                                    ▼
+[Lekki Billing Module] <─(3. Query Routing)─ [Lekki Config Context Engine]
+         │
+         │ (4. Trigger SettleBill Event)
+         ▼
+[Lekki Connector Runtime Engine]
+         │
+         │ (5. Resolve Active Payment Capability Route)
+         ▼
+[Pilot Connector Sandbox Container]
+         │
+         │ (6. Call Secrets API for Pilot Credentials)
+         ├── [Lekki Secrets Vault]
+         │
+         │ (7. Direct Secured Post with Payload)
+         ▼
+[Pilot Production API Network Gateway]
+         │
+         │ (8. Process Transaction On Card Networks)
+         ▼
+[Platform Event Engine] <─(9. Publish Standardized PaymentCompleted Event)─ [Pilot Sandbox Webhook Receiver]
+         │
+         ├───> [Lekki Analytics Engine] (Update Dashboard Visuals)
+         ├───> [Lekki Order Engine] (Flag Order as Paid, Dispatch Kitchen Ticket)
+         └───> [Neo Intelligence Agent] (Register successful check-out telemetry)
+5. Architectural Quality Attribute ValidationThe architectural design in LEK-022 satisfies several critical system properties:  Security (Least Privilege): The Pilot SDK operates within an isolated sandbox. It has zero access to database connections or other integrations. It only interacts with the platform via standard APIs using key credentials injected into memory at boot.  Loose Coupling (Decoupling): Core modules (Billing, Ordering) never call Pilot explicitly. They only publish an event asking for a provider that supports CreatePayment. The platform runtime resolves the route dynamically based on the venue's active configuration.  Zero Configuration Overload: The restaurant operator sees clean, business-oriented screens ("Where should your funds go?") rather than complex code configurations. The platform dynamically reads the integration manifest to generate the matching fields and connections automatically. 
+
+
+
+
+┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
+│  Setup Progress: [■■■■■■■■░░] 80% Connected                                                      │
+├──────────────────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                                  │
+│  MAP YOUR MERCHANT ACCOUNTS                                                                      │
+│  Link your active physical locations to their respective Pilot accounts and settlement banks.    │
+│                                                                                                  │
+│  Selected Strategy:  [ VENUE-SPECIFIC ROUTING ]  (Change Strategy)                               │
+│                                                                                                  │
+│  ──────────────────────────────────────────────────────────────────────────────────────────────  │
+│                                                                                                  │
+│  [ Cape Town Branch ] (Primary Venue)                                                            │
+│                                                                                                  │
+│  Merchant ID                                           Settlement Account                        │
+│  ┌──────────────────────────────────────────┐          ┌──────────────────────────────────────┐  │
+│  │ MID-883019283-CPT                        │          │ FNB Current ...8273                  │  │  │
+│  └──────────────────────────────────────────┘          └──────────────────────────────────────┘  │
+│  Status:  ✓ Verified (The Rusty Oak CPT)                                                         │
+│                                                                                                  │
+│  ──────────────────────────────────────────────────────────────────────────────────────────────  │
+│                                                                                                  │
+│  [ Johannesburg Branch ]                                                                         │
+│                                                                                                  │
+│  Merchant ID                                           Settlement Account                        │
+│  ┌──────────────────────────────────────────┐          ┌──────────────────────────────────────┐  │
+│  │ MID-991048271-JHB                        │          │ Std Bank Business ...1102            │  │  │
+│  └──────────────────────────────────────────┘          └──────────────────────────────────────┘  │
+│  Status:  ✓ Verified (The Rusty Oak JHB)                                                         │
+│                                                                                                  │
+│  ──────────────────────────────────────────────────────────────────────────────────────────────  │
+│                                                                                                  │
+│  [ Pretoria Branch (Incomplete) ]                                                                │
+│                                                                                                  │
+│  Merchant ID                                           Settlement Account                        │
+│  ┌──────────────────────────────────────────┐          ┌──────────────────────────────────────┐  │
+│  │ Enter Pilot MID...                       │          │ Select Bank Account...               │  │  │
+│  └──────────────────────────────────────────┘          └──────────────────────────────────────┘  │
+│  Status:  ⚠ Needs Configuration                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│  [ + Configure Another Venue ]                                                                   │
+│                                                                                                  │
+│  ──────────────────────────────────────────────────────────────────────────────────────────────  │
+│                                                                                                  │
+│                                                            [ Back ]   [ Save & Continue ]        │
+└──────────────────────────────────────────────────────────────────────────────────────────────────┘

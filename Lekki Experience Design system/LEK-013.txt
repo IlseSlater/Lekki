@@ -1,0 +1,753 @@
+# ============================================================================
+# LEKKI PLATFORM
+# SOFTWARE ARCHITECTURE BOOK
+# ============================================================================
+
+Document ID
+    LEK-013
+
+Document Title
+    Guest Session Architecture
+
+Status
+    Approved Foundation
+
+Version
+    1.0
+
+Owner
+    Chief Architect
+
+Classification
+    Core Domain
+
+Related Documents
+
+    LEK-005 Ubiquitous Language
+    LEK-007 Domain Driven Design
+    LEK-011 Experience Profiles
+    LEK-012 Venue Architecture
+    LEK-016 Ordering Domain
+    LEK-017 Billing & Settlement
+
+==============================================================================
+PURPOSE
+==============================================================================
+
+The Guest Session is the central business aggregate of the Lekki platform.
+
+Every interaction between a guest and a venue occurs within a Session.
+
+Rather than modelling restaurants around tables, hotels around rooms or
+festivals around tickets, Lekki models every guest interaction as a Session.
+
+This creates one consistent architecture across every industry.
+
+Everything that happens during a visit belongs to a Session.
+
+==============================================================================
+THE CORE IDEA
+==============================================================================
+
+Guests do not interact directly with Orders.
+
+Guests do not interact directly with Bills.
+
+Guests do not interact directly with Payments.
+
+Guests participate in Sessions.
+
+Orders happen inside Sessions.
+
+Bills belong to Sessions.
+
+Payments settle Sessions.
+
+Neo observes Sessions.
+
+Analytics analyse Sessions.
+
+The Session becomes the operational centre of the platform.
+
+==============================================================================
+SESSION LIFECYCLE
+==============================================================================
+
+Every Session follows a lifecycle.
+
+Created
+
+↓
+
+Activated
+
+↓
+
+In Progress
+
+↓
+
+Paused (optional)
+
+↓
+
+Settlement
+
+↓
+
+Completed
+
+↓
+
+Archived
+
+Some Experience Profiles introduce additional states.
+
+The lifecycle remains consistent.
+
+==============================================================================
+SESSION CREATION
+==============================================================================
+
+A Session may begin in multiple ways.
+
+QR Scan
+
+Reservation
+
+Walk-In
+
+Online Booking
+
+Staff Initiated
+
+API
+
+Recurring Visit
+
+Invitation
+
+Regardless of origin, the resulting Session behaves identically.
+
+==============================================================================
+SESSION CONTEXT
+==============================================================================
+
+Each Session contains complete operational context.
+
+Organisation
+
+Venue
+
+Location
+
+Experience Profile
+
+Participants
+
+Capabilities
+
+Language
+
+Currency
+
+Timezone
+
+Business Rules
+
+Device Context
+
+Neo Context
+
+This context travels with the Session.
+
+==============================================================================
+SESSION IDENTITY
+==============================================================================
+
+Every Session has
+
+Session ID
+
+Venue ID
+
+Organisation ID
+
+Experience Profile
+
+Location
+
+Status
+
+Created Timestamp
+
+Started Timestamp
+
+Completed Timestamp
+
+Created By
+
+Correlation ID
+
+Neo Score
+
+Offline Status
+
+==============================================================================
+
+PARTICIPANTS
+==============================================================================
+
+A Session contains one or more Participants.
+
+A Participant is a Guest participating in the Session.
+
+Examples
+
+Restaurant
+
+Four friends dining together.
+
+Hotel
+
+Family sharing a room.
+
+Festival
+
+Group attending together.
+
+Conference
+
+Delegates attending one event.
+
+Each Participant may have different permissions.
+
+==============================================================================
+
+PARTICIPANT ATTRIBUTES
+==============================================================================
+
+Each Participant may contain
+
+Guest ID
+
+Display Name
+
+Role
+
+Owner
+
+Invited By
+
+Joined Time
+
+Left Time
+
+Payment Preference
+
+Language
+
+Accessibility
+
+Notification Preferences
+
+The Session Owner may change over time.
+
+==============================================================================
+
+SESSION OWNER
+==============================================================================
+
+Every Session has one primary owner.
+
+The owner is responsible for
+
+Inviting Participants
+
+Approving requests
+
+Managing shared preferences
+
+Accepting transfers
+
+Closing the Session
+
+Ownership may be transferred.
+
+Ownership should never be tied to a specific device.
+
+==============================================================================
+
+LOCATION
+==============================================================================
+
+Every Session is associated with one Location.
+
+Examples
+
+Restaurant Table
+
+Hotel Room
+
+Festival Zone
+
+Conference Hall
+
+VIP Lounge
+
+Golf Cart
+
+Parking Bay
+
+A Session may move between Locations.
+
+Location history should be retained.
+
+==============================================================================
+
+SESSION TIMELINE
+==============================================================================
+
+Every significant action becomes part of the Session timeline.
+
+Examples
+
+Session Created
+
+Guest Joined
+
+Guest Left
+
+Order Submitted
+
+Order Modified
+
+Bill Created
+
+Bill Split
+
+Payment Received
+
+Neo Recommendation
+
+Feedback Submitted
+
+Venue Closed
+
+The timeline becomes the operational history of the Session.
+
+==============================================================================
+
+ORDERS
+==============================================================================
+
+A Session may contain multiple Orders.
+
+Orders may be
+
+Guest Specific
+
+Participant Specific
+
+Shared
+
+Scheduled
+
+Deferred
+
+Cancelled
+
+Orders remain independent.
+
+The Session provides context.
+
+==============================================================================
+
+BILLING
+==============================================================================
+
+A Session may contain
+
+One Bill
+
+Multiple Bills
+
+Shared Bills
+
+Transferred Bills
+
+Merged Bills
+
+Split Bills
+
+Billing strategies are independent of the Experience Profile.
+
+==============================================================================
+
+PAYMENTS
+==============================================================================
+
+Payments settle Bills.
+
+Multiple payment methods may exist.
+
+Examples
+
+Card
+
+Cash
+
+Tap-to-Pay
+
+Wallet
+
+Gift Card
+
+Voucher
+
+Corporate Account
+
+One Session may contain many Payments.
+
+==============================================================================
+
+SESSION POLICIES
+==============================================================================
+
+Business rules determine Session behaviour.
+
+Examples
+
+Maximum Participants
+
+Idle Timeout
+
+Location Capacity
+
+Order Restrictions
+
+Payment Rules
+
+Age Verification
+
+Alcohol Restrictions
+
+Service Charges
+
+Policies are configurable.
+
+==============================================================================
+
+SESSION EVENTS
+==============================================================================
+
+The Session Aggregate publishes events.
+
+Examples
+
+SessionCreated
+
+SessionActivated
+
+ParticipantJoined
+
+ParticipantRemoved
+
+SessionTransferred
+
+LocationChanged
+
+SessionPaused
+
+SettlementStarted
+
+SessionCompleted
+
+SessionArchived
+
+These events drive the rest of the platform.
+
+==============================================================================
+
+OFFLINE OPERATION
+==============================================================================
+
+Sessions must operate offline.
+
+Offline behaviour includes
+
+Participant Cache
+
+Order Queue
+
+Bill Cache
+
+Payment Queue
+
+QR Cache
+
+Timeline Cache
+
+Background Synchronisation
+
+Guests should remain unaware of connectivity loss.
+
+==============================================================================
+
+NEO AND SESSIONS
+==============================================================================
+
+Neo primarily reasons about Sessions.
+
+Neo observes
+
+Long Wait Times
+
+High Spend Guests
+
+Delayed Orders
+
+Repeated Complaints
+
+Large Groups
+
+Returning Guests
+
+Service Bottlenecks
+
+Payment Delays
+
+Neo recommendations become Session aware.
+
+==============================================================================
+
+SESSION HEALTH
+==============================================================================
+
+Every active Session has a health score.
+
+Inputs include
+
+Elapsed Time
+
+Order Progress
+
+Guest Satisfaction
+
+Operational Delays
+
+Outstanding Bills
+
+Connectivity
+
+Staff Response
+
+Neo Confidence
+
+Managers receive alerts when Session Health deteriorates.
+
+==============================================================================
+
+COLLABORATION
+==============================================================================
+
+Participants collaborate inside Sessions.
+
+Capabilities include
+
+Invite Participant
+
+Transfer Ownership
+
+Split Bill
+
+Shared Ordering
+
+Shared Messaging
+
+Live Notifications
+
+Collaborative Payments
+
+Real-time Updates
+
+The Session becomes the collaboration boundary.
+
+==============================================================================
+
+SESSION SECURITY
+==============================================================================
+
+Sessions enforce
+
+Identity Verification
+
+Permission Checks
+
+Audit Logging
+
+Device Registration
+
+Location Validation
+
+Payment Authorisation
+
+Participant Validation
+
+Every action is attributable.
+
+==============================================================================
+
+SESSION ANALYTICS
+==============================================================================
+
+Sessions generate rich operational intelligence.
+
+Metrics include
+
+Average Duration
+
+Revenue
+
+Orders
+
+Payment Success
+
+Guest Satisfaction
+
+Wait Time
+
+Repeat Visits
+
+Participant Count
+
+Neo Recommendations
+
+Completion Rate
+
+==============================================================================
+
+SESSION ARCHIVAL
+==============================================================================
+
+Completed Sessions become historical records.
+
+Historical Sessions support
+
+Analytics
+
+Reporting
+
+Guest History
+
+Neo Learning
+
+Dispute Resolution
+
+Business Intelligence
+
+Compliance
+
+Archived Sessions are immutable.
+
+==============================================================================
+
+ARCHITECTURAL DECISIONS
+==============================================================================
+
+ADR-013-001
+
+Session is the central business aggregate.
+
+ADR-013-002
+
+Everything occurs within a Session.
+
+ADR-013-003
+
+Participants belong to Sessions.
+
+ADR-013-004
+
+Orders never exist without a Session.
+
+ADR-013-005
+
+Bills settle Sessions.
+
+ADR-013-006
+
+Neo reasons about Sessions.
+
+==============================================================================
+
+WHY THIS MATTERS
+==============================================================================
+
+Traditional restaurant software asks
+
+Which table?
+
+Traditional hotel software asks
+
+Which room?
+
+Traditional festival software asks
+
+Which ticket?
+
+Lekki asks
+
+Which Session?
+
+This abstraction makes the platform venue agnostic while preserving
+industry-specific experiences.
+
+==============================================================================
+
+FUTURE EVOLUTION
+==============================================================================
+
+Future enhancements may include
+
+AI-generated Session summaries
+
+Predictive Session Health
+
+Autonomous Service Recovery
+
+Smart Session Merging
+
+Cross-Venue Sessions
+
+Cross-Organisation Experiences
+
+Persistent Guest Journeys
+
+Digital Companion Sessions
+
+The Session model already accommodates these possibilities.
+
+==============================================================================
+
+ARCHITECT'S NOTES
+==============================================================================
+
+The Guest Session is the beating heart of the Lekki platform.
+
+Nearly every capability—ordering, billing, payments, notifications,
+analytics, Neo, reporting and offline synchronisation—either contributes to
+or derives value from a Session.
+
+By making the Session the primary aggregate rather than industry-specific
+concepts such as tables or rooms, Lekki achieves something very few platforms
+have accomplished: one elegant operational model that spans every type of
+physical guest experience.
+
+This architectural decision dramatically simplifies future expansion while
+providing a richer model for collaboration, intelligence and operational
+optimisation.
+
+==============================================================================
+END OF DOCUMENT
+==============================================================================

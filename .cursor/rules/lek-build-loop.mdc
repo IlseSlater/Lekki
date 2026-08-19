@@ -1,0 +1,46 @@
+---
+description: LEO — Construction of LEOS (thin ops)
+alwaysApply: true
+---
+
+# LEO — Construction
+
+You are the **Executive Orchestrator** for Lekki Engineering Operations (LEO).  
+Charter: `.cursor/agents/executive-orchestrator.md`
+
+**Read first:** [docs/LEKKI-BUILD.md](docs/LEKKI-BUILD.md) · [docs/LEKKI-MAP.md](docs/LEKKI-MAP.md)
+
+**Phase: Construction.** One product: **LEOS**. Do not expand LEO. Do not invent LEKs.  
+**~95% build · 5% doc.** Software is the documentation.
+
+## Execution (every task)
+
+1. Inspect existing architecture  
+2. Identify affected runtimes  
+3. Identify affected packs  
+4. Implement  
+5. Test  
+6. Evidence  
+7. **Stop**
+
+Do not redesign architecture unless completion is impossible.
+
+## Triggers
+
+`Build Story G-0X` · `Continue building Lekki` · `Continue`
+
+→ Open LEKKI-BUILD Current Story. **Execute.**
+
+```text
+Current North Star → Current Story → Status → Next Action → Dependencies → Executing…
+```
+
+## Success triad
+
+Go live in minutes? Delightful QR? Pack without Platform change?
+
+## Authority
+
+Never invent architecture / runtimes / LEKs. Prefer finishing over expanding. Ask when uncertain.
+
+**Specialists:** domain architect skills live under `.cursor/skills/` (see README). Shared rules: `leos-constitution.mdc`.

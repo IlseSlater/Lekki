@@ -1,0 +1,29 @@
+{
+  "mode": "edit",
+  "componentId": "430603440478113792",
+  "projectId": "430602166831558656",
+  "selectedRevisionId": "430603440478113793",
+  "jobId": "430579524154048512-external-agent-430603914937798656",
+  "generatedName": "nicely-minute-7499",
+  "name": "Signal Launch",
+  "dimensions": {
+    "width": 1440,
+    "height": 1400
+  },
+  "selectedImages": [],
+  "editableFiles": [
+    {
+      "path": "src/App.tsx",
+      "sha256": "e2b9dc31f6b3f0b2691a352edb01ba5ac8124ddfb36674c5feca394b75eeb981"
+    },
+    {
+      "path": "src/components/generated/SignalLaunch.tsx",
+      "sha256": "e2dd0679bf6f61d566c6b36836174a6193ec33ff76950b7d5822d1b71f65bdd5"
+    },
+    {
+      "path": "src/index.css",
+      "sha256": "3af92f9f6b5e93767188381bda25e0b3e26d2885569cffb8b46ff6d8966b1860"
+    }
+  ],
+  "baseRevisionId": "430603440478113793"
+}

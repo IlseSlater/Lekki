@@ -1,0 +1,787 @@
+# ============================================================================
+# LEKKI PLATFORM
+# SOFTWARE ARCHITECTURE BOOK
+# ============================================================================
+
+Document ID
+    LEK-011
+
+Document Title
+    Experience Profiles & Experience Engine
+
+Status
+    Approved Foundation
+
+Version
+    1.0
+
+Owner
+    Chief Architect
+
+Classification
+    Core Platform
+
+Related Documents
+
+    LEK-004 Business Model
+    LEK-005 Ubiquitous Language
+    LEK-009 Capability Model
+    LEK-010 Organisation Architecture
+    LEK-012 Venue Model
+    LEK-013 Guest Session Architecture
+
+==============================================================================
+PURPOSE
+==============================================================================
+
+Experience Profiles are the primary mechanism that makes Lekki venue
+agnostic.
+
+Rather than building separate software products for restaurants,
+hotels, festivals or casinos, Lekki delivers one configurable platform.
+
+Experience Profiles determine how the platform behaves.
+
+The underlying architecture never changes.
+
+Only the experience changes.
+
+This principle allows Lekki to expand into entirely new industries without
+creating new applications.
+
+==============================================================================
+THE EXPERIENCE ENGINE
+==============================================================================
+
+The Experience Engine is responsible for adapting platform behaviour to
+match a particular business environment.
+
+The engine receives context from
+
+Organisation
+
+Venue
+
+Location
+
+QR Context
+
+Guest
+
+Capabilities
+
+Business Rules
+
+Based on this information the engine determines how the platform behaves.
+
+==============================================================================
+CORE PRINCIPLE
+==============================================================================
+
+One Platform.
+
+Unlimited Experiences.
+
+Every new industry should be introduced by configuration.
+
+Never by creating another application.
+
+==============================================================================
+WHAT AN EXPERIENCE PROFILE DEFINES
+==============================================================================
+
+Each Experience Profile controls
+
+Terminology
+
+Navigation
+
+Capabilities
+
+Business Rules
+
+Permissions
+
+Guest Journey
+
+Operational Workflow
+
+Notifications
+
+Neo Behaviour
+
+Analytics
+
+Reporting
+
+Branding Extensions
+
+Default Configuration
+
+==============================================================================
+SUPPORTED EXPERIENCE PROFILES
+==============================================================================
+
+Initial Profiles
+
+Restaurant
+
+Hotel
+
+Festival
+
+Conference
+
+Golf Club
+
+Winery
+
+Coffee Shop
+
+Casino
+
+Airport Lounge
+
+Future Profiles
+
+Retail
+
+Healthcare
+
+Museums
+
+Sport Stadiums
+
+Cruise Ships
+
+Theme Parks
+
+Education
+
+Corporate Campuses
+
+The architecture should never assume this list is complete.
+
+==============================================================================
+TERMINOLOGY
+==============================================================================
+
+Different industries use different language.
+
+Restaurant
+
+Table
+
+Hotel
+
+Room
+
+Festival
+
+Zone
+
+Casino
+
+Gaming Table
+
+Conference
+
+Venue Hall
+
+Airport
+
+Gate Lounge
+
+Internally
+
+Everything is a Location.
+
+Only the terminology changes.
+
+==============================================================================
+CAPABILITY ENABLEMENT
+==============================================================================
+
+Profiles enable or disable capabilities.
+
+Restaurant
+
+✓ Ordering
+
+✓ Kitchen
+
+✓ Split Bill
+
+✓ Table Service
+
+Hotel
+
+✓ Reservations
+
+✓ Room Service
+
+✓ Housekeeping
+
+✓ Check-In
+
+Festival
+
+✓ Vendors
+
+✓ Ticket Validation
+
+✓ Zones
+
+✓ Event Schedule
+
+Capabilities remain identical.
+
+Profiles determine visibility.
+
+==============================================================================
+NAVIGATION
+==============================================================================
+
+The same platform may present different navigation.
+
+Restaurant
+
+Menu
+
+Orders
+
+Bill
+
+Hotel
+
+Stay
+
+Services
+
+Room
+
+Festival
+
+Map
+
+Schedule
+
+Vendors
+
+Navigation is configuration.
+
+Not software.
+
+==============================================================================
+BUSINESS RULES
+==============================================================================
+
+Profiles define business behaviour.
+
+Restaurant
+
+Orders belong to Sessions.
+
+Hotel
+
+Charges belong to Stays.
+
+Festival
+
+Purchases belong to Attendees.
+
+The business language changes.
+
+The platform remains consistent.
+
+==============================================================================
+SESSION MODEL
+==============================================================================
+
+Each profile influences Session behaviour.
+
+Restaurant
+
+Arrival
+
+Seat Guests
+
+Order
+
+Pay
+
+Leave
+
+Hotel
+
+Check In
+
+Stay
+
+Services
+
+Checkout
+
+Festival
+
+Enter Venue
+
+Visit Vendors
+
+Attend Events
+
+Exit
+
+Every experience remains a Session.
+
+Only lifecycle stages differ.
+
+==============================================================================
+QR CONTEXT
+==============================================================================
+
+Experience Profiles determine how QR scans behave.
+
+Restaurant
+
+Open Table Session.
+
+Hotel
+
+Open Room Services.
+
+Festival
+
+Open Zone Information.
+
+Conference
+
+Open Agenda.
+
+Golf Club
+
+Open Halfway House.
+
+One QR architecture.
+
+Many guest experiences.
+
+==============================================================================
+PERMISSIONS
+==============================================================================
+
+Profiles define role templates.
+
+Restaurant
+
+Manager
+
+Waiter
+
+Kitchen
+
+Cashier
+
+Hotel
+
+Reception
+
+Housekeeping
+
+Maintenance
+
+Manager
+
+Festival
+
+Vendor
+
+Security
+
+Operations
+
+Staff
+
+Permissions remain capability based.
+
+Not hardcoded.
+
+==============================================================================
+DEFAULT WORKFLOWS
+==============================================================================
+
+Profiles provide recommended workflows.
+
+Restaurant
+
+Order
+
+Prepare
+
+Serve
+
+Pay
+
+Hotel
+
+Check-In
+
+Stay
+
+Room Service
+
+Checkout
+
+Festival
+
+Enter
+
+Explore
+
+Purchase
+
+Exit
+
+Customers may customise these workflows.
+
+==============================================================================
+DEFAULT DATA
+==============================================================================
+
+Profiles may include starter data.
+
+Restaurant
+
+Menu Categories
+
+Tables
+
+Tax Settings
+
+Hotel
+
+Room Types
+
+Amenities
+
+Housekeeping Statuses
+
+Festival
+
+Zones
+
+Vendor Categories
+
+Schedules
+
+This dramatically reduces onboarding effort.
+
+==============================================================================
+PROFILE INHERITANCE
+==============================================================================
+
+Profiles define defaults.
+
+Organisations customise them.
+
+Venues override where permitted.
+
+Hierarchy
+
+Platform
+
+↓
+
+Experience Profile
+
+↓
+
+Organisation
+
+↓
+
+Venue
+
+↓
+
+Location
+
+Inheritance minimises configuration effort.
+
+==============================================================================
+PROFILE VERSIONING
+==============================================================================
+
+Experience Profiles evolve.
+
+Each profile should support
+
+Version Number
+
+Migration Rules
+
+Upgrade Path
+
+Deprecation Policy
+
+Customers should upgrade safely.
+
+==============================================================================
+CUSTOM EXPERIENCE PROFILES
+==============================================================================
+
+Enterprise customers may create custom profiles.
+
+Example
+
+Luxury Safari Lodge
+
+Private Members Club
+
+University Campus
+
+Sports Arena
+
+These profiles extend existing capabilities.
+
+Not the platform itself.
+
+==============================================================================
+NEO AND EXPERIENCE PROFILES
+==============================================================================
+
+Neo adapts automatically.
+
+Restaurant Neo
+
+Suggest staffing.
+
+Identify slow tables.
+
+Recommend menu changes.
+
+Hotel Neo
+
+Predict occupancy.
+
+Recommend upgrades.
+
+Monitor housekeeping.
+
+Festival Neo
+
+Predict congestion.
+
+Monitor vendors.
+
+Recommend staffing.
+
+Neo understands the Experience Profile before making recommendations.
+
+==============================================================================
+ANALYTICS
+==============================================================================
+
+Every profile exposes industry-specific dashboards.
+
+Restaurant
+
+Average Spend
+
+Table Turnover
+
+Kitchen Times
+
+Hotel
+
+Occupancy
+
+RevPAR
+
+Housekeeping
+
+Festival
+
+Vendor Sales
+
+Attendance
+
+Zone Density
+
+Analytics are assembled from platform capabilities.
+
+==============================================================================
+ADDING A NEW INDUSTRY
+==============================================================================
+
+A new industry should require
+
+Create Profile
+
+Configure Terminology
+
+Enable Capabilities
+
+Define Workflow
+
+Configure Neo
+
+Generate Starter Templates
+
+No software rewrite.
+
+No new application.
+
+No duplicated architecture.
+
+==============================================================================
+EXAMPLE
+==============================================================================
+
+Future Industry
+
+Museums
+
+Terminology
+
+Exhibits
+
+Capabilities
+
+Tickets
+
+Audio Guides
+
+Tours
+
+Gift Shop
+
+Workflow
+
+Arrival
+
+Tour
+
+Purchase
+
+Exit
+
+Time to support
+
+Days
+
+Not months.
+
+==============================================================================
+DESIGN PRINCIPLES
+==============================================================================
+
+Experience Profiles should
+
+Be configurable.
+
+Be versioned.
+
+Be observable.
+
+Be testable.
+
+Be reusable.
+
+Be documented.
+
+Be inherited.
+
+Be extensible.
+
+Never modify platform architecture.
+
+==============================================================================
+ARCHITECTURAL DECISIONS
+==============================================================================
+
+ADR-011-001
+
+Experience Profiles define behaviour.
+
+Reason
+
+Supports unlimited industries.
+
+ADR-011-002
+
+Terminology is configurable.
+
+Reason
+
+Preserves platform consistency.
+
+ADR-011-003
+
+Capabilities remain platform assets.
+
+Reason
+
+Avoid duplication.
+
+ADR-011-004
+
+Neo adapts using Experience Profiles.
+
+Reason
+
+Industry-aware intelligence.
+
+==============================================================================
+SUCCESS CRITERIA
+==============================================================================
+
+Adding support for a completely new industry should require
+
+No platform rewrite.
+
+No database redesign.
+
+No API redesign.
+
+No mobile application rewrite.
+
+Only
+
+Configuration
+
+Templates
+
+Business Rules
+
+Neo Knowledge
+
+Documentation
+
+This is the measure of success for the Experience Engine.
+
+==============================================================================
+ARCHITECT'S NOTES
+==============================================================================
+
+The Experience Engine is one of Lekki's defining innovations.
+
+Most competitors build separate products for each industry.
+
+Lekki builds one platform capable of delivering many experiences.
+
+This dramatically reduces engineering effort while increasing long-term
+platform value.
+
+As the platform grows, Experience Profiles become strategic assets.
+
+Each new profile expands Lekki into another market without fragmenting the
+architecture or codebase.
+
+The platform does not become more complicated.
+
+It becomes more capable.
+
+==============================================================================
+END OF DOCUMENT
+==============================================================================

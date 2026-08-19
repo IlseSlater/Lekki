@@ -1,0 +1,31 @@
+{
+  "name": "Lekki Experience",
+  "short_name": "Lekki",
+  "description": "LEOS guest experience — scan, join, order, pay.",
+  "theme_color": "#d7a14a",
+  "background_color": "#faf7f2",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "start_url": "/scan",
+  "icons": [
+    {
+      "src": "/brand/lekki-mark.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/brand/lekki-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/brand/lekki-logo-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,1630 @@
+I think this is where Lekki can become much bigger than just another SaaS product.
+
+I wouldn't hardcode integrations.
+
+I would build a Connector SDK and a Connector Runtime, exactly like Shopify Apps, Stripe Apps or VS Code Extensions.
+
+This means Lekki doesn't own all connectors. Partners, banks, accounting vendors, payment providers, and even customers can build them.
+
+The Architecture
+                 LEKKI PLATFORM
+
+                   Marketplace
+                        │
+       ┌────────────────┼────────────────┐
+       │                │                │
+ Payment Connector   Accounting      Messaging
+     Connector        Connector       Connector
+       │                │                │
+       └────────────────┼────────────────┘
+                        │
+               Connector Runtime
+                        │
+             Event & Workflow Engine
+                        │
+                  Lekki Platform
+
+The Runtime is what executes connectors.
+
+The Marketplace is just where they are discovered.
+
+What is a Connector?
+
+A connector is simply a packaged integration.
+
+Think of it like a plugin.
+
+Example
+
+Pilot Connector
+
+Contains
+
+Authentication
+
+API Client
+
+Webhook Handlers
+
+Actions
+
+Triggers
+
+Configuration UI
+
+Documentation
+
+Version
+
+Icon
+
+Permissions
+
+Restaurants simply install it.
+
+Every Connector Has a Manifest
+
+Something like
+
+name: Pilot Payments
+
+version: 1.2
+
+publisher: Pilot
+
+category: Payments
+
+permissions:
+
+- Payments.Read
+- Payments.Write
+- Refunds.Write
+
+supports:
+
+- Payment
+- Refund
+- Settlement
+
+events:
+
+- PaymentCompleted
+- RefundCompleted
+
+actions:
+
+- CreatePayment
+- RefundPayment
+- CheckSettlement
+
+webhooks:
+
+- payment.success
+- payment.failed
+
+configuration:
+
+- MerchantId
+- APIKey
+- Environment
+
+The platform immediately knows how to use it.
+
+Connector SDK
+
+I'd release an SDK.
+
+Example
+
+Lekki Connector SDK
+
+Authentication
+
+Connector Base Class
+
+Webhook Verification
+
+Logging
+
+Retry Framework
+
+Health Monitoring
+
+Configuration API
+
+Secrets API
+
+Testing Tools
+
+Deployment CLI
+
+A partner installs the SDK.
+
+Writes very little code.
+
+Publishes.
+
+Done.
+
+Connector Lifecycle
+
+Developer
+
+↓
+
+Create Connector
+
+↓
+
+Run Tests
+
+↓
+
+Package Connector
+
+↓
+
+Submit Marketplace
+
+↓
+
+Review
+
+↓
+
+Approve
+
+↓
+
+Publish
+
+↓
+
+Restaurant installs
+
+Exactly like an App Store.
+
+Example
+
+FNB Bank builds
+
+FNB Connector
+
+Features
+
+Tap to Pay
+
+Refunds
+
+Settlement
+
+Merchant Accounts
+
+Statements
+
+Reconciliation
+
+Open Banking
+
+FNB owns it.
+
+FNB maintains it.
+
+Restaurants install it.
+
+Connector Permissions
+
+Just like mobile apps.
+
+Example
+
+Requires
+
+Read Payments
+
+Create Payments
+
+Refund Payments
+
+Read Customers
+
+Receive Webhooks
+
+Restaurant approves.
+
+Connector can only do those things.
+
+Configuration
+
+Restaurant installs
+
+Pilot
+
+Configuration screen appears
+
+Merchant Number
+
+API Key
+
+Environment
+
+Settlement Account
+
+Webhook Secret
+
+Click
+
+Test Connection
+
+Green Tick
+
+Done.
+
+Connector UI
+
+Interesting idea...
+
+Connectors can expose configuration pages.
+
+Example
+
+Pilot
+
+Settings
+
+Merchant
+
+Devices
+
+Settlement
+
+Reporting
+
+Webhook Logs
+
+Transactions
+
+No code in Lekki.
+
+Connector provides it.
+
+Triggers
+
+Connector may publish events.
+
+Example
+
+Settlement Completed
+
+↓
+
+Connector
+
+↓
+
+Publishes
+
+SettlementCompleted
+
+↓
+
+Workflow Engine
+
+↓
+
+Accounting
+
+↓
+
+Neo
+
+↓
+
+Reporting
+
+Everything becomes event-driven.
+
+Actions
+
+Workflows call actions.
+
+Payment Completed
+
+↓
+
+Pilot
+
+Create Settlement
+
+↓
+
+Notify Xero
+
+↓
+
+Email Finance
+Health
+
+Every connector has
+
+Connected
+
+Latency
+
+Errors
+
+Retries
+
+Version
+
+Usage
+
+Authentication
+
+Rate Limits
+
+Neo monitors them.
+
+Versioning
+
+Marketplace
+
+Pilot
+
+1.0
+
+1.1
+
+1.2
+
+2.0
+
+Upgrade Available
+
+Restaurant decides when to upgrade.
+
+Marketplace
+
+Looks similar to
+
+Payments
+
+Accounting
+
+Communication
+
+CRM
+
+Inventory
+
+Marketing
+
+AI
+
+Government
+
+Hospitality
+
+Finance
+
+Each connector has
+
+Description
+
+Publisher
+
+Screenshots
+
+Version
+
+Reviews
+
+Downloads
+
+Verified Badge
+
+Support
+
+Documentation
+
+Permissions
+
+Very similar to Shopify.
+
+Verification
+
+I'd have
+
+Official
+
+Built by Lekki
+
+Verified
+
+Built by Partner
+
+NB
+
+Pilot
+
+Sage
+
+Microsoft
+
+Stripe
+
+Community
+
+Built by anyone.
+
+Needs approval.
+
+Revenue Model
+
+Here's where it gets interesting.
+
+Suppose Sage builds
+
+Sage Connector
+
+They sell it
+
+$20/month
+
+Revenue
+
+Customer
+
+↓
+
+Lekki Marketplace
+
+↓
+
+80%
+
+Sage
+
+↓
+
+20%
+
+Lekki
+
+Exactly like Shopify.
+
+Future
+
+Eventually
+
+Marketplace
+
+↓
+
+Connectors
+
+↓
+
+Workflow Templates
+
+↓
+
+Experience Profiles
+
+↓
+
+Neo Skills
+
+↓
+
+Reporting Dashboards
+
+↓
+
+Themes
+
+↓
+
+Industry Packs
+
+The Marketplace becomes an ecosystem.
+
+What I Would Add (This Is the Part I'm Most Excited About)
+
+I think connectors shouldn't just expose APIs.
+
+They should expose business capabilities.
+
+For example, the Pilot connector shouldn't say:
+
+POST /payments
+
+Instead it declares:
+
+Capability
+
+Create Payment
+
+Capability
+
+Refund
+
+Capability
+
+Settlement
+
+Capability
+
+Merchant Lookup
+
+Then the Workflow Engine doesn't care whether it's Pilot, Stripe, Adyen, or NB.
+
+It simply asks:
+
+"I need someone who can Create Payment."
+
+The Runtime selects the installed connector that provides that capability.
+
+That means if a restaurant switches from Pilot to NB, their workflows don't change.
+
+Only the connector changes.
+
+I think that's a significant architectural improvement over most integration platforms. Instead of integrating with vendors, Lekki integrates with capabilities. Vendors implement those capabilities through connectors. That keeps the platform loosely coupled, makes workflows reusable, and makes it much easier for customers to change providers without redesigning their automations. I would absolutely make that one of the core design principles of the Integration Platform.
+
+
+
+# ============================================================================
+# LEKKI PLATFORM
+# SOFTWARE ARCHITECTURE BOOK
+# ============================================================================
+
+Document ID
+    LEK-021
+
+Document Title
+    Integration Engine, Workflow Automation & Connector Marketplace
+
+Status
+    Draft 1.0
+
+Version
+    1.0
+
+Owner
+    Chief Architect
+
+Classification
+    Platform Services
+
+Related Documents
+
+    LEK-008 Event Driven Architecture
+    LEK-010 Organisation Architecture
+    LEK-011 Experience Profiles
+    LEK-013 Guest Session Architecture
+    LEK-015 QR Context Engine
+    LEK-016 Experience Runtime
+    LEK-018 Payment Architecture
+
+==============================================================================
+PURPOSE
+==============================================================================
+
+This document defines the Integration Platform that enables Lekki to connect
+to external systems without requiring custom software development.
+
+Rather than building point-to-point integrations between systems, Lekki
+provides a configurable Integration Engine built on top of the Event Bus.
+
+The Integration Platform consists of three major components:
+
+• Integration Engine
+• Workflow Engine
+• Connector Marketplace
+
+Together these components allow customers to automate business processes,
+connect third-party services and orchestrate operations from within Lekki.
+
+This architecture is inspired by the strengths of products such as
+
+• SnapScan
+• Stripe Connect
+• Zapier
+• Make.com
+• Shopify Apps
+• Microsoft Power Automate
+
+while remaining deeply integrated into Lekki's domain model.
+
+==============================================================================
+VISION
+==============================================================================
+
+Traditional software integrates with external systems.
+
+Lekki orchestrates business experiences.
+
+The goal is not simply to connect APIs.
+
+The goal is to automate how businesses operate.
+
+Everything begins with a business event.
+
+Everything ends with business value.
+
+==============================================================================
+
+THE PROBLEM
+==============================================================================
+
+Today's businesses typically require many disconnected systems.
+
+Restaurant Example
+
+POS
+
+↓
+
+Accounting
+
+↓
+
+Bank
+
+↓
+
+Inventory
+
+↓
+
+CRM
+
+↓
+
+Slack
+
+↓
+
+Email
+
+↓
+
+Analytics
+
+↓
+
+Power BI
+
+↓
+
+WhatsApp
+
+Each integration is built separately.
+
+Every system requires custom configuration.
+
+Every API behaves differently.
+
+Every workflow becomes another integration project.
+
+==============================================================================
+
+THE LEKKI APPROACH
+==============================================================================
+
+Lekki does not build point-to-point integrations.
+
+Instead
+
+Business Events
+
+↓
+
+Workflow Engine
+
+↓
+
+Connector Engine
+
+↓
+
+External Systems
+
+Every integration starts from a business event.
+
+==============================================================================
+
+COMPARISON
+==============================================================================
+
+Traditional Integration
+
+Payment
+
+↓
+
+POS
+
+↓
+
+Accounting
+
+↓
+
+Inventory
+
+↓
+
+CRM
+
+↓
+
+Reports
+
+↓
+
+Notifications
+
+Every connection must be maintained.
+
+Lekki
+
+PaymentCompleted Event
+
+↓
+
+Workflow
+
+↓
+
+Accounting
+
+↓
+
+Notifications
+
+↓
+
+Analytics
+
+↓
+
+Neo
+
+↓
+
+Bank
+
+↓
+
+CRM
+
+↓
+
+Done
+
+Business logic exists once.
+
+==============================================================================
+
+THE THREE PLATFORM COMPONENTS
+==============================================================================
+
+1
+
+Integration Engine
+
+Responsible for communicating with external systems.
+
+2
+
+Workflow Engine
+
+Responsible for deciding what should happen.
+
+3
+
+Connector Marketplace
+
+Responsible for reusable integrations.
+
+==============================================================================
+
+INTEGRATION ENGINE
+==============================================================================
+
+Purpose
+
+Provide secure communication between Lekki and third-party systems.
+
+Responsibilities
+
+Authentication
+
+API Management
+
+Retries
+
+Rate Limiting
+
+Logging
+
+Monitoring
+
+Error Handling
+
+Health Monitoring
+
+Webhook Processing
+
+Version Management
+
+Transformation
+
+Queue Management
+
+==============================================================================
+
+SUPPORTED CONNECTOR TYPES
+==============================================================================
+
+Payments
+
+Accounting
+
+Banking
+
+Messaging
+
+CRM
+
+ERP
+
+Inventory
+
+Business Intelligence
+
+Document Storage
+
+Identity Providers
+
+Booking Systems
+
+AI Platforms
+
+Government Services
+
+Custom APIs
+
+==============================================================================
+
+PAYMENT CONNECTORS
+==============================================================================
+
+Examples
+
+NB
+
+Pilot
+
+GAAP
+
+Stripe
+
+Adyen
+
+Ozow
+
+Peach Payments
+
+Yoco
+
+PayFast
+
+Future providers
+
+Each provider exposes
+
+Authentication
+
+Payment
+
+Refund
+
+Settlement
+
+Reconciliation
+
+Health Status
+
+==============================================================================
+
+ACCOUNTING CONNECTORS
+==============================================================================
+
+Supported examples
+
+Xero
+
+Sage
+
+QuickBooks
+
+SAP
+
+Oracle
+
+Dynamics
+
+Typical actions
+
+Create Invoice
+
+Create Credit Note
+
+Create Customer
+
+Post Journal
+
+Upload Receipt
+
+Synchronise Payments
+
+==============================================================================
+
+BANKING CONNECTORS
+==============================================================================
+
+Possible integrations
+
+NB
+
+Pilot
+
+GAAP
+
+Future Open Banking APIs
+
+Capabilities
+
+Settlement
+
+Verification
+
+Payout
+
+Reconciliation
+
+Balance
+
+Statements
+
+==============================================================================
+
+MESSAGING CONNECTORS
+==============================================================================
+
+Supported providers
+
+WhatsApp
+
+SMS
+
+Email
+
+Push Notifications
+
+Microsoft Teams
+
+Slack
+
+Discord
+
+Examples
+
+Payment received
+
+↓
+
+Send Receipt
+
+Order Ready
+
+↓
+
+Notify Guest
+
+VIP Guest Arrived
+
+↓
+
+Notify Manager
+
+==============================================================================
+
+DOCUMENT CONNECTORS
+==============================================================================
+
+Examples
+
+Google Drive
+
+OneDrive
+
+SharePoint
+
+Dropbox
+
+Actions
+
+Store Receipt
+
+Upload Invoice
+
+Archive Reports
+
+Generate Audit Package
+
+==============================================================================
+
+WORKFLOW ENGINE
+==============================================================================
+
+Purpose
+
+Allow organisations to automate business processes.
+
+No programming required.
+
+Everything is configuration.
+
+==============================================================================
+
+WORKFLOW MODEL
+==============================================================================
+
+Every workflow contains
+
+Trigger
+
+Conditions
+
+Actions
+
+Error Handling
+
+Retry Policy
+
+Notifications
+
+Audit History
+
+==============================================================================
+
+WORKFLOW STRUCTURE
+==============================================================================
+
+WHEN
+
+Event
+
+↓
+
+IF
+
+Conditions
+
+↓
+
+THEN
+
+Actions
+
+↓
+
+Complete
+
+==============================================================================
+
+EXAMPLE
+==============================================================================
+
+WHEN
+
+Payment Completed
+
+↓
+
+IF
+
+Amount > R5,000
+
+↓
+
+THEN
+
+Generate VAT Invoice
+
+↓
+
+Upload PDF
+
+↓
+
+Email Customer
+
+↓
+
+Notify Manager
+
+↓
+
+Update Accounting
+
+↓
+
+Create Neo Insight
+
+==============================================================================
+
+AVAILABLE TRIGGERS
+==============================================================================
+
+Guest Created
+
+Session Started
+
+Participant Joined
+
+Order Submitted
+
+Order Ready
+
+Bill Split
+
+Payment Completed
+
+Refund Issued
+
+Venue Opened
+
+Venue Closed
+
+Neo Recommendation
+
+Inventory Low
+
+Product Sold Out
+
+Kitchen Delayed
+
+Guest Feedback Received
+
+Offline Mode Activated
+
+Synchronisation Completed
+
+Every published business event may trigger workflows.
+
+==============================================================================
+
+AVAILABLE CONDITIONS
+==============================================================================
+
+Amount
+
+Venue
+
+Experience Profile
+
+Organisation
+
+Guest Type
+
+VIP Status
+
+Language
+
+Country
+
+Payment Method
+
+Day
+
+Time
+
+Staff Role
+
+Loyalty Tier
+
+Product
+
+Category
+
+Session Size
+
+Weather (future)
+
+AI Prediction (future)
+
+==============================================================================
+
+AVAILABLE ACTIONS
+==============================================================================
+
+Create Invoice
+
+Send Email
+
+Send WhatsApp
+
+Send SMS
+
+Push Notification
+
+Create Task
+
+Generate PDF
+
+Store Document
+
+Update CRM
+
+Update Accounting
+
+Call API
+
+Run Webhook
+
+Execute Neo Action
+
+Generate Report
+
+Trigger Another Workflow
+
+==============================================================================
+
+WORKFLOW EXAMPLES
+==============================================================================
+
+Restaurant
+
+Payment Completed
+
+↓
+
+Email Receipt
+
+↓
+
+Update Sage
+
+↓
+
+Notify Kitchen
+
+↓
+
+Update Dashboard
+
+Hotel
+
+Guest Checks Out
+
+↓
+
+Generate Invoice
+
+↓
+
+Update PMS
+
+↓
+
+Notify Housekeeping
+
+↓
+
+Create Neo Summary
+
+Festival
+
+Vendor Sales
+
+↓
+
+Update Revenue
+
+↓
+
+Calculate Commission
+
+↓
+
+Notify Finance
+
+↓
+
+Update Dashboard
+
+==============================================================================
+
+CONNECTOR MARKETPLACE
+==============================================================================
+
+Purpose
+
+Provide reusable integrations.
+
+Customers install connectors rather than building integrations.
+
+Marketplace Categories
+
+Payments
+
+Accounting
+
+CRM
+
+Messaging
+
+Reporting
+
+AI
+
+Government
+
+Hospitality
+
+Retail
+
+Finance
+
+==============================================================================
+
+WORKFLOW MARKETPLACE
+==============================================================================
+
+Customers should also install workflow templates.
+
+Examples
+
+Restaurant Starter Pack
+
+Hotel Operations
+
+Festival Finance
+
+Daily Sales Summary
+
+VIP Guest Journey
+
+Customer Follow-Up
+
+Staff Onboarding
+
+Refund Approval
+
+Neo Operations
+
+==============================================================================
+
+INSTALLATION EXPERIENCE
+==============================================================================
+
+Select Marketplace
+
+↓
+
+Choose Connector
+
+↓
+
+Authenticate
+
+↓
+
+Configure
+
+↓
+
+Enable
+
+↓
+
+Done
+
+No development required.
+
+==============================================================================
+
+CONNECTOR HEALTH
+==============================================================================
+
+Each connector exposes
+
+Status
+
+Latency
+
+Authentication
+
+Retry Queue
+
+Errors
+
+Version
+
+Last Synchronisation
+
+==============================================================================
+
+ERROR HANDLING
+==============================================================================
+
+Failures should never stop operations.
+
+Retries
+
+↓
+
+Queue
+
+↓
+
+Alert
+
+↓
+
+Dead Letter Queue
+
+↓
+
+Neo Recommendation
+
+Operations continue.
+
+==============================================================================
+
+SECURITY
+==============================================================================
+
+All integrations must support
+
+OAuth
+
+API Keys
+
+Certificates
+
+Webhook Verification
+
+Encryption
+
+Secret Management
+
+Audit Logging
+
+Least Privilege
+
+==============================================================================
+
+NEO INTEGRATION
+==============================================================================
+
+Neo becomes the automation assistant.
+
+Users may ask
+
+"When a VIP spends more than R2,000,
+notify the manager and create a CRM follow-up."
+
+Neo builds the workflow.
+
+Users approve.
+
+Neo deploys.
+
+==============================================================================
+
+FUTURE AI AUTOMATION
+==============================================================================
+
+Neo may eventually recommend
+
+Unused automations
+
+Process optimisation
+
+Duplicate workflows
+
+Connector upgrades
+
+Performance improvements
+
+Compliance issues
+
+Automation opportunities
+
+==============================================================================
+
+OBSERVABILITY
+==============================================================================
+
+Dashboards should include
+
+Workflow Executions
+
+Success Rate
+
+Failure Rate
+
+Connector Health
+
+Average Runtime
+
+Retry Count
+
+Queue Length
+
+Most Used Workflows
+
+Automation Savings
+
+==============================================================================
+
+ARCHITECTURAL PRINCIPLES
+==============================================================================
+
+Events drive integrations.
+
+Workflows remain configurable.
+
+Connectors remain isolated.
+
+No hard-coded business logic.
+
+Everything is observable.
+
+Everything is auditable.
+
+Everything is reusable.
+
+==============================================================================
+
+LONG-TERM VISION
+==============================================================================
+
+The Integration Platform should eventually become a product in its own right.
+
+Customers should never require external automation tools for normal business
+operations.
+
+The majority of hospitality workflows should be configurable directly inside
+Lekki.
+
+As the platform grows, partners should be able to publish connectors,
+workflow templates and industry accelerators through the Marketplace,
+creating an ecosystem around the Lekki Experience Platform.
+
+==============================================================================
+ARCHITECT'S NOTES
+==============================================================================
+
+The Integration Platform transforms Lekki from an application into an
+orchestration platform.
+
+Instead of simply processing transactions, Lekki becomes responsible for
+coordinating people, systems, payments, documents and intelligence across the
+entire business.
+
+This architecture creates a significant competitive advantage because it
+combines event-driven automation, hospitality-specific workflows and AI-driven
+configuration into a single platform.
+
+Over time, organisations will spend less time integrating software and more
+time improving guest experiences.
+
+==============================================================================
+END OF DOCUMENT
+==============================================================================

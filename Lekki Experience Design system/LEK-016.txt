@@ -1,0 +1,631 @@
+# ============================================================================
+# LEKKI PLATFORM
+# SOFTWARE ARCHITECTURE BOOK
+# ============================================================================
+
+Document ID
+
+LEK-016
+
+Document Title
+
+Experience Runtime & Orchestration Engine
+
+Status
+
+Approved Foundation
+
+Version
+
+1.0
+
+Owner
+
+Chief Architect
+
+Classification
+
+Runtime Architecture
+
+Related Documents
+
+LEK-011 Experience Profiles
+
+LEK-013 Guest Session Architecture
+
+LEK-014 Identity Platform
+
+LEK-015 QR Context Engine
+
+LEK-017 Ordering Domain
+
+==============================================================================
+PURPOSE
+==============================================================================
+
+The Experience Runtime is responsible for executing the guest experience.
+
+It receives context from the QR Context Engine, Identity Platform and Session
+Manager before determining what the guest should see and what actions are
+available.
+
+Rather than embedding business logic inside user interfaces, Lekki centralises
+runtime decision making inside the Experience Runtime.
+
+This allows one platform to deliver unlimited venue experiences.
+
+==============================================================================
+
+VISION
+
+==============================================================================
+
+The Experience Runtime is the conductor of the platform.
+
+It does not own Orders.
+
+It does not own Payments.
+
+It does not own Sessions.
+
+It coordinates them.
+
+Every guest interaction passes through the Runtime.
+
+==============================================================================
+
+INPUTS
+
+==============================================================================
+
+The Runtime evaluates
+
+QR Context
+
+Guest Identity
+
+Session Status
+
+Venue Status
+
+Organisation Configuration
+
+Experience Profile
+
+Capability Availability
+
+Device Type
+
+Language
+
+Connectivity
+
+Neo Recommendations
+
+Business Rules
+
+Time
+
+Operational State
+
+==============================================================================
+
+OUTPUTS
+
+==============================================================================
+
+The Runtime determines
+
+Which screen to open
+
+Which workflow to execute
+
+Which capabilities are enabled
+
+Which navigation to display
+
+Whether authentication is required
+
+Whether to resume an existing Session
+
+Whether to create a new Session
+
+Which branding applies
+
+Which language applies
+
+Which notifications should appear
+
+==============================================================================
+
+RUNTIME FLOW
+
+==============================================================================
+
+QR Scan
+
+↓
+
+Resolve Context
+
+↓
+
+Authenticate Guest (optional)
+
+↓
+
+Find Existing Session
+
+↓
+
+If Session Exists
+
+Resume Session
+
+Else
+
+Create Session
+
+↓
+
+Load Experience Profile
+
+↓
+
+Enable Capabilities
+
+↓
+
+Render Experience
+
+↓
+
+Listen for Events
+
+↓
+
+React Continuously
+
+==============================================================================
+
+RUNTIME STATES
+
+==============================================================================
+
+Initialising
+
+Resolving Context
+
+Authenticating
+
+Loading Experience
+
+Ready
+
+Updating
+
+Offline
+
+Recovering
+
+Completed
+
+==============================================================================
+
+CAPABILITY ACTIVATION
+
+==============================================================================
+
+Capabilities are activated dynamically.
+
+Example
+
+Restaurant
+
+Ordering
+
+Split Bill
+
+Pay
+
+Call Waiter
+
+Hotel
+
+Room Service
+
+Check Out
+
+Housekeeping
+
+Spa Booking
+
+Festival
+
+Schedule
+
+Vendor Marketplace
+
+Map
+
+Ticket Validation
+
+No code changes are required.
+
+==============================================================================
+
+NAVIGATION
+
+==============================================================================
+
+Navigation is assembled dynamically.
+
+Inputs
+
+Experience Profile
+
+Capabilities
+
+Permissions
+
+Current Session
+
+Guest Status
+
+Venue Status
+
+Example
+
+Guest has not ordered
+
+↓
+
+Display Menu First
+
+Guest has unpaid bill
+
+↓
+
+Display Pay Now
+
+Guest already checked in
+
+↓
+
+Display Current Stay
+
+==============================================================================
+
+LIVE ORCHESTRATION
+
+==============================================================================
+
+The Runtime continuously reacts to platform events.
+
+Examples
+
+Bill Created
+
+↓
+
+Show Bill
+
+Order Ready
+
+↓
+
+Notify Guest
+
+Session Transferred
+
+↓
+
+Refresh Participants
+
+Venue Offline
+
+↓
+
+Switch Offline Mode
+
+Payment Completed
+
+↓
+
+Display Receipt
+
+==============================================================================
+
+SESSION AWARENESS
+
+==============================================================================
+
+The Runtime is Session aware.
+
+It always knows
+
+Current Session
+
+Participants
+
+Outstanding Bills
+
+Active Orders
+
+Venue Location
+
+Permissions
+
+Ownership
+
+Everything displayed derives from Session context.
+
+==============================================================================
+
+OFFLINE EXECUTION
+
+==============================================================================
+
+The Runtime continues operating during connectivity loss.
+
+Cached
+
+Experience Profile
+
+Configuration
+
+Capabilities
+
+Menu
+
+Session
+
+Guest Identity
+
+Queued
+
+Orders
+
+Payments
+
+Events
+
+Synchronisation occurs automatically when connectivity returns.
+
+==============================================================================
+
+DEVICE ADAPTATION
+
+==============================================================================
+
+The Runtime adapts automatically.
+
+Mobile Browser
+
+PWA
+
+Native App
+
+Tablet
+
+Kiosk
+
+Staff Device
+
+Kitchen Display
+
+Large Screen
+
+Wearables
+
+The business logic remains identical.
+
+==============================================================================
+
+NEO INTEGRATION
+
+==============================================================================
+
+Neo participates in runtime orchestration.
+
+Neo may recommend
+
+Welcome Returning Guest
+
+Offer Loyalty Reward
+
+Suggest Favourite Meal
+
+Recommend Faster Payment
+
+Identify Operational Delays
+
+Escalate Service Issues
+
+Neo recommends.
+
+Managers configure approval rules.
+
+==============================================================================
+
+BUSINESS RULES
+
+==============================================================================
+
+Runtime behaviour is determined by configuration.
+
+Examples
+
+Require Login
+
+Allow Anonymous Ordering
+
+Maximum Participants
+
+Auto Close Session
+
+Require Deposit
+
+Minimum Spend
+
+Happy Hour Rules
+
+Age Restrictions
+
+The Runtime evaluates these continuously.
+
+==============================================================================
+
+OBSERVABILITY
+
+==============================================================================
+
+Runtime metrics include
+
+Experience Load Time
+
+Context Resolution
+
+Session Creation Time
+
+Authentication Duration
+
+Offline Duration
+
+Navigation Events
+
+Capability Usage
+
+Guest Abandonment
+
+Neo Recommendations
+
+Errors
+
+==============================================================================
+
+EXTENSIBILITY
+
+==============================================================================
+
+Future runtime extensions
+
+Voice Experiences
+
+AR Navigation
+
+Wearables
+
+Smart Glasses
+
+Robotics
+
+IoT Devices
+
+AI Agents
+
+Vehicle Interfaces
+
+Digital Twins
+
+The Runtime should orchestrate all of them.
+
+==============================================================================
+
+ARCHITECTURAL DECISIONS
+
+==============================================================================
+
+ADR-016-001
+
+Business logic executes inside the Runtime.
+
+ADR-016-002
+
+Navigation is configuration.
+
+ADR-016-003
+
+Capabilities are dynamic.
+
+ADR-016-004
+
+Sessions drive Runtime behaviour.
+
+ADR-016-005
+
+Neo observes Runtime state.
+
+==============================================================================
+
+SUCCESS CRITERIA
+
+==============================================================================
+
+Every guest should experience
+
+Immediate context resolution
+
+Minimal navigation
+
+Consistent behaviour
+
+Fast interactions
+
+Offline resilience
+
+Personalised experiences
+
+Zero unnecessary configuration
+
+The Runtime should make the platform feel effortless.
+
+==============================================================================
+
+ARCHITECT'S NOTES
+
+==============================================================================
+
+The Experience Runtime is the execution engine of Lekki.
+
+The QR Context Engine provides context.
+
+The Identity Platform provides identity.
+
+The Session Manager provides operational state.
+
+The Experience Profile defines behaviour.
+
+The Runtime brings all of these together into a single coherent guest
+experience.
+
+This architecture removes hardcoded user journeys and replaces them with
+configuration, orchestration and context.
+
+It is this layer that enables Lekki to remain venue agnostic while still
+delivering highly tailored guest experiences across every industry.
+
+==============================================================================
+END OF DOCUMENT
+
+==============================================================================
+
+
+Chief Architect's Recommendation
+
+At this point, I think we've uncovered what I now see as the five architectural pillars of Lekki:
+
+Experience Profiles – What kind of business is this?
+QR Context Engine – Where am I?
+Identity Platform – Who am I?
+Guest Session – What am I currently doing?
+Experience Runtime – What should happen next?
+
+Together, these five components form the platform's "operating system" for guest experiences.
+
+From here, I would shift into the operational domains:
+
+LEK-017 – Ordering Domain
+LEK-018 – Billing & Settlement
+LEK-019 – Payment Architecture
+LEK-020 – Offline-First Architecture

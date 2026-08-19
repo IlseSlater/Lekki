@@ -1,0 +1,641 @@
+# ============================================================================
+# LEKKI PLATFORM
+# SOFTWARE ARCHITECTURE BOOK
+# ============================================================================
+
+Document ID
+    LEK-005
+
+Document Title
+    Ubiquitous Language & Domain Vocabulary
+
+Status
+    Draft
+
+Version
+    1.0
+
+Owner
+    Product Architecture
+
+Classification
+    Foundational
+
+Related Documents
+
+    LEK-001 Vision
+    LEK-002 Product Philosophy
+    LEK-003 Guiding Principles
+    LEK-004 Business Model
+    LEK-010 Domain Architecture
+
+==============================================================================
+EXECUTIVE SUMMARY
+==============================================================================
+
+Every successful software platform develops its own language.
+
+That language becomes the foundation upon which documentation,
+architecture, software, support, onboarding and training are built.
+
+Without a common language, different teams begin using different words for
+the same concept.
+
+This creates misunderstandings.
+
+Duplicate functionality.
+
+Inconsistent APIs.
+
+Confusing documentation.
+
+Poor user experiences.
+
+The purpose of this document is to establish the official language of Lekki.
+
+Every future discussion should use these terms consistently.
+
+==============================================================================
+WHY THIS MATTERS
+==============================================================================
+
+Imagine three conversations.
+
+A developer says
+
+"The table has moved."
+
+The product owner says
+
+"The session moved."
+
+The customer says
+
+"The guests changed tables."
+
+The database says
+
+"Location updated."
+
+All four people may be describing exactly the same event.
+
+The language removes ambiguity.
+
+For Lekki every concept has one preferred name.
+
+==============================================================================
+CORE DOMAIN
+==============================================================================
+
+The highest-level business concepts are called Core Domain Objects.
+
+These objects should remain stable over many years.
+
+Organisation
+
+Venue
+
+Experience Profile
+
+Guest
+
+Staff Member
+
+Session
+
+Participant
+
+Location
+
+Order
+
+Bill
+
+Payment
+
+QR Context
+
+Service
+
+Notification
+
+These names should not change.
+
+==============================================================================
+ORGANISATION
+==============================================================================
+
+Definition
+
+A legal business entity that owns one or more venues.
+
+Examples
+
+Ocean Hotels
+
+ABC Hospitality
+
+Sunset Festivals
+
+Blue Mountain Wines
+
+Responsibilities
+
+Owns business data.
+
+Owns staff.
+
+Owns venues.
+
+Owns reporting.
+
+Owns billing.
+
+Owns payment configuration.
+
+Important Rule
+
+Guests never belong to an organisation.
+
+Guests visit organisations.
+
+==============================================================================
+VENUE
+==============================================================================
+
+Definition
+
+A physical location operated by an organisation.
+
+Examples
+
+Restaurant
+
+Hotel
+
+Festival
+
+Golf Estate
+
+Casino
+
+Airport Lounge
+
+Conference Centre
+
+Rules
+
+A venue belongs to exactly one organisation.
+
+A venue has one Experience Profile.
+
+A venue contains Locations.
+
+A venue exposes Services.
+
+==============================================================================
+EXPERIENCE PROFILE
+==============================================================================
+
+Definition
+
+A reusable configuration that changes platform behaviour without changing
+platform architecture.
+
+Examples
+
+Restaurant
+
+Hotel
+
+Festival
+
+Conference
+
+Future profiles may be added without modifying the platform.
+
+Responsibilities
+
+Terminology
+
+Modules
+
+Capabilities
+
+Guest Journey
+
+Business Rules
+
+Visual Branding
+
+Permissions
+
+Experience Profiles are configuration.
+
+Never software forks.
+
+==============================================================================
+LOCATION
+==============================================================================
+
+Definition
+
+Any identifiable place inside a venue where interactions occur.
+
+Examples
+
+Restaurant Table
+
+Hotel Room
+
+Festival Zone
+
+Golf Halfway House
+
+Casino Table
+
+VIP Lounge
+
+Airport Gate
+
+The platform should never assume a Location is a table.
+
+Location is the generic concept.
+
+==============================================================================
+SERVICE
+==============================================================================
+
+Definition
+
+Anything a venue offers to a guest.
+
+Examples
+
+Food
+
+Drinks
+
+Accommodation
+
+Parking
+
+Ticket Upgrade
+
+Spa
+
+Golf Booking
+
+Wine Tasting
+
+Room Service
+
+Merchandise
+
+Future services should require no architectural changes.
+
+==============================================================================
+GUEST
+==============================================================================
+
+Definition
+
+A person interacting with a venue.
+
+Important Characteristics
+
+Global identity.
+
+Platform account.
+
+Cross-organisation history.
+
+Personal preferences.
+
+Payment methods.
+
+Guests belong to the platform.
+
+Not the venue.
+
+==============================================================================
+STAFF MEMBER
+==============================================================================
+
+Definition
+
+A person performing work for an organisation.
+
+Examples
+
+Waiter
+
+Manager
+
+Receptionist
+
+Cashier
+
+Security
+
+Bartender
+
+Staff identities belong to organisations.
+
+Not the platform.
+
+==============================================================================
+SESSION
+==============================================================================
+
+Definition
+
+A temporary interaction between one or more guests and a venue.
+
+Examples
+
+Restaurant visit.
+
+Hotel stay.
+
+Festival attendance.
+
+Wine tasting.
+
+Conference registration.
+
+The Session becomes the primary object around which interaction occurs.
+
+Everything else relates to the Session.
+
+==============================================================================
+PARTICIPANT
+==============================================================================
+
+Definition
+
+A Guest participating in a Session.
+
+A Session contains one or more Participants.
+
+Examples
+
+Restaurant
+
+Four guests sharing dinner.
+
+Hotel
+
+Two guests sharing one room.
+
+Festival
+
+Friends attending together.
+
+Participant replaces customer-at-table terminology.
+
+==============================================================================
+ORDER
+==============================================================================
+
+Definition
+
+A request made by one or more Participants for one or more Services.
+
+Restaurant
+
+Food order.
+
+Festival
+
+Drink purchase.
+
+Hotel
+
+Room service request.
+
+Golf Club
+
+Food at halfway house.
+
+Order is venue agnostic.
+
+==============================================================================
+BILL
+==============================================================================
+
+Definition
+
+The financial responsibility generated by one or more Orders.
+
+Bills may be
+
+Individual.
+
+Shared.
+
+Sponsored.
+
+Transferred.
+
+Merged.
+
+Split.
+
+The billing model should remain independent of venue type.
+
+==============================================================================
+PAYMENT
+==============================================================================
+
+Definition
+
+A financial transaction settling all or part of a Bill.
+
+Payments support
+
+Card.
+
+Tap-to-Pay.
+
+Digital Wallets.
+
+Cash.
+
+Gift Cards.
+
+Future payment methods.
+
+Payment Providers are interchangeable.
+
+Payments are platform concepts.
+
+Providers are integrations.
+
+==============================================================================
+QR CONTEXT
+==============================================================================
+
+Definition
+
+The information encoded or resolved from a QR code.
+
+Context may include
+
+Organisation.
+
+Venue.
+
+Location.
+
+Language.
+
+Experience Profile.
+
+Campaign.
+
+Permissions.
+
+Capabilities.
+
+A QR Code does not merely identify a web page.
+
+It establishes context.
+
+==============================================================================
+CAPABILITY
+==============================================================================
+
+Definition
+
+A reusable platform feature.
+
+Examples
+
+Ordering.
+
+Payments.
+
+Messaging.
+
+Notifications.
+
+Bookings.
+
+Analytics.
+
+Neo.
+
+Capabilities may be enabled or disabled through configuration.
+
+==============================================================================
+MODULE
+==============================================================================
+
+Definition
+
+A deployable unit of platform functionality.
+
+Modules implement Capabilities.
+
+Examples
+
+Payments Module.
+
+Ordering Module.
+
+Analytics Module.
+
+Neo Module.
+
+==============================================================================
+TENANT
+==============================================================================
+
+Definition
+
+A technical implementation of an Organisation within the SaaS platform.
+
+Business users should see Organisations.
+
+Developers may refer to Tenants.
+
+Documentation should prefer Organisation.
+
+==============================================================================
+EVENT
+==============================================================================
+
+Definition
+
+Something meaningful that has already happened.
+
+Examples
+
+Session Started.
+
+Participant Joined.
+
+Order Submitted.
+
+Bill Split.
+
+Payment Completed.
+
+Venue Closed.
+
+Neo Recommendation Accepted.
+
+Events become the foundation of future event-driven architecture.
+
+==============================================================================
+UBIQUITOUS LANGUAGE RULES
+==============================================================================
+
+Every concept has one preferred name.
+
+Never invent synonyms.
+
+Never create competing terminology.
+
+Documentation.
+
+Database.
+
+API.
+
+User Interface.
+
+Support.
+
+Analytics.
+
+Neo.
+
+All should use the same vocabulary.
+
+Consistency reduces cognitive load.
+
+==============================================================================
+THE IMPORTANCE OF LANGUAGE
+==============================================================================
+
+The platform will continue evolving for many years.
+
+New developers will join.
+
+New industries will be supported.
+
+New integrations will be added.
+
+The common language established today becomes one of Lekki's most valuable
+architectural assets.
+
+Protect it carefully.
+
+Whenever new concepts are introduced they should first become part of the
+Ubiquitous Language before becoming part of the software.
+
+==============================================================================
+END OF DOCUMENT
+==============================================================================

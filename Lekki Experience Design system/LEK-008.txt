@@ -1,0 +1,670 @@
+# ============================================================================
+# LEKKI PLATFORM
+# SOFTWARE ARCHITECTURE BOOK
+# ============================================================================
+
+Document ID
+    LEK-008
+
+Document Title
+    Event-Driven Architecture
+
+Status
+    Approved Foundation
+
+Version
+    1.0
+
+Owner
+    Chief Architect
+
+Classification
+    Architecture Foundation
+
+Related Documents
+
+    LEK-006 Platform Architecture Principles
+    LEK-007 Domain Driven Design
+    LEK-009 Capability Model
+    LEK-013 Guest Session Architecture
+    LEK-040 Neo Intelligence Platform
+
+==============================================================================
+PURPOSE
+==============================================================================
+
+This document defines the Event-Driven Architecture (EDA) strategy for the
+Lekki platform.
+
+Events are the primary mechanism by which business capabilities communicate.
+
+Rather than directly calling one another whenever possible, platform modules
+publish business events describing what has already occurred.
+
+Other modules subscribe to these events and react independently.
+
+This approach reduces coupling, improves scalability, simplifies integrations,
+supports offline synchronisation and enables Neo to observe platform activity
+without interfering with operational workflows.
+
+==============================================================================
+WHY EVENT-DRIVEN ARCHITECTURE?
+==============================================================================
+
+Traditional enterprise systems often rely on direct service-to-service calls.
+
+Example
+
+Guest places an order
+
+↓
+
+Ordering Service
+
+↓
+
+Billing Service
+
+↓
+
+Inventory Service
+
+↓
+
+Kitchen Service
+
+↓
+
+Analytics Service
+
+↓
+
+Notification Service
+
+↓
+
+Neo
+
+Each service depends directly on several others.
+
+As the platform grows these dependencies become increasingly complex.
+
+Every new feature requires modifying existing services.
+
+The platform becomes fragile.
+
+Lekki adopts an event-first architecture instead.
+
+==============================================================================
+THE CORE PRINCIPLE
+==============================================================================
+
+Services should announce what happened.
+
+They should never decide who needs to know.
+
+Example
+
+Order Submitted
+
+Instead of calling
+
+Kitchen
+
+Analytics
+
+Neo
+
+Billing
+
+Notifications
+
+the Ordering Context simply publishes
+
+OrderSubmitted
+
+Interested modules react independently.
+
+==============================================================================
+EVENT CHARACTERISTICS
+==============================================================================
+
+A business event always represents something that has already happened.
+
+Correct examples
+
+SessionStarted
+
+ParticipantJoined
+
+VenueOpened
+
+OrderSubmitted
+
+OrderPrepared
+
+BillCreated
+
+BillSplit
+
+PaymentAuthorised
+
+PaymentCompleted
+
+VenueClosed
+
+NeoRecommendationAccepted
+
+Incorrect examples
+
+CreateOrder
+
+SendNotification
+
+UpdateInventory
+
+ProcessPayment
+
+These are commands.
+
+Not events.
+
+Commands request work.
+
+Events describe completed work.
+
+==============================================================================
+EVENT DESIGN PRINCIPLES
+==============================================================================
+
+Events should be
+
+Immutable
+
+Past tense
+
+Business focused
+
+Self-contained
+
+Versioned
+
+Auditable
+
+Never deleted
+
+Events become part of the permanent business history.
+
+==============================================================================
+THE EVENT LIFECYCLE
+==============================================================================
+
+Business Action
+
+↓
+
+Aggregate validates business rules
+
+↓
+
+Aggregate changes state
+
+↓
+
+Aggregate publishes Domain Event
+
+↓
+
+Event Bus distributes event
+
+↓
+
+Subscribers react independently
+
+Each subscriber performs only its own responsibility.
+
+==============================================================================
+EXAMPLE
+GUEST PLACES AN ORDER
+==============================================================================
+
+Guest
+
+↓
+
+Order Aggregate
+
+↓
+
+OrderSubmitted Event
+
+Subscribers
+
+Billing
+
+Kitchen
+
+Analytics
+
+Neo
+
+Notifications
+
+Inventory
+
+Reporting
+
+Future subscribers can be added without changing Ordering.
+
+==============================================================================
+EVENT OWNERSHIP
+==============================================================================
+
+Every bounded context owns its own events.
+
+Identity
+
+GuestAuthenticated
+
+PasskeyRegistered
+
+Organisation
+
+OrganisationCreated
+
+Venue
+
+VenueOpened
+
+VenueClosed
+
+ExperienceChanged
+
+Guest Session
+
+SessionStarted
+
+ParticipantJoined
+
+ParticipantLeft
+
+Ordering
+
+OrderSubmitted
+
+OrderCancelled
+
+OrderPrepared
+
+Billing
+
+BillCreated
+
+BillMerged
+
+BillSplit
+
+Payments
+
+PaymentAuthorised
+
+PaymentCompleted
+
+RefundProcessed
+
+Neo
+
+RecommendationGenerated
+
+RecommendationAccepted
+
+RecommendationRejected
+
+==============================================================================
+EVENT BUS
+==============================================================================
+
+The Event Bus distributes events throughout the platform.
+
+Responsibilities
+
+Reliable delivery
+
+Ordering guarantees where required
+
+Retry
+
+Dead-letter handling
+
+Monitoring
+
+Tracing
+
+Version management
+
+Future implementations may use
+
+Azure Service Bus
+
+RabbitMQ
+
+Kafka
+
+AWS EventBridge
+
+Google Pub/Sub
+
+The architecture should remain provider independent.
+
+==============================================================================
+EVENT PAYLOAD DESIGN
+==============================================================================
+
+Every event should contain
+
+Event Identifier
+
+Event Name
+
+Aggregate Identifier
+
+Organisation Identifier
+
+Venue Identifier
+
+Timestamp
+
+Version
+
+Correlation Identifier
+
+Actor
+
+Business Payload
+
+Example
+
+Event
+
+PaymentCompleted
+
+Aggregate
+
+Bill
+
+Venue
+
+Cape Town Restaurant
+
+Actor
+
+Guest
+
+Amount
+
+R450.00
+
+Currency
+
+ZAR
+
+Occurred
+
+2026-07-15T18:42:00Z
+
+==============================================================================
+CORRELATION IDs
+==============================================================================
+
+Every business workflow should share a Correlation ID.
+
+Example
+
+Guest scans QR
+
+↓
+
+Session Created
+
+↓
+
+Order Submitted
+
+↓
+
+Bill Created
+
+↓
+
+Payment Completed
+
+All events can be reconstructed using the same Correlation ID.
+
+This dramatically improves observability and troubleshooting.
+
+==============================================================================
+EVENT VERSIONING
+==============================================================================
+
+Events evolve over time.
+
+Old consumers should continue operating.
+
+Rules
+
+Never remove existing fields.
+
+Only add optional fields.
+
+Publish new versions when breaking changes occur.
+
+Support migration windows.
+
+Events are public contracts.
+
+Treat them accordingly.
+
+==============================================================================
+EVENT STORAGE
+==============================================================================
+
+Important business events should be retained.
+
+Benefits
+
+Audit history
+
+Analytics
+
+Compliance
+
+Neo learning
+
+Operational replay
+
+Customer support
+
+Historical reporting
+
+The event history becomes the operational memory of the platform.
+
+==============================================================================
+OFFLINE SYNCHRONISATION
+==============================================================================
+
+Offline behaviour naturally aligns with events.
+
+While offline
+
+Events are queued locally.
+
+When connectivity returns
+
+Events are replayed.
+
+The platform converges automatically.
+
+This greatly simplifies offline architecture.
+
+==============================================================================
+NEO AS AN EVENT SUBSCRIBER
+==============================================================================
+
+Neo should never require direct integration with business modules.
+
+Neo subscribes to business events.
+
+Examples
+
+Venue performance
+
+Order delays
+
+Payment failures
+
+Guest behaviour
+
+Configuration changes
+
+Neo observes.
+
+Neo learns.
+
+Neo recommends.
+
+Neo does not interfere with operational workflows.
+
+==============================================================================
+INTEGRATION ARCHITECTURE
+==============================================================================
+
+External systems should integrate through events whenever possible.
+
+Examples
+
+Accounting
+
+Payment Providers
+
+Inventory
+
+Business Intelligence
+
+CRM
+
+Webhook Consumers
+
+This reduces direct dependencies between systems.
+
+==============================================================================
+EVENT CATALOGUE
+==============================================================================
+
+Every published event should appear in a central Event Catalogue.
+
+The catalogue documents
+
+Event name
+
+Owning context
+
+Publisher
+
+Consumers
+
+Payload schema
+
+Version history
+
+Business meaning
+
+Related aggregates
+
+No undocumented event should exist.
+
+==============================================================================
+OBSERVABILITY
+==============================================================================
+
+The event stream becomes the heartbeat of the platform.
+
+Operational dashboards should display
+
+Events per second
+
+Failed deliveries
+
+Retry queues
+
+Processing latency
+
+Subscriber health
+
+Dead-letter queues
+
+This enables rapid diagnosis of production issues.
+
+==============================================================================
+WHEN NOT TO USE EVENTS
+==============================================================================
+
+Events are powerful but not universal.
+
+Use synchronous communication when
+
+Immediate user feedback is required.
+
+Validation must occur before continuing.
+
+A query requires an immediate response.
+
+Events should communicate completed business actions.
+
+Not replace every API call.
+
+==============================================================================
+ARCHITECTURAL BENEFITS
+==============================================================================
+
+An event-driven architecture provides
+
+Loose coupling
+
+Independent deployment
+
+Scalability
+
+Auditability
+
+Replay capability
+
+Offline synchronisation
+
+Neo observability
+
+Simpler integrations
+
+Operational visibility
+
+Future extensibility
+
+==============================================================================
+ARCHITECT'S NOTES
+==============================================================================
+
+The event stream is the nervous system of Lekki.
+
+Business capabilities should remain unaware of one another wherever possible.
+
+They simply perform their responsibilities and announce what has happened.
+
+As the platform grows, new capabilities—including Neo, reporting, machine
+learning, partner integrations and future services—can be introduced by
+subscribing to existing events rather than modifying existing code.
+
+This architectural style allows Lekki to evolve continuously while preserving
+stability, reducing coupling and protecting the integrity of the domain model.
+
+==============================================================================
+END OF DOCUMENT
+==============================================================================

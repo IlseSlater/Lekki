@@ -1,0 +1,434 @@
+# ============================================================================
+# LEKKI PLATFORM
+# SOFTWARE ARCHITECTURE BOOK
+# ============================================================================
+
+Document ID
+    LEK-002
+
+Document Title
+    Product Philosophy
+
+Status
+    Draft
+
+Version
+    0.1
+
+Owner
+    Product Architecture
+
+Last Updated
+    July 2026
+
+Related Documents
+
+    LEK-000 Project Overview
+    LEK-001 Vision
+    LEK-003 Guiding Principles
+    LEK-004 Product Principles
+    LEK-010 Business Architecture
+
+==============================================================================
+EXECUTIVE SUMMARY
+==============================================================================
+
+Technology should feel invisible.
+
+People do not visit a restaurant because they enjoy using software.
+
+They visit because they enjoy spending time with friends.
+
+People do not attend concerts because they enjoy QR codes.
+
+They attend because they enjoy music.
+
+People do not stay in hotels because they enjoy mobile applications.
+
+They stay because they want comfort.
+
+Technology exists to support experiences.
+
+Never to become the experience.
+
+Everything within Lekki is built around this belief.
+
+The greatest compliment a guest can give the platform is:
+
+"I never had to think about it."
+
+------------------------------------------------------------------------------
+OUR BELIEF
+------------------------------------------------------------------------------
+
+Software should reduce thinking.
+
+Not create more thinking.
+
+Every interaction should remove uncertainty.
+
+The guest should never wonder
+
+• Where do I order?
+
+• How do I pay?
+
+• Which application do I need?
+
+• Whose bill is this?
+
+• Where is my waiter?
+
+The software should answer those questions before they are asked.
+
+------------------------------------------------------------------------------
+THE INVISIBLE SOFTWARE PRINCIPLE
+------------------------------------------------------------------------------
+
+The best software disappears.
+
+Guests should remember
+
+The dinner.
+
+The concert.
+
+The holiday.
+
+The celebration.
+
+Not the application they used.
+
+Whenever technology becomes the centre of attention we have increased friction.
+
+Lekki aims to remove technology from the foreground.
+
+------------------------------------------------------------------------------
+PEOPLE FIRST
+------------------------------------------------------------------------------
+
+Every architectural decision begins with people.
+
+Not databases.
+
+Not APIs.
+
+Not frameworks.
+
+Before designing a feature we ask
+
+Who benefits?
+
+What frustration disappears?
+
+What becomes simpler?
+
+How much time is saved?
+
+Technology is simply the mechanism.
+
+People are always the objective.
+
+------------------------------------------------------------------------------
+ONE APPLICATION
+------------------------------------------------------------------------------
+
+Guests should build familiarity.
+
+Not repeatedly learn.
+
+One application should work everywhere.
+
+The venue changes.
+
+The experience changes.
+
+The application remains familiar.
+
+Confidence grows over time.
+
+Training disappears naturally.
+
+------------------------------------------------------------------------------
+CONTEXT OVER NAVIGATION
+------------------------------------------------------------------------------
+
+Traditional software asks users where they want to go.
+
+Lekki already knows.
+
+The QR code establishes context.
+
+The platform understands
+
+Organisation
+
+Venue
+
+Location
+
+Experience Profile
+
+Language
+
+Permissions
+
+Services
+
+The interface should present only what is relevant.
+
+Menus should become shorter.
+
+Options should become fewer.
+
+Choices should become obvious.
+
+------------------------------------------------------------------------------
+CONFIGURE INSTEAD OF DEVELOP
+------------------------------------------------------------------------------
+
+Every custom feature increases long-term complexity.
+
+Whenever possible
+
+Configuration should replace development.
+
+Rules should replace code.
+
+Profiles should replace forks.
+
+Templates should replace duplication.
+
+This philosophy allows the platform to evolve without fragmentation.
+
+------------------------------------------------------------------------------
+SMALL DECISIONS CREATE GREAT EXPERIENCES
+------------------------------------------------------------------------------
+
+Guests rarely remember individual features.
+
+They remember moments.
+
+Examples include
+
+The menu loaded instantly.
+
+The payment worked immediately.
+
+Splitting the bill was effortless.
+
+Ordering required no explanation.
+
+Those moments are created by hundreds of small design decisions.
+
+Every interaction matters.
+
+------------------------------------------------------------------------------
+REDUCE COGNITIVE LOAD
+------------------------------------------------------------------------------
+
+Every screen asks something from the user.
+
+Attention.
+
+Memory.
+
+Decision making.
+
+Reading.
+
+Navigation.
+
+Whenever possible Lekki should
+
+Remove screens.
+
+Reduce options.
+
+Prefill information.
+
+Recognise intent.
+
+Predict the next action.
+
+The simplest interface is often the one that never appears.
+
+------------------------------------------------------------------------------
+CONSISTENCY BUILDS TRUST
+------------------------------------------------------------------------------
+
+Guests should develop muscle memory.
+
+Buttons should behave consistently.
+
+Terminology should remain stable.
+
+Colours should communicate meaning.
+
+Errors should be predictable.
+
+The platform should never surprise users unnecessarily.
+
+Consistency creates confidence.
+
+Confidence creates adoption.
+
+------------------------------------------------------------------------------
+AUTOMATION WITH ACCOUNTABILITY
+------------------------------------------------------------------------------
+
+Automation exists to remove repetitive work.
+
+Never to remove responsibility.
+
+Neo may recommend.
+
+Neo may analyse.
+
+Neo may optimise.
+
+Neo may prepare.
+
+Humans approve.
+
+Business owners remain in control.
+
+------------------------------------------------------------------------------
+TRUST IS THE PRODUCT
+------------------------------------------------------------------------------
+
+Guests trust Lekki with
+
+Identity.
+
+Payments.
+
+Personal preferences.
+
+Location.
+
+History.
+
+Trust must never be abused.
+
+Privacy is not a feature.
+
+It is a responsibility.
+
+Transparency should exist wherever data is collected or used.
+
+------------------------------------------------------------------------------
+OFFLINE IS A PROMISE
+------------------------------------------------------------------------------
+
+Operations cannot stop because connectivity fails.
+
+Guests should continue interacting.
+
+Staff should continue working.
+
+Managers should continue operating.
+
+Synchronization should happen automatically when possible.
+
+Offline support is not a premium feature.
+
+It is part of the platform's reliability.
+
+------------------------------------------------------------------------------
+INTEGRATE FIRST
+------------------------------------------------------------------------------
+
+Businesses already own valuable systems.
+
+Accounting.
+
+Inventory.
+
+Payments.
+
+Reservations.
+
+Reporting.
+
+Lekki should enhance those systems rather than forcing immediate replacement.
+
+Every successful integration reduces resistance to adoption.
+
+------------------------------------------------------------------------------
+LONG-TERM THINKING
+------------------------------------------------------------------------------
+
+Every shortcut becomes tomorrow's technical debt.
+
+Every duplicated feature becomes tomorrow's maintenance burden.
+
+Every undocumented decision becomes tomorrow's confusion.
+
+We optimise for the platform we want in ten years.
+
+Not merely the release we want next month.
+
+------------------------------------------------------------------------------
+PRODUCT VALUES
+------------------------------------------------------------------------------
+
+Lekki values
+
+Simplicity over complexity.
+
+Consistency over novelty.
+
+Configuration over customisation.
+
+Automation over repetition.
+
+Transparency over assumptions.
+
+Reliability over cleverness.
+
+Quality over speed.
+
+Documentation over tribal knowledge.
+
+Guests over technology.
+
+------------------------------------------------------------------------------
+THE QUESTION WE ALWAYS ASK
+------------------------------------------------------------------------------
+
+Before building any feature the product team should ask
+
+Would a guest naturally understand this?
+
+Would a staff member need training?
+
+Can Neo help?
+
+Can this work in another venue?
+
+Can this be configured?
+
+Does this reduce friction?
+
+If the answer is "no", rethink the solution.
+
+------------------------------------------------------------------------------
+OUR PROMISE
+------------------------------------------------------------------------------
+
+Lekki will never attempt to impress users with unnecessary complexity.
+
+Instead we aim to create software that quietly becomes indispensable.
+
+------------------------------------------------------------------------------
+PRODUCT PHILOSOPHY STATEMENT
+------------------------------------------------------------------------------
+
+We believe technology should adapt to people, not people to technology.
+
+Every feature we build should reduce effort, increase confidence, and allow
+guests and businesses to focus on what truly matters: the experience.
+
+------------------------------------------------------------------------------
+END OF DOCUMENT

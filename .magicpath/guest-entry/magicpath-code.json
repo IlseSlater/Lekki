@@ -1,0 +1,29 @@
+{
+  "mode": "edit",
+  "componentId": "430602733792428032",
+  "projectId": "430602166831558656",
+  "selectedRevisionId": "430602733792428033",
+  "jobId": "430579524154048512-external-agent-433482075920814080",
+  "generatedName": "calmly-house-2368",
+  "name": "Guest Entry",
+  "dimensions": {
+    "width": 390,
+    "height": 844
+  },
+  "selectedImages": [],
+  "editableFiles": [
+    {
+      "path": "src/App.tsx",
+      "sha256": "6e416b6ee4f0fba9adcea8b9e4e901d79c479b3bdba5064ff12fa12309629d0c"
+    },
+    {
+      "path": "src/components/generated/GuestEntry.tsx",
+      "sha256": "809be441482e9c44dae528f951736100ae6b2509398a34aa0202793d4feb16aa"
+    },
+    {
+      "path": "src/index.css",
+      "sha256": "2ca5fe44258a6055f09c525f9009b675c0fcfd4d23711d94fbb6f8bc64ae7e02"
+    }
+  ],
+  "baseRevisionId": "430602733792428033"
+}

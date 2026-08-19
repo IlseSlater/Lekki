@@ -1,0 +1,800 @@
+# ============================================================================
+# LEKKI PLATFORM
+# SOFTWARE ARCHITECTURE BOOK
+# ============================================================================
+
+Document ID
+    LEK-007
+
+Document Title
+    Domain Driven Design (DDD)
+
+Status
+    Approved Foundation
+
+Version
+    1.0
+
+Owner
+    Chief Architect
+
+Classification
+    Architecture Foundation
+
+Related Documents
+
+    LEK-005 Ubiquitous Language
+    LEK-006 Platform Principles
+    LEK-008 Event Driven Architecture
+    LEK-010 Organisation Architecture
+
+==============================================================================
+PURPOSE
+==============================================================================
+
+This document defines the Domain Driven Design strategy used throughout the
+Lekki platform.
+
+The objective is not to follow DDD academically.
+
+The objective is to organise the software around the business instead of
+organising the business around the software.
+
+Every important business concept should have a natural representation in the
+codebase.
+
+When the business changes,
+the software should evolve naturally.
+
+==============================================================================
+WHY DOMAIN DRIVEN DESIGN
+==============================================================================
+
+Most enterprise systems slowly become collections of APIs,
+database tables,
+controllers and services.
+
+After several years nobody understands where the business logic actually lives.
+
+Rules become duplicated.
+
+Features become inconsistent.
+
+Development slows.
+
+DDD prevents this by making the business domain the centre of the system.
+
+Everything else becomes supporting infrastructure.
+
+Business survives.
+
+Technology changes.
+
+==============================================================================
+THE HEART OF LEKKI
+==============================================================================
+
+The platform is built around one simple idea.
+
+People interact with Venues.
+
+Everything else supports that interaction.
+
+This interaction creates
+
+Sessions
+
+Orders
+
+Bills
+
+Payments
+
+Notifications
+
+Analytics
+
+Neo Insights
+
+Everything begins with a Session.
+
+==============================================================================
+BOUNDED CONTEXTS
+==============================================================================
+
+Lekki is divided into multiple business domains.
+
+Each domain owns its own language,
+rules,
+models,
+events,
+and persistence.
+
+The bounded contexts are
+
+Identity
+
+Organisation
+
+Venue
+
+Experience
+
+Guest Session
+
+Ordering
+
+Billing
+
+Payments
+
+Neo
+
+Analytics
+
+Notifications
+
+Administration
+
+Integrations
+
+Reporting
+
+Future contexts may be added.
+
+Existing contexts should remain independent.
+
+==============================================================================
+IDENTITY CONTEXT
+==============================================================================
+
+Purpose
+
+Manage identities.
+
+Responsibilities
+
+Authentication
+
+Passkeys
+
+OAuth
+
+Device Registration
+
+Guest Accounts
+
+Staff Accounts
+
+Role Resolution
+
+Multi-factor Authentication
+
+Never owns
+
+Orders
+
+Bills
+
+Venues
+
+Payments
+
+Identity knows WHO.
+
+Not WHAT.
+
+==============================================================================
+ORGANISATION CONTEXT
+==============================================================================
+
+Purpose
+
+Represent businesses.
+
+Responsibilities
+
+Organisation
+
+Tenant
+
+Subscriptions
+
+Branding
+
+Licensing
+
+Business Settings
+
+Regional Configuration
+
+Organisation owns
+
+Venues
+
+Staff
+
+Business Rules
+
+Organisation never owns
+
+Guests
+
+==============================================================================
+VENUE CONTEXT
+==============================================================================
+
+Purpose
+
+Represent physical locations.
+
+Responsibilities
+
+Venue
+
+Location
+
+Venue Layout
+
+QR Assignment
+
+Opening Hours
+
+Experience Profile
+
+Venue Configuration
+
+Venue owns
+
+Locations
+
+Services
+
+Venue Configuration
+
+Venue does not own
+
+Orders
+
+Guests
+
+Payments
+
+==============================================================================
+EXPERIENCE CONTEXT
+==============================================================================
+
+Purpose
+
+Control platform behaviour.
+
+Responsibilities
+
+Experience Profiles
+
+Terminology
+
+Capabilities
+
+Permissions
+
+Workflow Rules
+
+Business Rules
+
+Examples
+
+Restaurant
+
+Festival
+
+Hotel
+
+Casino
+
+Conference
+
+Future venue types require new Experience Profiles.
+
+Not new software.
+
+==============================================================================
+SESSION CONTEXT
+==============================================================================
+
+Purpose
+
+Manage live interactions.
+
+This is arguably the most important context in Lekki.
+
+Responsibilities
+
+Create Session
+
+Join Session
+
+Leave Session
+
+Transfer Session
+
+Split Session
+
+Participant Management
+
+Session State
+
+Lifecycle
+
+Every interaction begins with a Session.
+
+==============================================================================
+
+ORDERING CONTEXT
+==============================================================================
+
+Purpose
+
+Capture requests.
+
+Responsibilities
+
+Menus
+
+Products
+
+Modifiers
+
+Availability
+
+Ordering Rules
+
+Order Workflow
+
+Kitchen Routing
+
+Order Status
+
+Ordering never concerns itself with payments.
+
+==============================================================================
+BILLING CONTEXT
+==============================================================================
+
+Purpose
+
+Determine financial responsibility.
+
+Responsibilities
+
+Bill Creation
+
+Bill Ownership
+
+Bill Splitting
+
+Bill Merging
+
+Transfers
+
+Discount Allocation
+
+Tax Allocation
+
+Billing answers
+
+Who owes what?
+
+Payment answers
+
+Has it been paid?
+
+==============================================================================
+PAYMENT CONTEXT
+==============================================================================
+
+Purpose
+
+Settle Bills.
+
+Responsibilities
+
+Payment Requests
+
+Payment Providers
+
+Tap to Pay
+
+Refunds
+
+Reconciliation
+
+Payment Events
+
+Payment Providers are plugins.
+
+Payments are business concepts.
+
+==============================================================================
+NOTIFICATION CONTEXT
+==============================================================================
+
+Purpose
+
+Deliver information.
+
+Channels
+
+Push
+
+SMS
+
+Email
+
+WhatsApp
+
+In-App
+
+Neo
+
+Notifications never decide.
+
+They communicate.
+
+==============================================================================
+NEO CONTEXT
+==============================================================================
+
+Purpose
+
+Provide intelligence.
+
+Neo understands
+
+Business Rules
+
+Analytics
+
+Configuration
+
+Documentation
+
+Recommendations
+
+Neo never owns business data.
+
+Neo observes.
+
+Analyses.
+
+Advises.
+
+==============================================================================
+ANALYTICS CONTEXT
+==============================================================================
+
+Purpose
+
+Generate insight.
+
+Examples
+
+Revenue
+
+Guest Behaviour
+
+Operational Efficiency
+
+Venue Performance
+
+Neo Recommendations
+
+Analytics never changes operational data.
+
+==============================================================================
+AGGREGATES
+==============================================================================
+
+Large business concepts become Aggregates.
+
+Examples
+
+Organisation
+
+Venue
+
+Guest Session
+
+Bill
+
+Order
+
+Payment
+
+Each Aggregate protects its own consistency.
+
+Other contexts communicate through APIs or events.
+
+Never direct database access.
+
+==============================================================================
+ENTITIES
+==============================================================================
+
+Entities possess identity.
+
+Examples
+
+Guest
+
+Venue
+
+Session
+
+Participant
+
+Order
+
+Bill
+
+Payment
+
+Identity remains constant.
+
+Attributes may change.
+
+==============================================================================
+VALUE OBJECTS
+==============================================================================
+
+Value Objects possess meaning but no identity.
+
+Examples
+
+Money
+
+Address
+
+Coordinates
+
+Business Hours
+
+Language
+
+Tax Rate
+
+Currency
+
+QR Context
+
+Two equal Value Objects are interchangeable.
+
+==============================================================================
+DOMAIN SERVICES
+==============================================================================
+
+Some business logic belongs to no single Entity.
+
+Examples
+
+Bill Splitting
+
+Venue Discovery
+
+Pricing Rules
+
+Recommendation Engine
+
+Availability Calculation
+
+These become Domain Services.
+
+==============================================================================
+APPLICATION SERVICES
+==============================================================================
+
+Application Services coordinate work.
+
+Example
+
+Guest scans QR
+
+↓
+
+Find Venue
+
+↓
+
+Load Experience
+
+↓
+
+Create Session
+
+↓
+
+Return Guest Context
+
+Application Services orchestrate.
+
+They do not own business rules.
+
+==============================================================================
+DOMAIN EVENTS
+==============================================================================
+
+Every meaningful business action becomes an Event.
+
+Examples
+
+VenueCreated
+
+SessionStarted
+
+ParticipantJoined
+
+OrderSubmitted
+
+OrderPrepared
+
+BillCreated
+
+BillSplit
+
+PaymentCompleted
+
+VenueClosed
+
+NeoRecommendationAccepted
+
+Events become the language between contexts.
+
+==============================================================================
+REPOSITORIES
+==============================================================================
+
+Repositories retrieve Aggregates.
+
+Examples
+
+VenueRepository
+
+GuestRepository
+
+SessionRepository
+
+BillRepository
+
+Repositories hide persistence.
+
+Business logic never depends on SQL.
+
+==============================================================================
+FACTORIES
+==============================================================================
+
+Complex object creation belongs inside Factories.
+
+Examples
+
+Create Session
+
+Create Venue
+
+Create Experience
+
+Create Bill
+
+Factories guarantee valid initial state.
+
+==============================================================================
+SPECIFICATIONS
+==============================================================================
+
+Business rules become reusable Specifications.
+
+Examples
+
+CanJoinSession
+
+CanCloseVenue
+
+CanSplitBill
+
+CanTransferParticipant
+
+CanOrderAlcohol
+
+CanCheckout
+
+Specifications eliminate duplicated rules.
+
+==============================================================================
+ANTI-CORRUPTION LAYER
+==============================================================================
+
+External systems rarely speak Lekki's language.
+
+POS
+
+Accounting
+
+Payments
+
+ERP
+
+Inventory
+
+Each integration passes through an Anti-Corruption Layer.
+
+Its responsibility is translation.
+
+Never contamination.
+
+Lekki should never inherit poor models from external systems.
+
+==============================================================================
+DEPENDENCY RULE
+==============================================================================
+
+Dependencies always point inward.
+
+Infrastructure depends on Domain.
+
+Never the opposite.
+
+UI depends on Domain.
+
+Database depends on Domain.
+
+Neo depends on Domain.
+
+Payments depend on Domain.
+
+The Domain depends on nothing.
+
+==============================================================================
+THE GOLDEN RULE
+==============================================================================
+
+If the business disappeared,
+
+the database schema would become meaningless.
+
+If the database disappeared,
+
+the business should still make sense.
+
+Therefore...
+
+Model the business.
+
+Not the database.
+
+==============================================================================
+ARCHITECT'S NOTES
+==============================================================================
+
+A healthy domain model feels natural.
+
+Business people recognise it.
+
+Developers understand it.
+
+Neo can reason about it.
+
+Documentation reflects it.
+
+The software becomes easier to evolve because the architecture mirrors reality
+instead of implementation details.
+
+Every future module added to Lekki should first ask:
+
+"What business capability am I modelling?"
+
+If that question cannot be answered clearly,
+the feature probably does not belong in the domain.
+
+==============================================================================
+END OF DOCUMENT
+==============================================================================

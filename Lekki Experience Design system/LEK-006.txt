@@ -1,0 +1,572 @@
+# ============================================================================
+# LEKKI PLATFORM
+# SOFTWARE ARCHITECTURE BOOK
+# ============================================================================
+
+Document ID
+    LEK-006
+
+Document Title
+    Platform Architecture Principles
+
+Status
+    Approved Foundation
+
+Version
+    1.0
+
+Owner
+    Chief Architect
+
+Classification
+    Architecture Foundation
+
+Related Documents
+
+    LEK-001 Vision
+    LEK-002 Product Philosophy
+    LEK-003 Guiding Principles
+    LEK-004 Business Model
+    LEK-005 Ubiquitous Language
+    LEK-007 Domain Driven Design
+
+==============================================================================
+PURPOSE
+==============================================================================
+
+This document defines the architectural principles that govern the design,
+implementation and long-term evolution of the Lekki platform.
+
+These principles are intended to remain stable regardless of programming
+language, framework, cloud provider or infrastructure.
+
+Technology changes.
+
+Architecture should not.
+
+Every architectural review, pull request, design proposal and technical
+decision should reference these principles.
+
+==============================================================================
+ARCHITECTURAL PHILOSOPHY
+==============================================================================
+
+Lekki is not designed as a collection of applications.
+
+Lekki is designed as a platform.
+
+Applications are temporary.
+
+Platforms evolve.
+
+Applications solve a problem.
+
+Platforms enable solutions.
+
+This distinction influences every engineering decision.
+
+==============================================================================
+PRINCIPLE 1
+THE PLATFORM IS THE PRODUCT
+==============================================================================
+
+Most software companies build products.
+
+Lekki builds capabilities.
+
+Capabilities are assembled into experiences.
+
+For example
+
+Restaurant Experience
+
+Hotel Experience
+
+Festival Experience
+
+Golf Estate Experience
+
+Casino Experience
+
+Conference Experience
+
+The experience changes.
+
+The platform does not.
+
+Engineering Rule
+
+Never build a feature exclusively for one industry if it can become a
+platform capability.
+
+==============================================================================
+PRINCIPLE 2
+BUSINESS BEFORE TECHNOLOGY
+==============================================================================
+
+Every software component should represent a business concept.
+
+Not a technical concept.
+
+Poor Examples
+
+OrderManager
+
+TableHandler
+
+RestaurantController
+
+Better Examples
+
+Session
+
+Participant
+
+Venue
+
+Capability
+
+Experience Profile
+
+Payment
+
+Guest
+
+Business language drives software.
+
+Software should never dictate business language.
+
+==============================================================================
+PRINCIPLE 3
+DOMAIN FIRST
+==============================================================================
+
+The domain model is the heart of Lekki.
+
+Everything else exists to support it.
+
+User Interface
+
+Database
+
+Messaging
+
+Infrastructure
+
+Payment Providers
+
+Neo
+
+Reporting
+
+All of these are replaceable.
+
+The domain model is not.
+
+Engineering Rule
+
+Protect the domain.
+
+Everything else is an implementation detail.
+
+==============================================================================
+PRINCIPLE 4
+CONFIGURATION IS A FEATURE
+==============================================================================
+
+Configuration should be treated as first-class functionality.
+
+Customers should configure behaviour.
+
+Not request software changes.
+
+Examples
+
+Venue terminology
+
+Business hours
+
+Payment providers
+
+Ordering workflow
+
+Bill splitting rules
+
+Session timeout
+
+QR behaviour
+
+Notification rules
+
+Language
+
+Permissions
+
+Configuration increases platform value.
+
+Hardcoded behaviour reduces platform value.
+
+==============================================================================
+PRINCIPLE 5
+EVERYTHING IS A CAPABILITY
+==============================================================================
+
+The platform should expose reusable capabilities.
+
+Ordering.
+
+Payments.
+
+Notifications.
+
+Messaging.
+
+Analytics.
+
+Neo.
+
+Identity.
+
+Loyalty.
+
+Bookings.
+
+Capabilities should not depend on industries.
+
+Capabilities are reusable building blocks.
+
+==============================================================================
+PRINCIPLE 6
+MODULES SHOULD BE INDEPENDENT
+==============================================================================
+
+Each capability should exist as an independent module.
+
+Modules communicate through contracts.
+
+Not implementation details.
+
+A module should be removable without affecting unrelated capabilities.
+
+Examples
+
+Payments
+
+Analytics
+
+Neo
+
+Reporting
+
+Inventory
+
+Loyalty
+
+Each module owns its business logic.
+
+==============================================================================
+PRINCIPLE 7
+EVENTS OVER TIGHT COUPLING
+==============================================================================
+
+Whenever possible,
+
+systems should react to business events.
+
+Examples
+
+Session Started
+
+Participant Joined
+
+Order Submitted
+
+Payment Completed
+
+Venue Closed
+
+Neo Recommendation Accepted
+
+Events reduce dependencies.
+
+Events improve scalability.
+
+Events simplify integration.
+
+==============================================================================
+PRINCIPLE 8
+IDENTITY IS GLOBAL
+==============================================================================
+
+Identity belongs to the platform.
+
+Business data belongs to organisations.
+
+Guests move freely.
+
+Data does not.
+
+Authentication is global.
+
+Authorisation is contextual.
+
+This separation is fundamental.
+
+==============================================================================
+PRINCIPLE 9
+VENUES ARE CONFIGURATION
+==============================================================================
+
+Restaurants are not special.
+
+Hotels are not special.
+
+Festivals are not special.
+
+Venues configure behaviour.
+
+The architecture remains unchanged.
+
+Every future venue type should require configuration only.
+
+Never architectural modification.
+
+==============================================================================
+PRINCIPLE 10
+EVERYTHING HAS CONTEXT
+==============================================================================
+
+Nothing exists in isolation.
+
+Every request should understand its context.
+
+Organisation
+
+Venue
+
+Experience Profile
+
+Guest
+
+Session
+
+Location
+
+Permissions
+
+Language
+
+Context reduces complexity.
+
+==============================================================================
+PRINCIPLE 11
+QR CODES ARE CONTEXT PROVIDERS
+==============================================================================
+
+Traditional QR systems locate information.
+
+Lekki QR codes establish context.
+
+Scanning should immediately answer
+
+Who?
+
+Where?
+
+What experience?
+
+Which permissions?
+
+Which services?
+
+Which language?
+
+QR is an architectural component.
+
+Not merely a navigation mechanism.
+
+==============================================================================
+PRINCIPLE 12
+OFFLINE FIRST
+==============================================================================
+
+Offline capability should influence architecture from day one.
+
+Offline support should never become an afterthought.
+
+Examples
+
+Queued Orders
+
+Queued Payments
+
+Cached Menus
+
+Cached Venue Configuration
+
+Cached Session Information
+
+Background Synchronisation
+
+Offline is a platform guarantee.
+
+==============================================================================
+PRINCIPLE 13
+INTEGRATION IS A CORE CAPABILITY
+==============================================================================
+
+Businesses already have systems.
+
+Accounting.
+
+POS.
+
+Inventory.
+
+Payments.
+
+CRM.
+
+Reporting.
+
+Lekki should connect.
+
+Not replace.
+
+Every integration increases platform adoption.
+
+==============================================================================
+PRINCIPLE 14
+AI IS A PLATFORM SERVICE
+==============================================================================
+
+Neo is not a chatbot.
+
+Neo is a platform capability.
+
+Neo should be available across
+
+Onboarding
+
+Configuration
+
+Reporting
+
+Analytics
+
+Training
+
+Recommendations
+
+Documentation
+
+Operations
+
+Neo should understand the platform better than any human.
+
+==============================================================================
+PRINCIPLE 15
+DOCUMENTATION IS CODE
+==============================================================================
+
+Architecture exists independently of implementation.
+
+Every significant decision must be documented.
+
+Documentation should evolve alongside software.
+
+Undocumented architecture creates organisational risk.
+
+Engineering Rule
+
+If it is important enough to build,
+
+it is important enough to document.
+
+==============================================================================
+ARCHITECTURAL QUALITY ATTRIBUTES
+==============================================================================
+
+Every feature should improve one or more of the following.
+
+Scalability
+
+Reliability
+
+Maintainability
+
+Configurability
+
+Security
+
+Observability
+
+Performance
+
+Extensibility
+
+Reusability
+
+Usability
+
+If a proposal improves none of these,
+
+its value should be questioned.
+
+==============================================================================
+ENGINEERING DECISION CHECKLIST
+==============================================================================
+
+Before approving any implementation ask
+
+Does this belong in the domain?
+
+Can it become configuration?
+
+Is it venue agnostic?
+
+Does it increase coupling?
+
+Can Neo understand it?
+
+Will it scale?
+
+Can it work offline?
+
+Does it integrate cleanly?
+
+Is it documented?
+
+Would a future engineer understand why it exists?
+
+Architecture should be judged by these questions.
+
+==============================================================================
+ARCHITECT'S CLOSING REMARKS
+==============================================================================
+
+The greatest risk to any successful platform is not poor code.
+
+It is architectural inconsistency.
+
+Small shortcuts accumulate.
+
+Temporary decisions become permanent.
+
+Naming becomes inconsistent.
+
+Business rules become duplicated.
+
+Eventually the platform becomes difficult to evolve.
+
+These principles exist to prevent that future.
+
+Every engineer joining Lekki should understand these principles before writing
+their first line of code.
+
+If these principles remain intact, the platform can evolve for decades while
+remaining understandable, maintainable and extensible.
+
+==============================================================================
+END OF DOCUMENT
+==============================================================================

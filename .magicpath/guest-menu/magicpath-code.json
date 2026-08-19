@@ -1,0 +1,29 @@
+{
+  "mode": "edit",
+  "componentId": "433482214198632448",
+  "projectId": "430602166831558656",
+  "selectedRevisionId": "433482214198632449",
+  "jobId": "430579524154048512-external-agent-433482710938431488",
+  "generatedName": "cool-shore-6130",
+  "name": "Guest Menu",
+  "dimensions": {
+    "width": 390,
+    "height": 844
+  },
+  "selectedImages": [],
+  "editableFiles": [
+    {
+      "path": "src/App.tsx",
+      "sha256": "44d387c596c204cecaa7391f38aebc01368ce4b134227b3cc60343eef3027a1d"
+    },
+    {
+      "path": "src/components/generated/GuestMenu.tsx",
+      "sha256": "188c75d5d0bf1b0b3b2f4bffa92d9392af84e50b16bf2361af275e9abcc02d0b"
+    },
+    {
+      "path": "src/index.css",
+      "sha256": "5b53959cef58e9f6f21f476a7254507a3adca97863080c7c880dfd8dffb89991"
+    }
+  ],
+  "baseRevisionId": "433482214198632449"
+}

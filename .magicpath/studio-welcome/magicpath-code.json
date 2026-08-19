@@ -1,0 +1,29 @@
+{
+  "mode": "edit",
+  "componentId": "433482300387393536",
+  "projectId": "430602166831558656",
+  "selectedRevisionId": "433482300387393537",
+  "jobId": "430579524154048512-external-agent-433482774117249024",
+  "generatedName": "nicely-home-3540",
+  "name": "Studio Welcome",
+  "dimensions": {
+    "width": 1440,
+    "height": 900
+  },
+  "selectedImages": [],
+  "editableFiles": [
+    {
+      "path": "src/App.tsx",
+      "sha256": "1747ace78b53b4524c8ea309142b1f19852af070eb49f4823e337eb9051843e6"
+    },
+    {
+      "path": "src/components/generated/StudioWelcome.tsx",
+      "sha256": "81b0c546122478500f8de67915a22a4c6d456ebb3fe8f1edbd82bf3828fa9f33"
+    },
+    {
+      "path": "src/index.css",
+      "sha256": "7cfe232ea0217d525d4d779767dd72feee715e099d49ff9c1f643c116fcfe25e"
+    }
+  ],
+  "baseRevisionId": "433482300387393537"
+}

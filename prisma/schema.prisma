@@ -1,0 +1,318 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organisation {
+  id        String   @id
+  name      String
+  createdAt DateTime @default(now())
+  venues    Venue[]
+  staff     StaffMember[]
+  identities IdentityConsent[]
+}
+
+model Venue {
+  id             String   @id
+  organisationId String
+  name           String
+  createdAt      DateTime @default(now())
+  organisation   Organisation @relation(fields: [organisationId], references: [id])
+  physicalContexts PhysicalContext[]
+  entryTokens    EntryToken[]
+}
+
+model PhysicalContext {
+  id              String   @id
+  organisationId  String
+  venueId         String
+  code            String
+  type            String
+  activeSessionId String?
+  createdAt       DateTime @default(now())
+  venue           Venue @relation(fields: [venueId], references: [id])
+  sessions        ExperienceSession[]
+}
+
+model EntryToken {
+  token           String   @id
+  organisationId  String
+  venueId         String
+  physicalContextId String
+  profileId       String
+  profileVersion  String
+  active          Boolean  @default(true)
+  venue           Venue @relation(fields: [venueId], references: [id])
+}
+
+model Identity {
+  id           String   @id
+  displayName  String?
+  phoneHash    String?
+  consentGranted Boolean @default(false)
+  createdAt    DateTime @default(now())
+  consents     IdentityConsent[]
+  participants SessionParticipant[]
+}
+
+model IdentityConsent {
+  id             String @id
+  identityId     String
+  organisationId String
+  granted        Boolean @default(false)
+  grantedAt      DateTime?
+  identity       Identity @relation(fields: [identityId], references: [id])
+  organisation   Organisation @relation(fields: [organisationId], references: [id])
+
+  @@unique([identityId, organisationId])
+}
+
+model StaffMember {
+  id             String   @id
+  organisationId String
+  displayName    String
+  email          String   @unique
+  passwordHash   String
+  /** Operate role: kitchen | bar | waiter | staff */
+  role           String   @default("staff")
+  permissions    String[]
+  createdAt      DateTime @default(now())
+  organisation   Organisation @relation(fields: [organisationId], references: [id])
+  sessions       StaffSession[]
+}
+
+/** Staff Experience session — PIN login on a shared device (ADR-004). */
+model StaffSession {
+  id             String    @id
+  staffMemberId  String
+  organisationId String
+  deviceLabel    String?
+  createdAt      DateTime  @default(now())
+  lastSeenAt     DateTime  @default(now())
+  revokedAt      DateTime?
+  staffMember    StaffMember @relation(fields: [staffMemberId], references: [id])
+
+  @@index([organisationId])
+  @@index([staffMemberId])
+}
+
+/** Named shared devices (Kitchen Tablet · Bar Tablet · …). */
+model StaffDevice {
+  id             String   @id
+  organisationId String
+  label          String
+  lastStaffId    String?
+  lastStaffName  String?
+  lastSeenAt     DateTime @default(now())
+  createdAt      DateTime @default(now())
+
+  @@index([organisationId])
+  @@unique([organisationId, label])
+}
+
+
+model ExperienceSession {
+  id                String   @id
+  organisationId    String
+  venueId           String
+  physicalContextId String
+  profileId         String
+  profileVersion    String
+  status            String
+  correlationId     String
+  startedAt         DateTime @default(now())
+  completedAt       DateTime?
+  physicalContext   PhysicalContext @relation(fields: [physicalContextId], references: [id])
+  participants      SessionParticipant[]
+  transactions      Transaction[]
+  fulfilments       Fulfilment[]
+  payments          Payment[]
+  assistanceRequests AssistanceRequest[]
+}
+
+model SessionParticipant {
+  id          String   @id
+  sessionId   String
+  identityId  String?
+  displayName String
+  role        String
+  joinedAt    DateTime @default(now())
+  session     ExperienceSession @relation(fields: [sessionId], references: [id])
+  identity    Identity? @relation(fields: [identityId], references: [id])
+}
+
+model Transaction {
+  id             String   @id
+  sessionId      String
+  organisationId String
+  status         String
+  currency       String
+  total          Float
+  createdAt      DateTime @default(now())
+  session        ExperienceSession @relation(fields: [sessionId], references: [id])
+  lines          TransactionLine[]
+  payments       Payment[]
+  fulfilments    Fulfilment[]
+}
+
+model TransactionLine {
+  id              String  @id
+  transactionId   String
+  catalogueItemId String
+  label           String
+  quantity        Int
+  unitPrice       Float
+  routingTags     String[]
+  /// Guest who ordered — Continuity mine vs visit (optional for legacy lines).
+  participantId   String?
+  transaction     Transaction @relation(fields: [transactionId], references: [id])
+}
+
+model Fulfilment {
+  id             String   @id
+  transactionId  String
+  sessionId      String
+  organisationId String
+  stationId      String
+  status         String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  session        ExperienceSession @relation(fields: [sessionId], references: [id])
+  transaction    Transaction @relation(fields: [transactionId], references: [id])
+  lines          FulfilmentLine[]
+}
+
+model FulfilmentLine {
+  id                String @id
+  fulfilmentId      String
+  transactionLineId String
+  quantity          Int
+  stationId         String
+  fulfilment        Fulfilment @relation(fields: [fulfilmentId], references: [id])
+}
+
+model Payment {
+  id             String   @id
+  transactionId  String
+  sessionId      String
+  organisationId String
+  amount         Float
+  /// Tip portion of amount — excluded when measuring settlement toward transaction total.
+  tipAmount      Float    @default(0)
+  /// visit | mine | equal — Continuity scope that produced this payment.
+  scope          String   @default("visit")
+  /// Continuity — guest who paid a mine/equal-scoped share (null for visit / legacy).
+  participantId  String?
+  currency       String
+  status         String
+  reference      String
+  connectorId    String
+  createdAt      DateTime @default(now())
+  session        ExperienceSession @relation(fields: [sessionId], references: [id])
+  transaction    Transaction @relation(fields: [transactionId], references: [id])
+}
+
+model OutboxMessage {
+  id          String   @id
+  eventName   String
+  envelope    Json
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+}
+
+/// Tenant-scoped encrypted secret material for connector/runtime use only.
+model SecretsVaultEntry {
+  id             String   @id
+  organisationId String
+  venueId        String
+  connectorId    String
+  secretKey      String
+  secretRef      String   @unique
+  algorithm      String   @default("aes-256-gcm")
+  keyVersion     String   @default("v1")
+  cipherText     String
+  iv             String
+  authTag        String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([organisationId, venueId, connectorId, secretKey])
+  @@index([organisationId, venueId, connectorId])
+}
+
+/// Immutable audit trail for vault writes and reads; never stores plaintext values.
+model SecretsVaultAudit {
+  id             String   @id
+  organisationId String
+  venueId        String
+  connectorId    String
+  secretKey      String
+  secretRef      String
+  action         String
+  metadataJson   Json?
+  createdAt      DateTime @default(now())
+
+  @@index([organisationId, venueId, connectorId, createdAt])
+  @@index([secretRef, createdAt])
+}
+
+model RestaurantCatalogItem {
+  id           String @id
+  venueId      String
+  label        String
+  description  String?
+  /** Optional thumbnail URL for guest-facing menus. */
+  imageUrl     String?
+  unitPrice    Float
+  currency     String
+  routingTags  String[]
+  category     String
+  /// Pack choice groups (G-04). Guest never sees “modifier” — Choose 1 / Extras.
+  choiceGroups Json?
+}
+
+model AssistanceRequest {
+  id             String   @id
+  sessionId      String
+  organisationId String
+  venueId        String
+  kind           String
+  message        String?
+  status         String   @default("open")
+  createdAt      DateTime @default(now())
+  resolvedAt     DateTime?
+  session        ExperienceSession @relation(fields: [sessionId], references: [id])
+}
+
+/// Setup Studio payment connector install (LEK-022). At most one active row.
+model PaymentConnectorInstall {
+  id               String   @id
+  organisationId   String?
+  venueId          String?
+  connectorId      String
+  /// draft | verified | active
+  status           String   @default("draft")
+  /// sandbox | production
+  environment      String   @default("sandbox")
+  merchantId       String?
+  merchantKey      String?
+  passphrase       String?
+  merchantKeySecretRef String?
+  passphraseSecretRef  String?
+  businessName     String?
+  merchantStatus   String?
+  country          String?
+  currency         String?
+  settlementJson   Json?
+  /// global | venue | location
+  routingStrategy  String?
+  step             String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([organisationId, venueId, status, updatedAt])
+}
