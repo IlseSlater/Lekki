@@ -221,7 +221,7 @@ export class StudioGrowPageComponent implements OnInit {
       this.delightLine = `You’re ready when ${peoplePlural} arrive.`;
       this.delighted = false;
     } else if (waitSlow) {
-      this.delightLine = `${this.capitalize(peoplePlural)} waited a little longer.`;
+      this.delightLine = `Waits were slow — your ${peoplePlural} noticed it.`;
       this.delighted = false;
     } else {
       this.delightLine = `${this.capitalize(peoplePlural)} were delighted.`;
@@ -229,19 +229,19 @@ export class StudioGrowPageComponent implements OnInit {
     }
 
     if (waitSlow) {
-      this.suggestion = `Give the ${station} more hands when the floor fills.`;
+      this.suggestion = `Waits are long. Open another ${station} when the rush hits.`;
     } else if (count != null && count >= 30) {
-      this.suggestion = `Busy ${when} — keep another ${station} ready for the rush.`;
+      this.suggestion = `You had ${count} ${count === 1 ? people : peoplePlural}. Have another ${station} ready for the next busy night.`;
     } else if (takings > 0 && (this.averageWaitMinutes ?? 0) < 8) {
-      this.suggestion = `${places} moved calmly — keep this pace.`;
+      this.suggestion = `${places} moved at the right speed. Keep this pace going.`;
     } else if (!this.hasMemory) {
-      this.suggestion = `Welcome a few more ${peoplePlural} — memory gets clearer with each night.`;
+      this.suggestion = `You're building memory. Each night tells you more about what works.`;
     } else if (this.paymentsStatus === 'setup') {
-      this.suggestion = 'Finish payments when you have a quiet moment.';
+      this.suggestion = 'Payments are waiting. Finish setup when you have a quiet moment.';
     } else {
       this.suggestion = useToday
-        ? 'Keep the pace as calm as it felt today.'
-        : 'Keep the pace as calm as yesterday felt.';
+        ? 'Today felt calm. Keep this rhythm going.'
+        : 'Yesterday was calm. Keep this rhythm going.';
     }
   }
 
