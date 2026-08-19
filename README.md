@@ -1,5 +1,7 @@
 # Lekki
 
+Helping people spend less time waiting and more time together.
+
 **Lekki is an Operating System for Human Experiences.** One product: **LEOS**.
 
 **Phase: Construction.** [docs/LEKKI-BUILD.md](docs/LEKKI-BUILD.md) · [docs/LEKKI-MAP.md](docs/LEKKI-MAP.md)  
