@@ -1,6 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { StudioContextService } from '../services/studio-context.service';
+import { StudioAuthService } from '../services/studio-auth.service';
 import { LeosApiService } from '../services/leos-api.service';
 import { getExperience, type ExperienceTypeId } from '../studio/experience-registry';
 
@@ -69,6 +70,7 @@ import { getExperience, type ExperienceTypeId } from '../studio/experience-regis
 })
 export class StudioGrowPageComponent implements OnInit {
   private readonly ctx = inject(StudioContextService);
+  private readonly auth = inject(StudioAuthService);
   private readonly api = inject(LeosApiService);
 
   greeting = 'Good evening.';
@@ -106,6 +108,17 @@ export class StudioGrowPageComponent implements OnInit {
     this.hour = new Date().getHours();
     this.greeting =
       this.hour < 12 ? 'Good morning.' : this.hour < 18 ? 'Good afternoon.' : 'Good evening.';
+
+    const displayName = this.auth.read().name;
+    if (displayName) {
+      const first = displayName.trim().split(/\s+/)[0];
+      this.greeting =
+        this.hour < 12
+          ? `Good morning, ${first}.`
+          : this.hour < 18
+            ? `Good afternoon, ${first}.`
+            : `Good evening, ${first}.`;
+    }
 
     const c = this.ctx.readConfig();
     this.venue = this.ctx.displayVenue();
