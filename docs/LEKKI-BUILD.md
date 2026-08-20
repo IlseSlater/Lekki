@@ -14,9 +14,9 @@ Read first every session.
 | **Mission** | Give people **confidence** throughout an experience. |
 | **Sacred** | Reduce **uncertainty**. |
 | **Phase** | **Hospitality Phase** |
-| **Current Proof** | **Grow one-breath quality** |
-| **Current Human Moment** | How are we doing? — one story · one figure · one suggestion |
-| **Next Proof** | Continuity polish if named |
+| **Current Proof** | **Continuity polish if named** |
+| **Current Human Moment** | Name one continuity moment — then craft it |
+| **Next Proof** | Hold until a moment is named |
 | **Platform Confidence** | High |
 | **Bottleneck** | Named Continuity craft — not new products |
 | **Goal** | Confidence · Calm · Hospitality · Continuity |
