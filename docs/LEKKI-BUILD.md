@@ -14,11 +14,11 @@ Read first every session.
 | **Mission** | Give people **confidence** throughout an experience. |
 | **Sacred** | Reduce **uncertainty**. |
 | **Phase** | **Hospitality Phase** |
-| **Current Proof** | **Operate craft glance** |
-| **Current Human Moment** | Claim Table 12 first — work continues in Staff Experience |
-| **Next Proof** | Grow one-breath quality · Continuity polish if named |
+| **Current Proof** | **Grow one-breath quality** |
+| **Current Human Moment** | How are we doing? — one story · one figure · one suggestion |
+| **Next Proof** | Continuity polish if named |
 | **Platform Confidence** | High |
-| **Bottleneck** | Grow content (one fact · one suggestion) |
+| **Bottleneck** | Named Continuity craft — not new products |
 | **Goal** | Confidence · Calm · Hospitality · Continuity |
 
 **Every commit:** Did this moment increase at least one pillar?
@@ -87,7 +87,7 @@ One question: **Am I confident?**
 | Identity → Go Live | Ready to welcome guests? | ✓ Setup v1 **FROZEN** |
 | Home | Am I ready? | ✓ Readiness door · **calm floor live counts** |
 | Operate | Is everything under control? | ✓ Overview · next action · Needs you/Ready/Preparing · Staff handoff |
-| Grow | Do I hear calm truth (not BI)? | ✓ Trading breath · one suggestion · pack nouns |
+| Grow | Do I hear calm truth (not BI)? | ✓ One breath · one suggestion · pack nouns |
 | Team | Can I assign Experiences · know who can do what? | ✓ Assignment · grouped actions · device Idle/In use · End now |
 
 **Backlog = moments.** Not Marketplace. Not Neo. Not Setup redesign.
@@ -122,11 +122,11 @@ Restaurant ✓ · Café ✓ · Hotel · Festival · Airport · Healthcare path-p
 
 ## Heartbeat now
 
-**Hospitality Phase.** Shell ✓ · Live ✓ · Setup ✓ · Owner→QR ✓ · Home ✓ · Operate ✓ · Welcome Back ✓ · Grow ✓ · Alignment ✓ · **Claim-from-table** ✓ · **PaymentCapability vault** ✓ · **Board calm** ✓ · **G-04 browse confidence** ✓ · **Equal share people** ✓ · **Studio→Live→Guest parity** ✓ · **Team confidence** ✓ · **Operate craft glance** ✓.
+**Hospitality Phase.** Shell ✓ · Live ✓ · Setup ✓ · Owner→QR ✓ · Home ✓ · Operate ✓ · Welcome Back ✓ · Grow ✓ · Alignment ✓ · **Claim-from-table** ✓ · **PaymentCapability vault** ✓ · **Board calm** ✓ · **G-04 browse confidence** ✓ · **Equal share people** ✓ · **Studio→Live→Guest parity** ✓ · **Team confidence** ✓ · **Operate craft glance** ✓ · **Grow one-breath** ✓.
 
-**Next:** Grow one-breath quality. Resist Marketplace · Neo · Setup redesign · Admin BI · allocation wizard.
+**Next:** Continuity polish if named. Resist Marketplace · Neo · Setup redesign · Admin BI · allocation wizard.
 
-**Roadmap (fidelity, not redesign):** Shell ✓ · Live ✓ · Setup ✓ · Evidence ✓ · Home ✓ · Operate ✓ · Remember ✓ · Grow ✓ · Align ✓ · Claim ✓ · Vault ✓ · Board calm ✓ · G-04 ✓ · Equal people ✓ · §3A Live parity ✓ · Team confidence ✓ · Operate craft ✓.
+**Roadmap (fidelity, not redesign):** Shell ✓ · Live ✓ · Setup ✓ · Evidence ✓ · Home ✓ · Operate ✓ · Remember ✓ · Grow ✓ · Align ✓ · Claim ✓ · Vault ✓ · Board calm ✓ · G-04 ✓ · Equal people ✓ · §3A Live parity ✓ · Team confidence ✓ · Operate craft ✓ · Grow one-breath ✓.
 
-**Evidence:** [Operate craft glance](ux/evidence/operate-craft-glance.md) · [Studio Team confidence](ux/evidence/studio-team-confidence.md) · [Studio→Live→Guest parity](ux/evidence/studio-live-guest-parity.md) · [Equal share people](ux/evidence/continuity-equal-share.md) · [G-04 choices sheet](ux/evidence/g04-choices-sheet.md) · [Operate calm / Board calm](ux/evidence/operate-calm-pass.md) · [PaymentCapability vault](ux/evidence/payment-capability-vault.md) · [Claim-from-table](ux/evidence/continuity-claim-from-table.md) · [Alignment crisp](ux/evidence/continuity-alignment-crisp.md) · [Grow calm](ux/evidence/grow-calm-insights.md) · [Welcome Back](ux/evidence/welcome-back-remember.md) · [Studio Home readiness](ux/evidence/studio-home-readiness.md) · [Owner → QR walk](ux/evidence/owner-qr-walk.md) · [Setup visual pass](ux/evidence/setup-visual-pass.md) · [Live first-class](ux/evidence/live-experience-first-class.md) · [Blueprint §3A](ux/LEOS-Studio-Design-Blueprint.md#section-3a--studio--live-experience--guest-interaction-contract)
+**Evidence:** [Grow one-breath](ux/evidence/grow-one-breath.md) · [Operate craft glance](ux/evidence/operate-craft-glance.md) · [Studio Team confidence](ux/evidence/studio-team-confidence.md) · [Studio→Live→Guest parity](ux/evidence/studio-live-guest-parity.md) · [Equal share people](ux/evidence/continuity-equal-share.md) · [G-04 choices sheet](ux/evidence/g04-choices-sheet.md) · [Operate calm / Board calm](ux/evidence/operate-calm-pass.md) · [PaymentCapability vault](ux/evidence/payment-capability-vault.md) · [Claim-from-table](ux/evidence/continuity-claim-from-table.md) · [Alignment crisp](ux/evidence/continuity-alignment-crisp.md) · [Grow calm](ux/evidence/grow-calm-insights.md) · [Welcome Back](ux/evidence/welcome-back-remember.md) · [Studio Home readiness](ux/evidence/studio-home-readiness.md) · [Owner → QR walk](ux/evidence/owner-qr-walk.md) · [Setup visual pass](ux/evidence/setup-visual-pass.md) · [Live first-class](ux/evidence/live-experience-first-class.md) · [Blueprint §3A](ux/LEOS-Studio-Design-Blueprint.md#section-3a--studio--live-experience--guest-interaction-contract)
 
