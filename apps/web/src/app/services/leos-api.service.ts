@@ -458,6 +458,8 @@ export class LeosApiService {
       venueId: string | null;
       guestsYesterday: number;
       guestsToday: number;
+      waitToday?: number | null;
+      waitYesterday?: number | null;
       averageWaitMinutes: number | null;
       paymentsStatus: 'healthy' | 'setup';
       hasMemory: boolean;

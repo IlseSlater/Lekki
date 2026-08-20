@@ -110,17 +110,18 @@ export class GrowController {
 
     const waitToday = averageWait(fulfilmentsToday);
     const waitYesterday = averageWait(fulfilmentsYesterday);
-    /** Prefer today’s wait when today has guests; else yesterday — one story window. */
-    const averageWaitMinutes =
-      guestsToday > 0 ? waitToday : waitYesterday;
+    const takingsToday = sumPayments(paymentsToday);
+    const takingsYesterday = sumPayments(paymentsYesterday);
+    /** Same window as Grow’s one-breath story (today if guests or lone takings). */
+    const useToday =
+      guestsToday > 0 || (takingsToday.amount > 0 && guestsYesterday === 0);
+    const averageWaitMinutes = useToday ? waitToday : waitYesterday;
 
     const paymentsStatus: 'healthy' | 'setup' =
       paymentInstall?.status === 'active' ? 'healthy' : 'setup';
 
-    const takingsToday = sumPayments(paymentsToday);
-    const takingsYesterday = sumPayments(paymentsYesterday);
     const popularLabel =
-      (guestsToday > 0
+      (useToday
         ? popularToday[0]?.label?.trim()
         : popularYesterday[0]?.label?.trim()) ||
       popularToday[0]?.label?.trim() ||
@@ -136,6 +137,8 @@ export class GrowController {
       },
       guestsYesterday,
       guestsToday,
+      waitToday,
+      waitYesterday,
       averageWaitMinutes,
       paymentsStatus,
       hasMemory: guestsYesterday > 0 || guestsToday > 0,

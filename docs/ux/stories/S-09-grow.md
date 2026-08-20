@@ -2,10 +2,10 @@
 
 | | |
 |--|--|
-| **Maturity** | L3 (craft in progress — trusted manager) |
+| **Maturity** | L4 (one-breath quality) |
 | **Journey stage** | Provider — Grow |
 | **Spec** | [studio-screen-summaries.md §S-09](../studio-screen-summaries.md) · [grow-craft.md](../grow-craft.md) |
-| **Evidence** | `studio-grow.page.ts` |
+| **Evidence** | [grow-one-breath.md](../evidence/grow-one-breath.md) · `grow-breath.ts` |
 | **Questions** | — |
 
 ### Five questions

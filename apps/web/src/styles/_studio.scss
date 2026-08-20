@@ -1055,8 +1055,10 @@
 
 .studio-grow__story--trade {
   margin-top: 0.65rem;
-  font-size: clamp(1.25rem, 2.8vw, 1.5rem);
-  font-weight: 600;
+  font-family: inherit;
+  font-size: 1.125rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
   color: var(--studio-ink);
 }
 

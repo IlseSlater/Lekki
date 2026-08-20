@@ -10,7 +10,7 @@ Guest HCI:     9/9 complete
 Studio HCI:    7/7 complete
 Pack paths:    6 proven
 Setup Engine:  FROZEN v1
-Next Proof:    Grow one-breath
+Next Proof:    Continuity polish if named
 ```
 
 This section prevents future design work from accidentally reopening already-proven journeys or expanding the product into areas that are intentionally held.
