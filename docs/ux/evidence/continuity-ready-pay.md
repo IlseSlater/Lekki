@@ -11,9 +11,9 @@
 
 | State | Meaning |
 |-------|---------|
-| Ready · balance due | Gold CTA **Pay now** · lead = ready cue + “Settle when you’re ready.” |
+| Ready · balance due | Gold CTA **Pay now** · lead = **Settle when you’re ready.** (ready cue stays on orders banner — no double job) |
 | Not ready · balance due | **Pay when ready** (unchanged) |
-| Ready · no balance | **Finish** → receipt (unchanged) |
+| Ready · no balance | **Finish** → receipt (unchanged) · lead = ready cue only |
 
 ## HCI
 
@@ -27,9 +27,9 @@ node --import tsx --test apps/web/src/app/studio/ready-pay-continuity.test.ts
 ```
 
 1. Ready + open balance → primary is **Pay now** (no finish / leave / end).
-2. Lead bridges waiter/counter/door ready cue with settle invitation.
-3. Café ready hint still bridges settle when balance due.
-4. Cleared balance → Finish path unchanged.
+2. Ready + balance → lead is **Settle when you’re ready.** only (fulfilment stays on orders ready banner).
+3. Café ready hint still on banner; lead settles when balance due.
+4. Cleared balance → Finish path unchanged · lead = ready cue.
 
 ## Still HOLD
 

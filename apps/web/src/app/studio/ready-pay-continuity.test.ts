@@ -12,10 +12,10 @@ test('not ready CTA stays Pay when ready', () => {
   assert.equal(livePayCtaLabel(false), 'Pay when ready');
 });
 
-test('ready lead with balance bridges settle without leave language', () => {
+test('ready lead with balance is settle-only — no fulfilment double-up', () => {
   const lead = liveReadyLead('Your waiter is on the way with your order.', true);
-  assert.match(lead, /Settle when you’re ready/);
-  assert.doesNotMatch(lead, /finish|leave|end visit/i);
+  assert.equal(lead, 'Settle when you’re ready.');
+  assert.doesNotMatch(lead, /waiter|finish|leave|end visit/i);
 });
 
 test('ready lead without balance is fulfilment cue only', () => {
@@ -25,8 +25,7 @@ test('ready lead without balance is fulfilment cue only', () => {
   );
 });
 
-test('café pack ready hint still bridges settle when balance due', () => {
+test('café ready hint stays on banner path; lead settles when balance due', () => {
   const lead = liveReadyLead('Head to the counter when you’re called.', true);
-  assert.match(lead, /counter/);
-  assert.match(lead, /Settle/);
+  assert.equal(lead, 'Settle when you’re ready.');
 });

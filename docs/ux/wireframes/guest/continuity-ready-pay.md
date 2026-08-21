@@ -36,7 +36,7 @@ This moment answers the **next** breath when a balance is still due: **settle no
 |--|--|
 | **Title** | Ready for you (or pack-equivalent calm title already in use) |
 | **Ready cue** | Existing pack `readyHint` / orders ready banner — fulfilment only |
-| **Lead** | One calm bridge: ready + settle invitation (not Leave language) |
+| **Lead** | **Settle when you’re ready.** only — fulfilment stays on orders ready banner (no double job) |
 | **Primary (gold)** | **Pay now** (or pack-neutral settle noun — never “finish”) |
 | **Secondary** | Help / Leave stay in dock — not competing primary |
 

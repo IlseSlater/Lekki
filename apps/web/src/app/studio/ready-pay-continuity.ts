@@ -10,10 +10,11 @@ export function livePayCtaLabel(isReady: boolean): string {
 
 /**
  * Live lead when fulfilment is Ready.
- * Balance due → calm bridge to settle; cleared balance → fulfilment cue only.
+ * Balance due → settle invitation only (ready cue lives on the orders banner).
+ * Cleared balance → fulfilment cue only.
  */
 export function liveReadyLead(readyHint: string, balanceDue: boolean): string {
   const hint = readyHint.trim() || 'It’s ready for you.';
   if (!balanceDue) return hint;
-  return `${hint} Settle when you’re ready.`;
+  return 'Settle when you’re ready.';
 }
