@@ -247,6 +247,7 @@ type TablePulse = {
         font-weight: 650;
         color: var(--studio-ink, #1b2230);
       }
+      .studio-operate__action-msg {
         margin: 0;
         font-size: 0.875rem;
         font-weight: 600;

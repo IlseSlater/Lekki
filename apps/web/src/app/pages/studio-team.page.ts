@@ -433,6 +433,7 @@ export class StudioTeamPageComponent implements OnInit {
   }> = [];
   sessions: Array<{
     id: string;
+    staffId: string;
     displayName: string;
     deviceLabel?: string | null;
     createdAt: string;
