@@ -29,4 +29,4 @@ node --import tsx --test apps/web/src/app/studio/entry-wait-continuity.test.ts
 
 ## Still HOLD
 
-Ready lead density · Leave purpose chrome · cross-device tipStaff · Marketplace · Neo · Setup · Admin BI
+Leave purpose chrome · cross-device tipStaff · Marketplace · Neo · Setup · Admin BI
