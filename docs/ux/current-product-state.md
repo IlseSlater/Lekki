@@ -590,7 +590,7 @@ The next work should strengthen continuity rather than redesign the product.
 
 Continuity-safe areas still open:
 
-- Named Continuity polish only (board calm shipped)
+- Named Continuity polish only (Tip · Ready→Pay · Leave while open · Mid-visit resume shipped)
 
 ---
 
@@ -631,6 +631,40 @@ Current payment-method UI remains calm while connector credentials route through
 Implementation uses **PaymentCapability** rather than inventing a separate payment architecture.
 
 Emotional experience remains: simple · recognisable · trustworthy.
+
+---
+
+## 3.41b Tip Continuity
+
+**Status: Shipped** — Guest Bill honours Setup Tips (`tipStaff`); Live already did. [evidence](evidence/continuity-tip-parity.md)
+
+Tips off → no tip chips / tip line. Tips on → same calm tip moment. Pack defaults hide tips for festival / airport / healthcare demo tokens.
+
+Do not invent a tip product surface. Do not reopen Setup.
+
+---
+
+## 3.41c Ready → Pay crispness
+
+**Status: Shipped** — Ready + balance due → gold **Pay now** · lead bridges settle · never “Pay & finish”. [evidence](evidence/continuity-ready-pay.md) · [interaction](wireframes/guest/continuity-ready-pay.md)
+
+Finish → receipt when balance is cleared stays unchanged. Leave stays in dock — not the primary.
+
+---
+
+## 3.41d Leave while visit open
+
+**Status: Shipped** — Leave confirm affirms you’re free to leave when others still owe · quiet Visit still open amount · no allocation wizard. [evidence](evidence/continuity-leave-open.md)
+
+Primary stays **I’m finished**. Stay still returns. Do not add Cover-from-Leave.
+
+---
+
+## 3.41e Mid-visit resume
+
+**Status: Shipped** — Re-open open visit → **You’re still in** (not Welcome back, not Join). [evidence](evidence/continuity-mid-visit-resume.md) · [interaction](wireframes/guest/continuity-mid-visit-resume.md)
+
+After Leave → Welcome back unchanged. First join → You’re in unchanged. No CRM resume-cart.
 
 ---
 

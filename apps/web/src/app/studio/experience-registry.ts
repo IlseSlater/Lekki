@@ -299,6 +299,15 @@ export function getExperience(id: string | null | undefined): ExperienceDefiniti
   return EXPERIENCE_REGISTRY.find((e) => e.id === id);
 }
 
+/** Demo / seed token → experience type (Continuity with Entry QR). */
+export function experienceTypeIdForToken(
+  token: string | null | undefined,
+): ExperienceTypeId | undefined {
+  const t = token?.trim();
+  if (!t) return undefined;
+  return EXPERIENCE_REGISTRY.find((e) => e.defaults.token === t)?.id;
+}
+
 export function experienceLabel(id: string | null | undefined): string {
   return getExperience(id)?.label ?? 'Experience';
 }

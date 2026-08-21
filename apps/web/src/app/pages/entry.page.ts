@@ -4,6 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { ExperienceScreenComponent } from '../leos/experience-screen.component';
 import { LeosApiService, SessionStateService } from '../services/leos-api.service';
 import { OnboardingService } from '../services/onboarding.service';
+import { isSameOpenSessionResume } from '../studio/mid-visit-resume';
 
 type EntryStep = 'missing' | 'welcome' | 'join' | 'loading' | 'redirect' | 'done';
 
@@ -93,7 +94,22 @@ const DEMO_VENUES: Array<{ token: string; title: string; desc: string }> = [
               <strong>{{ state.physicalContextCode }}</strong>
             </p>
           }
-          @if (returning) {
+          @if (stillIn) {
+            <p class="leos-arrival__reassure">
+              You’re still in{{ guestFirstName ? ', ' + guestFirstName : '' }}.
+            </p>
+            <p class="leos-muted">
+              @if (state.venueName) {
+                {{ state.venueName }} — pick up where you left off.
+              } @else if (state.physicalContextCode) {
+                {{ termsPhysical }}
+                <strong>{{ state.physicalContextCode }}</strong>
+                — pick up where you left off.
+              } @else {
+                Pick up where you left off.
+              }
+            </p>
+          } @else if (returning) {
             <p class="leos-arrival__reassure">
               Ready when you are{{ guestFirstName ? ', ' + guestFirstName : '' }}.
             </p>
@@ -146,7 +162,7 @@ const DEMO_VENUES: Array<{ token: string; title: string; desc: string }> = [
       }
       @if (step === 'welcome') {
         <button primary type="button" class="leos-btn leos-btn--primary" (click)="enterExperience()">
-          {{ returning ? 'Continue' : seeCatalogueCta }}
+          {{ stillIn || returning ? 'Continue' : seeCatalogueCta }}
         </button>
       }
       @if (step === 'join') {
@@ -169,6 +185,8 @@ export class EntryPageComponent {
   error = '';
   demoMode = false;
   returning = false;
+  /** Mid-visit restore on Entry welcome — not Join, not Welcome back. */
+  stillIn = false;
   lastVenue = '';
   private resolving = false;
 
@@ -210,10 +228,12 @@ export class EntryPageComponent {
       this.step = 'missing';
     } else if (this.state.sessionId && this.state.profileLabel) {
       this.step = 'welcome';
-      this.returning = this.onboarding.isReturningGuest();
-      // One Welcome back moment — owned by Experience on splash path;
-      // Entry welcome claims it so Continue does not stack another banner.
-      if (this.returning) this.onboarding.consumeReturnGreeting();
+      this.stillIn = !!(this.state.participantId?.trim());
+      this.returning = this.onboarding.isReturningGuest() && !this.stillIn;
+      // One greeting — Entry claims it so Experience does not stack another.
+      if (this.stillIn) this.onboarding.consumeResumeGreeting();
+      else if (this.returning) this.onboarding.consumeReturnGreeting();
+      if (this.state.sessionId) this.onboarding.noteOpenSession(this.state.sessionId);
     } else {
       this.step = 'missing';
     }
@@ -295,6 +315,8 @@ export class EntryPageComponent {
       this.state.displayName?.trim() && this.state.displayName !== 'Guest'
         ? this.state.displayName.trim()
         : profile.name?.trim() || 'Guest';
+    const priorSessionId = this.state.sessionId;
+    const priorParticipantId = this.state.participantId;
     this.api
       .resolveEntry(this.state.entryBody(token.trim(), displayName))
       .subscribe({
@@ -313,15 +335,28 @@ export class EntryPageComponent {
           this.state.persist();
           this.api.connectSocket(this.state.organisationId, this.state.sessionId);
           this.resolving = false;
+          const stillIn = isSameOpenSessionResume(
+            priorSessionId,
+            priorParticipantId,
+            res.session.id,
+          );
+          this.stillIn = stillIn;
+          this.returning = this.onboarding.isReturningGuest() && !stillIn;
           if (autoEnter) {
+            if (stillIn) this.onboarding.noteOpenSession(res.session.id);
+            const welcome = stillIn ? 'still' : this.returning ? 'back' : undefined;
             void this.router.navigate(['/experience'], {
-              queryParams: this.returning ? { welcome: 'back' } : {},
+              queryParams: welcome ? { welcome } : {},
             });
             return;
           }
           this.step = 'welcome';
-          this.returning = this.onboarding.isReturningGuest();
-          if (this.returning) this.onboarding.consumeReturnGreeting();
+          if (stillIn) {
+            this.onboarding.consumeResumeGreeting();
+            this.onboarding.noteOpenSession(res.session.id);
+          } else if (this.returning) {
+            this.onboarding.consumeReturnGreeting();
+          }
         },
         error: (err) => {
           this.resolving = false;
@@ -335,9 +370,9 @@ export class EntryPageComponent {
   enterExperience() {
     this.state.displayName = this.state.displayName.trim() || 'Guest';
     this.state.persist();
-    // Returning: Entry already claimed the once-per-tab greeting — don’t stack Experience banner.
+    // Entry already claimed the once-per-tab greeting — don’t stack Experience banner.
     void this.router.navigate(['/experience'], {
-      queryParams: this.returning ? {} : { joined: '1' },
+      queryParams: this.stillIn || this.returning ? {} : { joined: '1' },
     });
   }
 }

@@ -33,6 +33,11 @@ import { LeosApiService, SessionStateService } from '../services/leos-api.servic
 import type { PlatformEventEnvelope } from '../services/leos-api.service';
 import { TerminologyService } from '../services/terminology.service';
 import { OnboardingService } from '../services/onboarding.service';
+import { StudioContextService } from '../services/studio-context.service';
+import { resolveAllowTip } from '../studio/tip-continuity';
+import { livePayCtaLabel, liveReadyLead } from '../studio/ready-pay-continuity';
+import { composeLeaveOpenCopy } from '../studio/leave-open-continuity';
+import { composeStillInBanner } from '../studio/mid-visit-resume';
 import { offlineQueue } from '../services/offline-queue';
 import { LeosMoneyPipe } from '../leos/leos-money.pipe';
 import { firstValueFrom } from 'rxjs';
@@ -356,7 +361,7 @@ function equalShareState(
               [equalRemaining]="equalRemaining"
               [visitLabel]="billVisitLabel"
               [showScope]="true"
-              [allowTip]="true"
+              [allowTip]="allowTip"
               [trustLine]="paymentTrustLine"
               [savedPaymentMethodStatus]="savedPaymentMethodStatus"
               [paymentMethodLabel]="paymentMethodLabel"
@@ -414,12 +419,15 @@ function equalShareState(
 
         @if (phase === 'leave') {
           <div class="leos-leave-confirm" role="dialog" aria-labelledby="leave-title">
-            <h2 id="leave-title" class="leos-leave-confirm__title">{{ leaveConfirmTitle }}</h2>
-            <p class="leos-muted">
-              This ends your session at
-              {{ state.physicalContextCode || terms.term('physicalContext', 'this place') }}
-              and returns you to the welcome screen.
-            </p>
+            <h2 id="leave-title" class="leos-leave-confirm__title">{{ leaveOpenCopy.title }}</h2>
+            @if (leaveOpenCopy.showVisitOpen && (visitRemaining ?? 0) > 0.001) {
+              <p class="leos-muted" style="margin-top:0.75rem;">
+                Visit still open: {{ visitRemaining | leosMoney: 'ZAR' }}
+              </p>
+            }
+            @if (leaveOpenCopy.body) {
+              <p class="leos-muted">{{ leaveOpenCopy.body }}</p>
+            }
           </div>
         }
 
@@ -433,7 +441,7 @@ function equalShareState(
 
       @if (state.sessionId && phase === 'live' && balanceDue) {
         <button primary type="button" class="leos-btn leos-btn--primary" (click)="openBill()">
-          {{ isReady ? 'Pay & finish' : 'Pay when ready' }}
+          {{ livePayLabel }}
         </button>
       }
       @if (state.sessionId && phase === 'live' && !balanceDue && (lastOrderTotal > 0 || fulfilments.length)) {
@@ -468,7 +476,7 @@ function equalShareState(
       }
       @if (state.sessionId && phase === 'leave') {
         <button primary type="button" class="leos-btn leos-btn--primary" (click)="leave()">
-          I’m finished
+          {{ leaveOpenCopy.primary }}
         </button>
       }
 
@@ -549,12 +557,15 @@ export class GuestPageComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly onboarding = inject(OnboardingService);
+  private readonly studio = inject(StudioContextService);
   readonly state = inject(SessionStateService);
   readonly terms = inject(TerminologyService);
 
   @ViewChild('bill') bill?: GuestBillComponent;
 
   phase: GuestPhase = 'browse';
+  /** Tip Continuity — Studio Tips (`tipStaff`) · never hardcode on. */
+  allowTip = true;
   catalogue: CatalogueItem[] = [];
   catalogueLoading = false;
   cart: CartLine[] = [];
@@ -672,6 +683,11 @@ export class GuestPageComponent implements OnInit, OnDestroy {
     return guestReadyBanner(this.state.profileId);
   }
 
+  /** Ready → Pay Continuity — settle only when balance due; never “finish”. */
+  get livePayLabel(): string {
+    return livePayCtaLabel(this.isReady);
+  }
+
   get leaveCta(): string {
     return `Thanks — leave ${this.terms.term('physicalContext', 'place').toLowerCase()}`;
   }
@@ -708,6 +724,13 @@ export class GuestPageComponent implements OnInit, OnDestroy {
     if (close.includes('zone')) return 'Leave this zone?';
     if (close.includes('bay')) return 'Leave the bay?';
     return 'All done here?';
+  }
+
+  /** Leave Continuity — free to leave even when visit still open for others. */
+  get leaveOpenCopy() {
+    const place =
+      this.state.physicalContextCode || this.terms.term('physicalContext', 'this place');
+    return composeLeaveOpenCopy(this.visitRemaining, this.leaveConfirmTitle, place);
   }
 
   get categories(): string[] {
@@ -859,7 +882,7 @@ export class GuestPageComponent implements OnInit, OnDestroy {
         return 'Looks right? Place when you’re ready — the team will see it straight away.';
       case 'live':
         return this.isReady
-          ? this.readyHint
+          ? liveReadyLead(this.readyHint, this.balanceDue)
           : this.timelineGuidance ||
               `We’ve got your ${txn} — updates appear here as the team progresses.`;
       case 'payment':
@@ -872,7 +895,7 @@ export class GuestPageComponent implements OnInit, OnDestroy {
       case 'receipt':
         return 'Thanks for joining us today.';
       case 'leave':
-        return 'Stay if you still need anything.';
+        return this.leaveOpenCopy.lead;
       default:
         return `Add what you’d like — the team sees your ${txn} when you place it.`;
     }
@@ -967,12 +990,14 @@ export class GuestPageComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.state.restore();
+    this.refreshAllowTip();
     this.restoreVisitPaymentMethod();
     this.offline = typeof navigator !== 'undefined' && !navigator.onLine;
     window.addEventListener('online', this.onlineHandler);
     window.addEventListener('offline', this.offlineHandler);
     const paymentResult = this.route.snapshot.queryParamMap.get('payment');
     const welcomeBack = this.route.snapshot.queryParamMap.get('welcome') === 'back';
+    const welcomeStill = this.route.snapshot.queryParamMap.get('welcome') === 'still';
     const justJoined = this.route.snapshot.queryParamMap.get('joined') === '1';
     if (paymentResult === 'return') {
       this.message = 'Confirming your payment…';
@@ -981,15 +1006,26 @@ export class GuestPageComponent implements OnInit, OnDestroy {
     } else if (paymentResult === 'cancel') {
       this.error = 'Payment cancelled — nothing was taken. You can try again.';
       this.phase = 'payment';
-    } else if (
-      (welcomeBack || this.onboarding.isReturningGuest()) &&
-      this.onboarding.consumeReturnGreeting()
-    ) {
+    } else if (welcomeBack && this.onboarding.consumeReturnGreeting()) {
       this.showWelcomeBack();
-    } else if ((justJoined || !this.onboarding.isReturningGuest()) && this.onboarding.consumeJoinGreeting()) {
+    } else if (
+      (welcomeStill ||
+        (!!this.state.sessionId &&
+          !!this.state.participantId &&
+          this.onboarding.isKnownOpenSession(this.state.sessionId))) &&
+      this.onboarding.consumeResumeGreeting()
+    ) {
+      this.showStillIn();
+    } else if (this.onboarding.isReturningGuest() && this.onboarding.consumeReturnGreeting()) {
+      this.showWelcomeBack();
+    } else if (
+      (justJoined || !this.onboarding.isReturningGuest()) &&
+      this.onboarding.consumeJoinGreeting()
+    ) {
       this.showJoined();
     }
     if (this.state.sessionId) {
+      this.onboarding.noteOpenSession(this.state.sessionId);
       this.refreshLive();
       this.bindLiveSocket();
       this.startLivePoll();
@@ -1046,6 +1082,29 @@ export class GuestPageComponent implements OnInit, OnDestroy {
       : 'You’re in — browse when you’re ready.';
     setTimeout(() => {
       if (this.message.startsWith('You’re in')) this.message = '';
+    }, 4500);
+  }
+
+  private showStillIn() {
+    const first =
+      this.onboarding.firstName() ||
+      (this.state.displayName || '').trim().split(/\s+/)[0] ||
+      '';
+    const banner = composeStillInBanner({
+      firstName: first,
+      placeTerm: this.terms.term('physicalContext', 'Place'),
+      placeCode: this.state.physicalContextCode,
+    });
+    this.message = banner.message;
+    setTimeout(() => {
+      if (this.message === banner.message || this.message === banner.quiet) {
+        this.message = this.message === banner.message ? banner.quiet : '';
+      }
+    }, 2800);
+    setTimeout(() => {
+      if (this.message === banner.quiet || this.message.startsWith('You’re still in')) {
+        this.message = '';
+      }
     }, 4500);
   }
 
@@ -1632,6 +1691,7 @@ export class GuestPageComponent implements OnInit, OnDestroy {
   }
 
   openBill() {
+    this.refreshAllowTip();
     if (!this.billLines.length && this.cart.length) {
       this.billLines = this.cart.map((l) => ({
         label: l.choiceSummary ? `${l.label} · ${l.choiceSummary}` : l.label,
@@ -1651,6 +1711,12 @@ export class GuestPageComponent implements OnInit, OnDestroy {
       if (hasUnclaimed) this.bill.setScope('visit');
       else if (this.preferMineScope) this.bill.setScope('mine');
     }, 0);
+  }
+
+  /** Studio Tips → Guest Bill (Blueprint tip example · No Drift). */
+  private refreshAllowTip() {
+    const ws = this.studio.readWorkspace();
+    this.allowTip = resolveAllowTip(this.state.token, ws.experiences);
   }
 
   /** Inline claim — one tap, item becomes yours; undo toast + Mine pulse (no extra screens). */

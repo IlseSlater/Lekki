@@ -2,6 +2,7 @@ import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { OnboardingService } from '../services/onboarding.service';
 import { LeosApiService, SessionStateService } from '../services/leos-api.service';
+import { isSameOpenSessionResume } from '../studio/mid-visit-resume';
 
 const FIRST_SPLASH_MS = 5000;
 const RETURN_SPLASH_MS = 1400;
@@ -174,13 +175,17 @@ export class GuestSplashPageComponent implements OnInit, OnDestroy {
       return;
     }
 
+    this.state.restore();
     const canEnter = this.onboarding.canEnterExperience();
     const returning = canEnter && this.onboarding.isReturningGuest();
-    this.returningSplash = returning;
+    const midVisit =
+      canEnter && !!(this.state.sessionId?.trim() && this.state.participantId?.trim());
+    // Short beat for return or mid-visit resume — not first-run wait.
+    this.returningSplash = returning || midVisit;
 
     const reduced =
       typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const ms = returning ? (reduced ? 0 : RETURN_SPLASH_MS) : FIRST_SPLASH_MS;
+    const ms = this.returningSplash ? (reduced ? 0 : RETURN_SPLASH_MS) : FIRST_SPLASH_MS;
     if (ms === 0) {
       void this.finish();
       return;
@@ -197,16 +202,19 @@ export class GuestSplashPageComponent implements OnInit, OnDestroy {
     await new Promise((r) => setTimeout(r, this.returningSplash ? 280 : 420));
 
     if (this.onboarding.canEnterExperience()) {
-      this.resolveAndEnter(this.onboarding.isReturningGuest());
+      this.resolveAndEnter();
       return;
     }
 
     void this.router.navigate(['/onboarding'], { queryParams: { token: this.token } });
   }
 
-  private resolveAndEnter(returning: boolean) {
+  private resolveAndEnter() {
     const profile = this.onboarding.read();
     const displayName = profile.name.trim() || 'Guest';
+    const priorSessionId = this.state.sessionId;
+    const priorParticipantId = this.state.participantId;
+    const returning = this.onboarding.isReturningGuest();
     this.api.resolveEntry(this.state.entryBody(this.token, displayName)).subscribe({
       next: (res) => {
         this.state.sessionId = res.session.id;
@@ -222,8 +230,15 @@ export class GuestSplashPageComponent implements OnInit, OnDestroy {
         this.state.displayName = displayName;
         this.state.persist();
         this.api.connectSocket(this.state.organisationId, this.state.sessionId);
+        const stillIn = isSameOpenSessionResume(
+          priorSessionId,
+          priorParticipantId,
+          res.session.id,
+        );
+        if (stillIn) this.onboarding.noteOpenSession(res.session.id);
+        const welcome = stillIn ? 'still' : returning ? 'back' : undefined;
         void this.router.navigate(['/experience'], {
-          queryParams: returning ? { welcome: 'back' } : {},
+          queryParams: welcome ? { welcome } : {},
         });
       },
       error: () => {

@@ -25,6 +25,8 @@ export type OnboardingProfile = {
 const KEY = 'leos.onboarding';
 const RETURN_SHOWN_KEY = 'leos.return.shown';
 const JOIN_SHOWN_KEY = 'leos.join.shown';
+const RESUME_SHOWN_KEY = 'leos.resume.shown';
+const KNOWN_SESSION_KEY = 'leos.session.known';
 
 const EMPTY: OnboardingProfile = {
   email: '',
@@ -124,10 +126,48 @@ export class OnboardingService {
     }
   }
 
+  /** Once per tab — mid-visit “You’re still in” (not Welcome back / Join). */
+  consumeResumeGreeting(): boolean {
+    try {
+      if (sessionStorage.getItem(RESUME_SHOWN_KEY) === '1') return false;
+      sessionStorage.setItem(RESUME_SHOWN_KEY, '1');
+      return true;
+    } catch {
+      return true;
+    }
+  }
+
+  /** Remember open session so refresh can show still-in, not Join. */
+  noteOpenSession(sessionId: string | null | undefined) {
+    const id = (sessionId ?? '').trim();
+    if (!id) return;
+    try {
+      sessionStorage.setItem(KNOWN_SESSION_KEY, id);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  knownOpenSessionId(): string {
+    try {
+      return sessionStorage.getItem(KNOWN_SESSION_KEY)?.trim() || '';
+    } catch {
+      return '';
+    }
+  }
+
+  /** True when this tab already knew this open session (refresh / re-open). */
+  isKnownOpenSession(sessionId: string | null | undefined): boolean {
+    const id = (sessionId ?? '').trim();
+    return !!id && this.knownOpenSessionId() === id;
+  }
+
   clearReturnGreetingFlag() {
     try {
       sessionStorage.removeItem(RETURN_SHOWN_KEY);
       sessionStorage.removeItem(JOIN_SHOWN_KEY);
+      sessionStorage.removeItem(RESUME_SHOWN_KEY);
+      sessionStorage.removeItem(KNOWN_SESSION_KEY);
     } catch {
       /* ignore */
     }
