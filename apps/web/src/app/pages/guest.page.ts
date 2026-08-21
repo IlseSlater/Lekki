@@ -564,8 +564,8 @@ export class GuestPageComponent implements OnInit, OnDestroy {
   @ViewChild('bill') bill?: GuestBillComponent;
 
   phase: GuestPhase = 'browse';
-  /** Tip Continuity — Studio Tips (`tipStaff`) · never hardcode on. */
-  allowTip = true;
+  /** Tip Continuity — false until refresh; never flash tips when Setup Tips is off. */
+  allowTip = false;
   catalogue: CatalogueItem[] = [];
   catalogueLoading = false;
   cart: CartLine[] = [];

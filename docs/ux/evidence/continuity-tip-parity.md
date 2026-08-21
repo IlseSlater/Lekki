@@ -33,4 +33,4 @@ node --import tsx --test apps/web/src/app/studio/tip-continuity.test.ts
 
 ## Still HOLD
 
-Loyalty · wallets · allocation wizard · Marketplace · Neo · Setup redesign · Admin BI · tip as a new product · server-published guestDesign for cross-device (same-origin Studio workspace + pack defaults for this slice)
+Loyalty · wallets · allocation wizard · Marketplace · Neo · Setup redesign · Admin BI · tip as a new product · server-published guestDesign for cross-device (same-origin Studio workspace + pack defaults). First paint defaults tips off until resolve.

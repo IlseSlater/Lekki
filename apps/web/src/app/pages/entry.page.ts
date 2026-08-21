@@ -5,6 +5,7 @@ import { ExperienceScreenComponent } from '../leos/experience-screen.component';
 import { LeosApiService, SessionStateService } from '../services/leos-api.service';
 import { OnboardingService } from '../services/onboarding.service';
 import { isSameOpenSessionResume } from '../studio/mid-visit-resume';
+import { composeEntryWaitCopy } from '../studio/entry-wait-continuity';
 
 type EntryStep = 'missing' | 'welcome' | 'join' | 'loading' | 'redirect' | 'done';
 
@@ -37,18 +38,8 @@ const DEMO_VENUES: Array<{ token: string; title: string; desc: string }> = [
 
       @if (step === 'redirect' || step === 'loading') {
         <div class="leos-arrival studio-motion-appear" aria-live="polite">
-          <p class="leos-arrival__reassure">
-            {{
-              step === 'redirect'
-                ? returning
-                  ? 'Welcome back — one moment…'
-                  : 'Welcome — one moment…'
-                : 'Finding your place…'
-            }}
-          </p>
-          <p class="leos-muted">
-            {{ returning ? 'Good to see you again.' : 'You’re joining the right experience.' }}
-          </p>
+          <p class="leos-arrival__reassure">{{ entryWaitCopy.reassure }}</p>
+          <p class="leos-muted">{{ entryWaitCopy.muted }}</p>
         </div>
       }
 
@@ -211,6 +202,8 @@ export class EntryPageComponent {
 
       // Printed / shared QR → brand splash, then onboarding or experience
       if (!skipOnboarding) {
+        this.stillIn = !!(this.state.sessionId?.trim() && this.state.participantId?.trim());
+        this.returning = this.onboarding.isReturningGuest() && !this.stillIn;
         this.step = 'redirect';
         void this.router.navigate(['/splash'], { queryParams: { token: q } });
         return;
@@ -219,7 +212,8 @@ export class EntryPageComponent {
       // Returning guest who already finished personal onboarding
       const profile = this.onboarding.read();
       if (profile.name) this.state.displayName = profile.name;
-      this.returning = this.onboarding.isReturningGuest();
+      this.stillIn = !!(this.state.sessionId?.trim() && this.state.participantId?.trim());
+      this.returning = this.onboarding.isReturningGuest() && !this.stillIn;
       void this.beginWithToken(q, true);
       return;
     }
@@ -241,6 +235,15 @@ export class EntryPageComponent {
 
   get guestFirstName(): string {
     return this.onboarding.firstName() || (this.state.displayName || '').trim().split(/\s+/)[0] || '';
+  }
+
+  /** Redirect / loading beat — mid-visit never flashes Welcome back. */
+  get entryWaitCopy() {
+    return composeEntryWaitCopy({
+      stillIn: this.stillIn,
+      returning: this.returning,
+      findingPlace: this.step === 'loading',
+    });
   }
 
   get termsPhysical(): string {
@@ -317,6 +320,8 @@ export class EntryPageComponent {
         : profile.name?.trim() || 'Guest';
     const priorSessionId = this.state.sessionId;
     const priorParticipantId = this.state.participantId;
+    this.stillIn = !!(priorSessionId?.trim() && priorParticipantId?.trim());
+    this.returning = this.onboarding.isReturningGuest() && !this.stillIn;
     this.api
       .resolveEntry(this.state.entryBody(token.trim(), displayName))
       .subscribe({
