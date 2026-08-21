@@ -254,7 +254,7 @@ export function guestServiceAssistCopy(profileIdOrType?: string): {
       idleHint: 'Something at the counter',
       pendingHint: 'Counter notified',
       onWay: 'Someone from the counter is on the way',
-      notified: 'Counter notified — hang tight',
+      notified: 'We’ve told the counter',
       staffNoun: 'counter',
     };
   }
@@ -264,7 +264,7 @@ export function guestServiceAssistCopy(profileIdOrType?: string): {
       idleHint: 'Something in your room',
       pendingHint: 'Reception notified',
       onWay: 'Reception is on the way',
-      notified: 'Reception notified — hang tight',
+      notified: 'We’ve told reception',
       staffNoun: 'reception',
     };
   }
@@ -274,7 +274,7 @@ export function guestServiceAssistCopy(profileIdOrType?: string): {
       idleHint: 'Something in the waiting bay',
       pendingHint: 'Reception notified',
       onWay: 'Reception is on the way',
-      notified: 'Reception notified — hang tight',
+      notified: 'We’ve told reception',
       staffNoun: 'reception',
     };
   }
@@ -284,7 +284,7 @@ export function guestServiceAssistCopy(profileIdOrType?: string): {
       idleHint: 'Something in this zone',
       pendingHint: 'Crew notified',
       onWay: 'Crew is on the way',
-      notified: 'Crew notified — hang tight',
+      notified: 'We’ve told the crew',
       staffNoun: 'crew',
     };
   }
@@ -294,7 +294,7 @@ export function guestServiceAssistCopy(profileIdOrType?: string): {
       idleHint: 'Something at your seat',
       pendingHint: 'Gate service notified',
       onWay: 'Gate service is on the way',
-      notified: 'Gate service notified — hang tight',
+      notified: 'We’ve told gate service',
       staffNoun: 'gate',
     };
   }
@@ -303,7 +303,7 @@ export function guestServiceAssistCopy(profileIdOrType?: string): {
     idleHint: 'Something at the table',
     pendingHint: 'Waiter notified',
     onWay: 'Your waiter is on the way',
-    notified: 'Waiter notified — hang tight',
+    notified: 'We’ve told your waiter',
     staffNoun: 'waiter',
   };
 }
@@ -323,7 +323,7 @@ export function guestManagerAssistCopy(profileIdOrType?: string): {
       idleHint: 'A private matter',
       pendingHint: 'Manager notified',
       onWay: 'The manager is on the way',
-      notified: 'Manager notified — hang tight',
+      notified: 'We’ve told the manager',
     };
   }
   if (id.includes('hotel') || id.includes('healthcare')) {
@@ -332,7 +332,7 @@ export function guestManagerAssistCopy(profileIdOrType?: string): {
       idleHint: 'A private matter',
       pendingHint: 'Manager notified',
       onWay: 'The manager is on the way',
-      notified: 'Manager notified — hang tight',
+      notified: 'We’ve told the manager',
     };
   }
   if (id.includes('festival')) {
@@ -341,7 +341,7 @@ export function guestManagerAssistCopy(profileIdOrType?: string): {
       idleHint: 'A private matter',
       pendingHint: 'Lead notified',
       onWay: 'The lead is on the way',
-      notified: 'Lead notified — hang tight',
+      notified: 'We’ve told the lead',
     };
   }
   if (id.includes('airport')) {
@@ -350,7 +350,7 @@ export function guestManagerAssistCopy(profileIdOrType?: string): {
       idleHint: 'A private matter',
       pendingHint: 'Gate lead notified',
       onWay: 'Gate lead is on the way',
-      notified: 'Gate lead notified — hang tight',
+      notified: 'We’ve told gate lead',
     };
   }
   return {
@@ -358,7 +358,7 @@ export function guestManagerAssistCopy(profileIdOrType?: string): {
     idleHint: 'A private matter',
     pendingHint: 'Manager notified',
     onWay: 'The manager is on the way',
-    notified: 'Manager notified — hang tight',
+    notified: 'We’ve told the manager',
   };
 }
 

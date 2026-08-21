@@ -590,7 +590,7 @@ The next work should strengthen continuity rather than redesign the product.
 
 Continuity-safe areas still open:
 
-- Named Continuity polish only (Tip · Ready→Pay · Leave while open · Mid-visit resume shipped)
+- Named Continuity polish only (Tip · Ready→Pay · Leave while open · Mid-visit resume · Help ack shipped)
 
 ---
 
@@ -665,6 +665,14 @@ Primary stays **I’m finished**. Stay still returns. Do not add Cover-from-Leav
 **Status: Shipped** — Re-open open visit → **You’re still in** (not Welcome back, not Join). [evidence](evidence/continuity-mid-visit-resume.md) · [interaction](wireframes/guest/continuity-mid-visit-resume.md)
 
 After Leave → Welcome back unchanged. First join → You’re in unchanged. No CRM resume-cart.
+
+---
+
+## 3.41f Help ack pack polish
+
+**Status: Shipped** — Help open → **We’ve told…** (pack noun) · ack → **… on the way** · no “hang tight”. [evidence](evidence/continuity-help-ack.md) · [interaction](wireframes/guest/continuity-help-ack.md)
+
+Do not add ETAs, chat, or a second Help surface.
 
 ---
 
