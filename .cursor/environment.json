@@ -1,0 +1,17 @@
+{
+  "name": "Lekki LEOS",
+  "user": "ubuntu",
+  "install": "bash .cursor/scripts/cloud-install.sh",
+  "start": "bash .cursor/scripts/cloud-start.sh",
+  "terminals": [
+    {
+      "name": "runtime",
+      "command": "pnpm run dev:runtime"
+    },
+    {
+      "name": "web",
+      "command": "pnpm run dev:web"
+    }
+  ],
+  "ports": [3000, 4200, 5432]
+}
