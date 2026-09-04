@@ -12,6 +12,12 @@ import { EventBusService } from '../events/event-bus.service';
 import { StaffTokenService } from '../staff-auth/staff-token.service';
 import { SessionAccessService } from '../leos/session-access.service';
 import { guestVisibleEvent } from './guest-visible-event';
+import {
+  isOperateRoleAllowed,
+  normalizeOperateRole,
+  restaurantStationAccess,
+} from '@lekki/pack-restaurant';
+import { operateRoleForStation } from '../staff-auth/station-access';
 
 type OperateRole = 'kitchen' | 'bar' | 'waiter' | 'counter' | 'staff';
 
@@ -123,10 +129,7 @@ export class LeosGateway implements OnGatewayInit, OnGatewayConnection, OnModule
   }
 
   private roleAllowed(staffRole: string, requested: OperateRole): boolean {
-    if (staffRole === 'staff') return true;
-    if (staffRole === requested) return true;
-    if (staffRole === 'waiter' && requested === 'waiter') return true;
-    return false;
+    return isOperateRoleAllowed(staffRole, requested, restaurantStationAccess);
   }
 
   private joinOperate(client: Socket, organisationId: string, roleRaw: string): string | null {
@@ -151,23 +154,15 @@ export class LeosGateway implements OnGatewayInit, OnGatewayConnection, OnModule
   }
 
   private normRole(raw: string): OperateRole | null {
-    const r = (raw || '').toLowerCase();
-    if (r === 'floor') return 'waiter';
-    if (r === 'kitchen' || r === 'bar' || r === 'waiter' || r === 'counter' || r === 'staff') {
-      return r;
-    }
-    return null;
+    const normalized = normalizeOperateRole(raw, restaurantStationAccess);
+    return normalized as OperateRole | null;
   }
 
   private stationOperateRole(stationId: string | undefined): OperateRole | null {
-    const id = (stationId || '').toLowerCase();
-    if (!id) return null;
-    if (id.includes('bar') && !id.includes('barista')) return 'bar';
-    if (id.includes('counter') || id.includes('cafe') || id.includes('café')) return 'counter';
-    if (id.includes('kitchen') || id.includes('food-truck') || id.includes('room-service')) {
-      return 'kitchen';
-    }
-    return 'kitchen';
+    return operateRoleForStation({
+      stationId,
+      table: restaurantStationAccess,
+    }) as OperateRole | null;
   }
 
   private operateRolesFor(envelope: EventEnvelope): OperateRole[] {

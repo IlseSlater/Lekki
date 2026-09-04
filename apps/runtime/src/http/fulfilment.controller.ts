@@ -3,6 +3,8 @@ import { LeosService } from '../leos/leos.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { StaffAuthGuard, RequireStaffPermission } from '../staff-auth/staff-auth.guard';
 import { StaffTokenService, type StaffTokenClaims } from '../staff-auth/staff-token.service';
+import { restaurantStationAccess } from '@lekki/pack-restaurant';
+import { isDeliverOnlyRole } from '../staff-auth/station-access';
 
 @Controller('fulfilments')
 export class FulfilmentController {
@@ -29,9 +31,12 @@ export class FulfilmentController {
     if (!this.tokens.canAccessStation(staff.role, existing.stationId)) {
       throw new ForbiddenException('Experience cannot update this station');
     }
-    // Waiter may only mark ready → delivered (serve)
-    if (staff.role === 'waiter' && body.status !== 'delivered') {
-      throw new ForbiddenException('Waiter can only mark served');
+    // Serve / handoff roles may only mark ready → delivered
+    if (
+      isDeliverOnlyRole(staff.role, restaurantStationAccess) &&
+      body.status !== 'delivered'
+    ) {
+      throw new ForbiddenException('Serve role can only mark served');
     }
     return this.leos.updateFulfilmentStatus(id, body.status);
   }

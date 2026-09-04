@@ -4,6 +4,8 @@ import { hasPermission, type StaffPrincipal } from '@lekki/contracts';
 import { PrismaService } from '../prisma/prisma.service';
 import { newId } from '@lekki/shared';
 import { requireStaffTokenSecret } from '../leos/runtime-secrets';
+import { restaurantStationAccess } from '@lekki/pack-restaurant';
+import { canAccessStation as canAccessStationFromTable } from './station-access';
 
 export type StaffTokenClaims = {
   sub: string;
@@ -158,23 +160,13 @@ export class StaffTokenService {
     }
   }
 
-  /** Experience assignment — station board access. */
-  canAccessStation(role: string, stationId: string): boolean {
-    if (role === 'staff') return true;
-    if (role === 'waiter') return true; // serve / handoff visibility
-    const id = (stationId || '').toLowerCase();
-    if (role === 'kitchen') {
-      return (
-        id.includes('kitchen') ||
-        id.includes('food-truck') ||
-        id.includes('room-service') ||
-        (!id.includes('bar') && !id.includes('counter'))
-      );
-    }
-    if (role === 'bar') return id.includes('bar');
-    if (role === 'counter') {
-      return id.includes('counter') || id.includes('cafe') || id.includes('café') || id.includes('gate');
-    }
-    return false;
+  /** Experience assignment — station board access (Pack table, fail closed). */
+  canAccessStation(role: string, stationId: string, venueId?: string): boolean {
+    return canAccessStationFromTable({
+      role,
+      stationId,
+      venueId,
+      table: restaurantStationAccess,
+    });
   }
 }

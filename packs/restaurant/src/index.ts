@@ -300,3 +300,11 @@ export function registerRestaurantPack(store: {
   store.register(restaurantProfile);
   store.register(cafeProfile);
 }
+
+export {
+  restaurantStationAccess,
+  venueStationId,
+  normalizeOperateRole,
+  isOperateRoleAllowed,
+  type StationAccessTable,
+} from './station-access';

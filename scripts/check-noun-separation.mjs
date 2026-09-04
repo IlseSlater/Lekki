@@ -1,19 +1,12 @@
 /**
  * Pack nouns must not drive Platform authorization.
  * Scans identifiers in decisions (===, includes, return) — not comments,
- * route strings, or allowlists. Batch 4 drives remaining hits to 0.
+ * route strings, or allowlists.
  */
 const FORBIDDEN_NOUNS = new Set(['table', 'menu_item', 'waiter', 'kitchen']);
 
-/**
- * Decision sites still open (Batch 4). CI stays green while these exist, but
- * any NEW decision-site hit fails. Clear this list when Batch 4 lands.
- */
-const KNOWN_OPEN = new Set([
-  'apps/runtime/src/staff-auth/staff-token.service.ts',
-  'apps/runtime/src/ws/leos.gateway.ts',
-  'apps/runtime/src/http/fulfilment.controller.ts',
-]);
+/** Empty after Batch 4 — any decision-site hit fails CI. */
+const KNOWN_OPEN = new Set();
 
 const SCAN_DIRS = [
   'packages/contracts/src',
@@ -102,15 +95,13 @@ if (violations.length > 0) {
 
 if (novel.length > 0) {
   console.error(
-    'New decision-site pack nouns are not allowed. Fix them or (Batch 4 only) extend KNOWN_OPEN.',
+    'Decision-site pack nouns are not allowed in Platform paths.',
   );
   process.exit(1);
 }
 
 if (violations.length > 0) {
-  console.warn(
-    'Known Batch 4 authz sites remain — clear KNOWN_OPEN when station→role table lands.',
-  );
+  console.warn('Known open sites remain — clear KNOWN_OPEN when fixed.');
   process.exit(0);
 }
 

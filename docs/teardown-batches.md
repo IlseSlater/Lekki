@@ -15,22 +15,15 @@ every later batch easier to debug, because right now a 500 hides the cause.
 
 | Item | State |
 |------|--------|
-| Settle-after-expiry hole | **Closed in working tree** — `markPaymentSettled` re-takes `paidMinor` or flags `needs_refund` + `PaymentOverpayment`. Uncommitted relative to remote `main`. |
-| Batch 1 error semantics | Landed (WT) |
-| Batch 3 outbox | **Landed in WT** — SKIP LOCKED claim, poison DL on validate, transient retry×12, health lag, survivable tick. Apply `20260904140000_outbox_retry` (+ still-pending `expires_at` when Docker is up). |
-| Batch 2 hardening | **Landed** — fail-fast secrets; PIN lockout (10→lock); throttler; helmet; 256kb body; 30s timeout; CORS allowlist from `WEB_ORIGIN`; ValidationPipe + transaction DTO. |
-| Batch 4 authz nouns | Decision-site linter (comments/URLs skipped). `KNOWN_OPEN`: staff-token, gateway, fulfilment. CI green; novel hits fail. |
-| Batch 5 menu editor | Not started (truth problem — ahead of 3/4 if demoing) |
+| Settle-after-expiry hole | **Closed** (on remote) |
+| Batch 1 error semantics | Landed |
+| Batch 2 hardening | Landed |
+| Batch 3 outbox | Landed — apply SQL when DB up (done on this machine 4 Sept) |
+| Batch 4 authz nouns | **Landed** — Pack `restaurantStationAccess` table; cellar-bar not bar-by-substring; unknown fail-closed; `KNOWN_OPEN` empty; `check:nouns` exits 0 |
+| Batch 5 menu editor | Not started (truth problem — next if demoing, else next in sequence) |
 | Batches 6–7 | Not started |
 
-**Authz vs harmless (nouns triage):** substring station/role grants in
-`staff-token.service.ts` + `leos.gateway.ts` (incl. unconditional
-`return 'kitchen'`) are the dangerous sites. `fulfilment.controller.ts`
-gates on a validated role enum (fail-closed) — fix with the same table,
-second. Comments, route strings, and `VALID_ROLES` allowlists are not
-flagged by the narrowed linter.
-
-**Next sequence:** Batch 4 (authz nouns) — or Batch 5 if demoing.
+**Next sequence:** Batch 5 (menu editor).
 
 ---
 
