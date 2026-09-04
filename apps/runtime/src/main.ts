@@ -3,10 +3,14 @@ import { existsSync } from 'node:fs';
 import { networkInterfaces } from 'node:os';
 import { resolve } from 'node:path';
 import { loadEnvFile } from 'node:process';
+import { json, urlencoded, type Request, type Response, type NextFunction } from 'express';
+import helmet from 'helmet';
+import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DomainExceptionFilter } from './http/domain-exception.filter';
 import { assertRuntimeSecrets } from './leos/runtime-secrets';
+import { resolveCorsOrigins } from './leos/cors-origins';
 
 for (const candidate of [
   resolve(process.cwd(), '.env'),
@@ -24,7 +28,6 @@ function lanIpv4(): string | null {
   const candidates: string[] = [];
   for (const entries of Object.values(nets)) {
     for (const net of entries ?? []) {
-      // Node types vary: family may be 'IPv4' or (older) numeric 4.
       const family = String(net.family);
       if ((family !== 'IPv4' && family !== '4') || net.internal) continue;
       candidates.push(net.address);
@@ -39,16 +42,33 @@ function lanIpv4(): string | null {
 }
 
 async function bootstrap() {
-  // Fail closed before Nest wires anything that signs tokens or opens the vault.
   assertRuntimeSecrets(process.env);
+  const corsOrigins = resolveCorsOrigins(process.env);
 
-  const app = await NestFactory.create(AppModule, { cors: true });
+  const app = await NestFactory.create(AppModule, { cors: false, bodyParser: false });
   const port = Number(process.env.RUNTIME_PORT ?? 3000);
-  // Reflect request origin so phone → LAN IP:4200 can call API (dev).
+
+  app.use(helmet());
+  app.use(json({ limit: '256kb' }));
+  app.use(urlencoded({ extended: true, limit: '256kb' }));
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    req.setTimeout(30_000);
+    res.setTimeout(30_000);
+    next();
+  });
+
   app.useGlobalFilters(new DomainExceptionFilter());
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+      transformOptions: { enableImplicitConversion: true },
+    }),
+  );
 
   app.enableCors({
-    origin: true,
+    origin: corsOrigins,
     credentials: true,
   });
 
@@ -69,4 +89,3 @@ async function bootstrap() {
 }
 
 bootstrap();
-

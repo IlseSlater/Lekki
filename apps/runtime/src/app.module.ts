@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { PrismaModule } from './prisma/prisma.module';
 import { LeosModule } from './leos/leos.module';
 import { EntryController } from './http/entry.controller';
@@ -22,7 +24,20 @@ import { WsModule } from './ws/ws.module';
 import { StaffAuthModule } from './staff-auth/staff-auth.module';
 
 @Module({
-  imports: [PrismaModule, LeosModule, EventsModule, WsModule, StaffAuthModule],
+  imports: [
+    ThrottlerModule.forRoot([
+      {
+        name: 'default',
+        ttl: 60_000,
+        limit: 120,
+      },
+    ]),
+    PrismaModule,
+    LeosModule,
+    EventsModule,
+    WsModule,
+    StaffAuthModule,
+  ],
   controllers: [
     EntryController,
     SessionController,
@@ -40,6 +55,12 @@ import { StaffAuthModule } from './staff-auth/staff-auth.module';
     SetupEntryController,
     GrowController,
     OperateController,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
   ],
 })
 export class AppModule {}
