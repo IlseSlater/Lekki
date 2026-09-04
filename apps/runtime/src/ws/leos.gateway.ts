@@ -11,6 +11,7 @@ import type { EventEnvelope } from '@lekki/contracts';
 import { EventBusService } from '../events/event-bus.service';
 import { StaffTokenService } from '../staff-auth/staff-token.service';
 import { SessionAccessService } from '../leos/session-access.service';
+import { guestVisibleEvent } from './guest-visible-event';
 
 type OperateRole = 'kitchen' | 'bar' | 'waiter' | 'counter' | 'staff';
 
@@ -199,8 +200,10 @@ export class LeosGateway implements OnGatewayInit, OnGatewayConnection, OnModule
   private project(envelope: EventEnvelope) {
     const sessionId = envelope.payload?.['sessionId'] as string | undefined;
     if (sessionId) {
-      const room = this.sessionRoom(envelope.organisationId, sessionId);
-      this.server.to(room).emit('platform.event', envelope);
+      if (guestVisibleEvent(envelope)) {
+        const room = this.sessionRoom(envelope.organisationId, sessionId);
+        this.server.to(room).emit('platform.event', envelope);
+      }
     } else {
       this.server
         .to(this.operateRoom(envelope.organisationId, 'staff'))

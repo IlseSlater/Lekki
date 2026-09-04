@@ -17,8 +17,8 @@ every later batch easier to debug, because right now a 500 hides the cause.
 |------|--------|
 | Settle-after-expiry hole | **Closed in working tree** — `markPaymentSettled` re-takes `paidMinor` or flags `needs_refund` + `PaymentOverpayment`. Uncommitted relative to remote `main`. |
 | Batch 1 error semantics | Landed (WT) |
+| Batch 3 outbox | **Landed in WT** — SKIP LOCKED claim, poison DL on validate, transient retry×12, health lag, survivable tick. Apply `20260904140000_outbox_retry` (+ still-pending `expires_at` when Docker is up). |
 | Batch 2 hardening | **Landed** — fail-fast secrets; PIN lockout (10→lock); throttler; helmet; 256kb body; 30s timeout; CORS allowlist from `WEB_ORIGIN`; ValidationPipe + transaction DTO. |
-| Batch 3 outbox | Not started (more urgent: expiry sweep rides this loop) |
 | Batch 4 authz nouns | Decision-site linter (comments/URLs skipped). `KNOWN_OPEN`: staff-token, gateway, fulfilment. CI green; novel hits fail. |
 | Batch 5 menu editor | Not started (truth problem — ahead of 3/4 if demoing) |
 | Batches 6–7 | Not started |

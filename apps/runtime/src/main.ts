@@ -88,4 +88,10 @@ async function bootstrap() {
   }
 }
 
+process.on('unhandledRejection', (reason) => {
+  const stack =
+    reason instanceof Error ? reason.stack ?? reason.message : String(reason);
+  console.error(`[LEOS] unhandledRejection — ${stack}`);
+});
+
 bootstrap();

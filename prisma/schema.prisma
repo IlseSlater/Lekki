@@ -245,11 +245,16 @@ model Payment {
 }
 
 model OutboxMessage {
-  id          String   @id
-  eventName   String
-  envelope    Json
-  publishedAt DateTime?
-  createdAt   DateTime @default(now())
+  id             String    @id
+  eventName      String
+  envelope       Json
+  publishedAt    DateTime?
+  /// Consecutive publish failures (poison dead-letters without burning retries).
+  attempts       Int       @default(0)
+  nextRetryAt    DateTime?
+  deadLetteredAt DateTime?
+  lastError      String?
+  createdAt      DateTime  @default(now())
 }
 
 /// Tenant-scoped encrypted secret material for connector/runtime use only.
