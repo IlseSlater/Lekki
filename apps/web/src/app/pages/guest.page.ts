@@ -28,6 +28,12 @@ import {
 } from '../leos/progress-timeline';
 import { guestReadyBanner, guestServiceAssistCopy, guestManagerAssistCopy } from '../studio/operate-status';
 import { safeGuestImageUrl } from '../leos/catalogue-parity';
+import {
+  applyCatalogueItemChange,
+  formatAllergenLine,
+  formatDietaryLine,
+  guestVisibleCatalogueItems,
+} from '../studio/catalogue-guest-visibility';
 import { LeosApiService, SessionStateService } from '../services/leos-api.service';
 import type { PlatformEventEnvelope } from '../services/leos-api.service';
 import { TerminologyService } from '../services/terminology.service';
@@ -63,6 +69,10 @@ type CatalogueItem = {
   description?: string;
   choiceGroups?: CatalogChoiceGroup[];
   imageUrl?: string;
+  available?: boolean;
+  allergens?: string[];
+  dietaryTags?: string[];
+  ageRestricted?: boolean;
 };
 
 type CartLine = {
@@ -280,6 +290,8 @@ function equalShareState(
                     [category]="showSectionTitles ? '' : item.category"
                     [unitPrice]="item.unitPrice"
                     [description]="item.description || ''"
+                    [allergenLine]="allergenLine(item)"
+                    [dietaryLine]="dietaryLine(item)"
                     [imageUrl]="item.imageUrl || null"
                     [showFoodImages]="showFoodImages"
                     [quantity]="lineQty(item.id)"
@@ -359,6 +371,12 @@ function equalShareState(
                         @if (item.description) {
                           <p class="leos-specials-card__desc">{{ item.description }}</p>
                         }
+                        @if (allergenLine(item)) {
+                          <p class="leos-muted leos-menu-card__meta">{{ allergenLine(item) }}</p>
+                        }
+                        @if (dietaryLine(item)) {
+                          <p class="leos-muted leos-menu-card__meta">{{ dietaryLine(item) }}</p>
+                        }
                         <p class="leos-specials-card__price">
                           {{ item.unitPrice | leosMoney }}
                         </p>
@@ -390,6 +408,8 @@ function equalShareState(
                       [category]="item.category"
                       [unitPrice]="item.unitPrice"
                       [description]="item.description || ''"
+                      [allergenLine]="allergenLine(item)"
+                      [dietaryLine]="dietaryLine(item)"
                       [imageUrl]="item.imageUrl || null"
                       [showFoodImages]="showFoodImages"
                       [quantity]="lineQty(item.id)"
@@ -1248,11 +1268,13 @@ export class GuestPageComponent implements OnInit, OnDestroy {
       this.catalogueLoading = true;
       this.api.getCatalogue(this.state.venueId).subscribe({
         next: (items) => {
-          this.catalogue = items.map((item) => ({
-            ...item,
-            imageUrl: safeGuestImageUrl(item.imageUrl) ?? undefined,
-            choiceGroups: this.normalizeChoiceGroups(item.choiceGroups),
-          }));
+          this.catalogue = guestVisibleCatalogueItems(
+            items.map((item) => ({
+              ...item,
+              imageUrl: safeGuestImageUrl(item.imageUrl) ?? undefined,
+              choiceGroups: this.normalizeChoiceGroups(item.choiceGroups),
+            })),
+          );
           this.catalogueLoading = false;
         },
         error: () => {
@@ -1416,6 +1438,11 @@ export class GuestPageComponent implements OnInit, OnDestroy {
     const sessionInPayload = envelope?.payload?.['sessionId'] as string | undefined;
     if (sessionInPayload && sessionInPayload !== this.state.sessionId) return;
 
+    if (name === 'CatalogueItemChanged') {
+      this.applyLiveCatalogueChange(envelope);
+      return;
+    }
+
     if (name === 'ParticipantJoined') {
       const joinedName = (envelope?.payload?.['displayName'] as string | undefined)?.trim();
       const myName = (this.state.displayName || '').trim();
@@ -1489,6 +1516,44 @@ export class GuestPageComponent implements OnInit, OnDestroy {
     return this.cart
       .filter((l) => l.catalogueItemId === catalogueItemId)
       .reduce((n, l) => n + l.quantity, 0);
+  }
+
+  allergenLine(item: CatalogueItem): string {
+    return formatAllergenLine(item.allergens);
+  }
+
+  dietaryLine(item: CatalogueItem): string {
+    return formatDietaryLine(item.dietaryTags);
+  }
+
+  private applyLiveCatalogueChange(envelope: PlatformEventEnvelope) {
+    const payload = envelope?.payload ?? {};
+    const venueId = payload['venueId'] as string | undefined;
+    if (venueId && this.state.venueId && venueId !== this.state.venueId) return;
+    const itemId = (payload['itemId'] as string | undefined) || '';
+    if (!itemId) return;
+
+    const change: CatalogueItem = {
+      id: itemId,
+      label: String(payload['label'] ?? ''),
+      category: String(payload['category'] ?? 'More'),
+      unitPrice: Number(payload['unitPrice']) || 0,
+      routingTags: Array.isArray(payload['routingTags'])
+        ? (payload['routingTags'] as string[])
+        : [],
+      description: (payload['description'] as string | null | undefined) || undefined,
+      imageUrl: safeGuestImageUrl(payload['imageUrl'] as string | undefined) ?? undefined,
+      available: payload['available'] !== false,
+      allergens: Array.isArray(payload['allergens'])
+        ? (payload['allergens'] as string[])
+        : [],
+      dietaryTags: Array.isArray(payload['dietaryTags'])
+        ? (payload['dietaryTags'] as string[])
+        : [],
+      ageRestricted: payload['ageRestricted'] === true,
+      choiceGroups: this.catalogue.find((c) => c.id === itemId)?.choiceGroups,
+    };
+    this.catalogue = applyCatalogueItemChange(this.catalogue, change);
   }
 
   hasChoices(item: CatalogueItem): boolean {

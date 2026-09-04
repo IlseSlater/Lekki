@@ -13,6 +13,7 @@ import { StudioContextService } from '../services/studio-context.service';
 import { LeosApiService } from '../services/leos-api.service';
 import { GuestShellProjectionComponent } from './guest-shell-projection.component';
 import { safeGuestImageUrl } from './catalogue-parity';
+import { CatalogueLiveService } from '../services/catalogue-live.service';
 import { guestPlaceSpoken } from '../studio/place-continuity';
 
 /**
@@ -500,6 +501,7 @@ import { guestPlaceSpoken } from '../studio/place-continuity';
 export class LiveExperiencePanelComponent implements OnInit, OnDestroy {
   readonly ctx = inject(StudioContextService);
   private readonly api = inject(LeosApiService);
+  private readonly catalogueLive = inject(CatalogueLiveService);
   private readonly router = inject(Router);
   private navSub?: Subscription;
   private pulseTimer?: ReturnType<typeof setTimeout>;
@@ -538,6 +540,7 @@ export class LiveExperiencePanelComponent implements OnInit, OnDestroy {
       this.ctx.liveRevision();
       this.ctx.liveFocusPlace();
       this.ctx.livePayMethods();
+      this.catalogueLive.revision();
       this.hydrate(true);
     });
   }

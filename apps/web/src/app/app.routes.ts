@@ -147,6 +147,11 @@ export const routes: Routes = [
         ],
       },
       {
+        path: 'menu',
+        loadComponent: () =>
+          import('./pages/studio-menu.page').then((m) => m.StudioMenuPageComponent),
+      },
+      {
         path: 'operate',
         loadComponent: () =>
           import('./pages/setup-operate.page').then((m) => m.SetupOperatePageComponent),

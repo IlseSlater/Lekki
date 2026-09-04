@@ -116,6 +116,9 @@ export class LeosApiService {
         routingTags: string[];
         category: string;
         available?: boolean;
+        allergens?: string[];
+        dietaryTags?: string[];
+        ageRestricted?: boolean;
         choiceGroups?: Array<{
           id: string;
           label: string;
@@ -197,6 +200,10 @@ export class LeosApiService {
       description?: string;
       available?: boolean;
       routingTags?: string[];
+      imageUrl?: string;
+      allergens?: string[];
+      dietaryTags?: string[];
+      ageRestricted?: boolean;
     },
   ) {
     return this.http.post(`${this.api}/catalogue/venue/${venueId}`, body, {
@@ -208,9 +215,15 @@ export class LeosApiService {
     id: string,
     body: {
       label?: string;
+      description?: string;
       unitPrice?: number;
       category?: string;
       available?: boolean;
+      routingTags?: string[];
+      imageUrl?: string;
+      allergens?: string[];
+      dietaryTags?: string[];
+      ageRestricted?: boolean;
     },
   ) {
     return this.http.put(`${this.api}/catalogue/item/${id}`, body, {

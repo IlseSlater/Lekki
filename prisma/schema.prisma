@@ -304,7 +304,11 @@ model RestaurantCatalogItem {
   currency     String
   routingTags  String[]
   category     String
+  /// False = 86'd — hidden from guest browse without a reload when socket fires.
   available    Boolean @default(true)
+  allergens    String[] @default([])
+  dietaryTags  String[] @default([])
+  ageRestricted Boolean @default(false)
   /// Pack choice groups (G-04). Guest never sees “modifier” — Choose 1 / Extras.
   choiceGroups Json?
 }

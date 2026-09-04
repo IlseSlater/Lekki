@@ -20,10 +20,10 @@ every later batch easier to debug, because right now a 500 hides the cause.
 | Batch 2 hardening | Landed |
 | Batch 3 outbox | Landed — apply SQL when DB up (done on this machine 4 Sept) |
 | Batch 4 authz nouns | **Landed** — Pack `restaurantStationAccess` table; cellar-bar not bar-by-substring; unknown fail-closed; `KNOWN_OPEN` empty; `check:nouns` exits 0 |
-| Batch 5 menu editor | Not started (truth problem — next if demoing, else next in sequence) |
+| Batch 5 menu editor | **Landed** — Studio `/studio/menu`, hospitality fields, guest 86/allergen live path |
 | Batches 6–7 | Not started |
 
-**Next sequence:** Batch 5 (menu editor).
+**Next sequence:** Batch 6 (onboarding wall).
 
 ---
 

@@ -23,8 +23,9 @@ type OperateRole = 'kitchen' | 'bar' | 'waiter' | 'counter' | 'staff';
 
 /**
  * Live rooms:
- * - Guest: org:{org}:session:{sessionId} — participant secret or staff token required
- * - Operate: org:{org}:operate:{kitchen|bar|waiter|counter|staff} — staff token; org from claims
+ * - Guest session: org:{org}:session:{sessionId}
+ * - Guest venue: org:{org}:venue:{venueId} — catalogue / 86 updates
+ * - Operate: org:{org}:operate:{role} — staff token; org from claims
  */
 @WebSocketGateway({
   cors: { origin: true },
@@ -105,6 +106,9 @@ export class LeosGateway implements OnGatewayInit, OnGatewayConnection, OnModule
       if (session.organisationId !== organisationId) return null;
       const room = this.sessionRoom(session.organisationId, sessionId);
       client.join(room);
+      if (session.venueId) {
+        client.join(this.venueRoom(session.organisationId, session.venueId));
+      }
       return room;
     } catch {
       return null;
@@ -147,6 +151,10 @@ export class LeosGateway implements OnGatewayInit, OnGatewayConnection, OnModule
 
   private sessionRoom(organisationId: string, sessionId: string) {
     return `org:${organisationId}:session:${sessionId}`;
+  }
+
+  private venueRoom(organisationId: string, venueId: string) {
+    return `org:${organisationId}:venue:${venueId}`;
   }
 
   private operateRoom(organisationId: string, role: OperateRole) {
@@ -194,11 +202,19 @@ export class LeosGateway implements OnGatewayInit, OnGatewayConnection, OnModule
 
   private project(envelope: EventEnvelope) {
     const sessionId = envelope.payload?.['sessionId'] as string | undefined;
+    const venueId =
+      (envelope.payload?.['venueId'] as string | undefined) ||
+      (envelope.venueId as string | undefined);
+
     if (sessionId) {
       if (guestVisibleEvent(envelope)) {
         const room = this.sessionRoom(envelope.organisationId, sessionId);
         this.server.to(room).emit('platform.event', envelope);
       }
+    } else if (venueId && guestVisibleEvent(envelope)) {
+      this.server
+        .to(this.venueRoom(envelope.organisationId, venueId))
+        .emit('platform.event', envelope);
     } else {
       this.server
         .to(this.operateRoom(envelope.organisationId, 'staff'))

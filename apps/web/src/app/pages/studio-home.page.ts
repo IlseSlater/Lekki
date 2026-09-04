@@ -52,6 +52,8 @@ type TodayRow = { label: string; value: string; ok?: boolean };
           @if (live) {
             <a class="leos-btn leos-btn--primary" routerLink="/studio/setup/golive">Open Experience</a>
             <div class="studio-home__door-row">
+              <a class="studio-home__door" routerLink="/studio/menu">Menu</a>
+              <span class="studio-home__door-sep" aria-hidden="true">·</span>
               <a class="studio-home__door" routerLink="/studio/operate">Operate</a>
               <span class="studio-home__door-sep" aria-hidden="true">·</span>
               <a class="studio-home__door" routerLink="/studio/grow">Grow</a>
@@ -59,6 +61,8 @@ type TodayRow = { label: string; value: string; ok?: boolean };
           } @else {
             <a class="leos-btn leos-btn--primary" [routerLink]="resumeLink">{{ primaryCta }}</a>
             <div class="studio-home__door-row">
+              <a class="studio-home__door" routerLink="/studio/menu">Menu</a>
+              <span class="studio-home__door-sep" aria-hidden="true">·</span>
               <a class="studio-home__door" routerLink="/studio/operate">Operate</a>
               <span class="studio-home__door-sep" aria-hidden="true">·</span>
               <a class="studio-home__door" routerLink="/studio/grow">Grow</a>

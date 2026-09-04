@@ -19,6 +19,7 @@ const GUEST_EVENT_ALLOWLIST = new Set([
   'AssistanceResolved',
   'ParticipantJoined',
   'ParticipantDeparted',
+  'CatalogueItemChanged',
 ]);
 
 export function guestVisibleEvent(

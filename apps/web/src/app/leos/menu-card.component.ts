@@ -103,6 +103,12 @@ type FoodIcon =
         @if (description) {
           <p class="leos-muted leos-menu-card__desc">{{ description }}</p>
         }
+        @if (allergenLine) {
+          <p class="leos-muted leos-menu-card__meta">{{ allergenLine }}</p>
+        }
+        @if (dietaryLine) {
+          <p class="leos-muted leos-menu-card__meta">{{ dietaryLine }}</p>
+        }
         <p class="leos-menu-card__price">{{ unitPrice | leosMoney: currency }}</p>
         @if (requiresChoices) {
           <p class="leos-menu-card__choices-cue">Choose options</p>
@@ -149,6 +155,10 @@ export class MenuCardComponent {
   @Input() unitPrice = 0;
   @Input() currency = 'ZAR';
   @Input() description = '';
+  /** Guest-facing allergen notice, e.g. "Contains gluten, dairy". */
+  @Input() allergenLine = '';
+  /** Guest-facing dietary tags, e.g. "vegan · vegetarian". */
+  @Input() dietaryLine = '';
   /** Optional thumbnail for guest menu cards. */
   @Input() imageUrl?: string | null;
   /** Toggle to hide/show all food thumbnails. */
