@@ -3,6 +3,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { hasPermission, type StaffPrincipal } from '@lekki/contracts';
 import { PrismaService } from '../prisma/prisma.service';
 import { newId } from '@lekki/shared';
+import { requireStaffTokenSecret } from '../leos/runtime-secrets';
 
 export type StaffTokenClaims = {
   sub: string;
@@ -21,7 +22,7 @@ export class StaffTokenService {
   constructor(private readonly prisma: PrismaService) {}
 
   private secret() {
-    return process.env['STAFF_TOKEN_SECRET'] || 'leos-dev-staff-token-secret';
+    return requireStaffTokenSecret();
   }
 
   sign(claims: Omit<StaffTokenClaims, 'exp'> & { exp?: number }): string {

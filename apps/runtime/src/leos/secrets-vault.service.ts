@@ -9,6 +9,7 @@ import {
 } from 'node:crypto';
 import { newId } from '@lekki/shared';
 import { PrismaService } from '../prisma/prisma.service';
+import { requireVaultKey } from './runtime-secrets';
 
 type VaultAuditAction = 'write' | 'read' | 'verify';
 
@@ -16,11 +17,11 @@ type VaultAuditAction = 'write' | 'read' | 'verify';
 export class SecretsVaultService {
   private readonly algorithm: CipherGCMTypes = 'aes-256-gcm';
   private readonly keyVersion = 'v1';
-  private readonly key = createHash('sha256')
-    .update(process.env.LEKKI_VAULT_KEY || 'lekki-dev-vault-key')
-    .digest();
+  private readonly key: Buffer;
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {
+    this.key = createHash('sha256').update(requireVaultKey()).digest();
+  }
 
   async storeSecret(input: {
     organisationId: string;

@@ -6,6 +6,7 @@ import { loadEnvFile } from 'node:process';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DomainExceptionFilter } from './http/domain-exception.filter';
+import { assertRuntimeSecrets } from './leos/runtime-secrets';
 
 for (const candidate of [
   resolve(process.cwd(), '.env'),
@@ -38,7 +39,8 @@ function lanIpv4(): string | null {
 }
 
 async function bootstrap() {
-  validateRequiredSecrets();
+  // Fail closed before Nest wires anything that signs tokens or opens the vault.
+  assertRuntimeSecrets(process.env);
 
   const app = await NestFactory.create(AppModule, { cors: true });
   const port = Number(process.env.RUNTIME_PORT ?? 3000);
@@ -68,21 +70,3 @@ async function bootstrap() {
 
 bootstrap();
 
-function validateRequiredSecrets() {
-  const devStaff = 'leos-dev-staff-token-secret';
-  const devVault = 'lekki-dev-vault-key';
-  const staff = process.env.STAFF_TOKEN_SECRET?.trim();
-  const vault = process.env.LEKKI_VAULT_KEY?.trim();
-  if (!staff || staff === devStaff) {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('STAFF_TOKEN_SECRET must be set to a non-default value in production');
-    }
-    console.warn('[LEOS] STAFF_TOKEN_SECRET unset — using dev default (local only)');
-  }
-  if (!vault || vault === devVault) {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('LEKKI_VAULT_KEY must be set to a non-default value in production');
-    }
-    console.warn('[LEOS] LEKKI_VAULT_KEY unset — using dev default (local only)');
-  }
-}
