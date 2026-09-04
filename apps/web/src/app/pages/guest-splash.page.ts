@@ -3,14 +3,14 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { OnboardingService } from '../services/onboarding.service';
 import { LeosApiService, SessionStateService } from '../services/leos-api.service';
 import { isSameOpenSessionResume } from '../studio/mid-visit-resume';
+import { GUEST_SPLASH_MAX_MS } from '../studio/guest-entry-gate';
 
-const FIRST_SPLASH_MS = 2800;
-const RETURN_SPLASH_MS = 900;
+const FIRST_SPLASH_MS = Math.min(700, GUEST_SPLASH_MAX_MS);
+const RETURN_SPLASH_MS = Math.min(500, GUEST_SPLASH_MAX_MS);
 
 /**
- * Brand intro after QR scan — hospitality splash,
- * then new-user onboarding or returning-guest experience.
- * Returning guests get a shorter beat (not the same first-run wait).
+ * Brand intro after QR scan — under one second, tap to skip,
+ * then straight into the live menu. No onboarding wall.
  */
 @Component({
   standalone: true,
@@ -20,8 +20,12 @@ const RETURN_SPLASH_MS = 900;
       class="gs"
       [class.gs--out]="exiting"
       [class.gs--return]="returningSplash"
-      role="img"
-      aria-label="Lekki — The human experience app. Every great experience begins with confidence."
+      role="button"
+      tabindex="0"
+      aria-label="Lekki — continue to your menu. Tap to skip."
+      (click)="skip()"
+      (keydown.enter)="skip()"
+      (keydown.space)="skip(); $event.preventDefault()"
     >
       <img
         class="gs__photo"
@@ -33,6 +37,7 @@ const RETURN_SPLASH_MS = 900;
       <div class="gs__progress" aria-hidden="true">
         <span class="gs__progress-bar"></span>
       </div>
+      <p class="gs__skip" aria-hidden="true">Tap to continue</p>
     </div>
   `,
   styles: [
@@ -44,7 +49,8 @@ const RETURN_SPLASH_MS = 900;
         background: var(--leos-warm-sand, #ffffff);
         overflow: hidden;
         opacity: 1;
-        transition: opacity 420ms ease;
+        transition: opacity 280ms ease;
+        cursor: pointer;
       }
       .gs--out {
         opacity: 0;
@@ -59,8 +65,8 @@ const RETURN_SPLASH_MS = 900;
         object-fit: cover;
         object-position: center center;
         opacity: 0;
-        transform: scale(1.04);
-        animation: gs-in 1100ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        transform: scale(1.03);
+        animation: gs-in 700ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
       }
 
       .gs__veil {
@@ -73,47 +79,43 @@ const RETURN_SPLASH_MS = 900;
         );
         pointer-events: none;
         opacity: 0;
-        animation: gs-fade 800ms 400ms ease forwards;
+        animation: gs-fade 500ms 200ms ease forwards;
       }
 
       .gs__progress {
         position: absolute;
-        left: 50%;
-        bottom: max(1.75rem, env(safe-area-inset-bottom, 0px) + 1rem);
-        transform: translateX(-50%);
-        width: min(11rem, 42vw);
+        left: 12%;
+        right: 12%;
+        bottom: 12%;
         height: 2px;
+        background: rgba(255, 255, 255, 0.35);
         border-radius: 999px;
-        background: rgba(215, 161, 74, 0.22);
         overflow: hidden;
-        z-index: 2;
-        opacity: 0;
-        animation: gs-fade 500ms 900ms ease forwards;
       }
-
       .gs__progress-bar {
         display: block;
         height: 100%;
         width: 0;
-        border-radius: inherit;
-        background: linear-gradient(90deg, #c98f33, #e8c178, #fff4d6, #d7a14a);
-        box-shadow: 0 0 12px rgba(215, 161, 74, 0.45);
-        animation: gs-progress 3800ms 1000ms linear forwards;
-      }
-
-      .gs--return .gs__photo {
-        animation-duration: 600ms;
-      }
-      .gs--return .gs__veil {
-        animation-delay: 120ms;
-        animation-duration: 400ms;
-      }
-      .gs--return .gs__progress {
-        animation-delay: 200ms;
-        animation-duration: 300ms;
+        background: #d7a14a;
+        animation: gs-bar 700ms linear forwards;
       }
       .gs--return .gs__progress-bar {
-        animation: gs-progress 900ms 250ms linear forwards;
+        animation-duration: 500ms;
+      }
+
+      .gs__skip {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 6%;
+        margin: 0;
+        text-align: center;
+        font-family: 'Sora', system-ui, sans-serif;
+        font-size: 0.75rem;
+        letter-spacing: 0.04em;
+        color: rgba(255, 255, 255, 0.85);
+        opacity: 0;
+        animation: gs-fade 400ms 350ms ease forwards;
       }
 
       @keyframes gs-in {
@@ -127,7 +129,7 @@ const RETURN_SPLASH_MS = 900;
           opacity: 1;
         }
       }
-      @keyframes gs-progress {
+      @keyframes gs-bar {
         to {
           width: 100%;
         }
@@ -136,11 +138,11 @@ const RETURN_SPLASH_MS = 900;
       @media (prefers-reduced-motion: reduce) {
         .gs__photo,
         .gs__veil,
-        .gs__progress,
-        .gs__progress-bar {
-          animation: none !important;
-          opacity: 1 !important;
-          transform: none !important;
+        .gs__progress-bar,
+        .gs__skip {
+          animation: none;
+          opacity: 1;
+          transform: none;
         }
         .gs__progress-bar {
           width: 100%;
@@ -160,6 +162,7 @@ export class GuestSplashPageComponent implements OnInit, OnDestroy {
   returningSplash = false;
   private timer?: ReturnType<typeof setTimeout>;
   private token = '';
+  private finishing = false;
 
   ngOnInit() {
     const qToken = this.route.snapshot.queryParamMap.get('token')?.trim();
@@ -176,16 +179,13 @@ export class GuestSplashPageComponent implements OnInit, OnDestroy {
     }
 
     this.state.restore();
-    const canEnter = this.onboarding.canEnterExperience();
-    const returning = canEnter && this.onboarding.isReturningGuest();
-    const midVisit =
-      canEnter && !!(this.state.sessionId?.trim() && this.state.participantId?.trim());
-    // Short beat for return or mid-visit resume — not first-run wait.
+    const returning = this.onboarding.isReturningGuest();
+    const midVisit = !!(this.state.sessionId?.trim() && this.state.participantId?.trim());
     this.returningSplash = returning || midVisit;
 
     const reduced =
       typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const ms = this.returningSplash ? (reduced ? 0 : RETURN_SPLASH_MS) : FIRST_SPLASH_MS;
+    const ms = this.returningSplash ? (reduced ? 0 : RETURN_SPLASH_MS) : reduced ? 0 : FIRST_SPLASH_MS;
     if (ms === 0) {
       void this.finish();
       return;
@@ -197,16 +197,20 @@ export class GuestSplashPageComponent implements OnInit, OnDestroy {
     if (this.timer) clearTimeout(this.timer);
   }
 
+  skip() {
+    void this.finish();
+  }
+
   private async finish() {
-    this.exiting = true;
-    await new Promise((r) => setTimeout(r, this.returningSplash ? 280 : 420));
-
-    if (this.onboarding.canEnterExperience()) {
-      this.resolveAndEnter();
-      return;
+    if (this.finishing) return;
+    this.finishing = true;
+    if (this.timer) {
+      clearTimeout(this.timer);
+      this.timer = undefined;
     }
-
-    void this.router.navigate(['/onboarding'], { queryParams: { token: this.token } });
+    this.exiting = true;
+    await new Promise((r) => setTimeout(r, this.returningSplash ? 180 : 240));
+    this.resolveAndEnter();
   }
 
   private resolveAndEnter() {
@@ -238,6 +242,7 @@ export class GuestSplashPageComponent implements OnInit, OnDestroy {
         this.state.token = this.token;
         this.state.displayName = displayName;
         this.state.persist();
+        this.onboarding.save({ completed: true, entryToken: this.token });
         this.api.connectSocket(this.state.organisationId, this.state.sessionId);
         const stillIn = isSameOpenSessionResume(
           priorSessionId,
@@ -251,7 +256,10 @@ export class GuestSplashPageComponent implements OnInit, OnDestroy {
         });
       },
       error: () => {
-        void this.router.navigate(['/onboarding'], { queryParams: { token: this.token } });
+        // No signup wall — retry through Entry join.
+        void this.router.navigate(['/entry'], {
+          queryParams: { token: this.token, join: '1' },
+        });
       },
     });
   }

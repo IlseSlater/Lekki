@@ -1,16 +1,19 @@
 import { Injectable } from '@angular/core';
+import { canEnterWithToken, isReturningByVisits } from '../studio/guest-entry-gate';
 
+/** @deprecated Kept for localStorage shape only — never collected in Batch 6+. */
 export type GuestGender = 'man' | 'woman' | 'nonbinary' | 'prefer_not' | '';
 
 export type OnboardingProfile = {
   email: string;
   name: string;
   phone: string;
-  /** ISO date YYYY-MM-DD */
+  /** @deprecated Unused — ageRestricted is checked at order time. */
   birthday: string;
+  /** @deprecated Unused — never collected. */
   gender: GuestGender;
   verified: boolean;
-  /** Guest finished personal onboarding and may enter an experience. */
+  /** Guest has entered an experience at least once (not a signup wall). */
   completed: boolean;
   /** Venue QR token captured from Scan or deep link. */
   entryToken: string;
@@ -43,9 +46,8 @@ const EMPTY: OnboardingProfile = {
 };
 
 /**
- * Guest personal onboarding —
- * Account → Verify → Name → Birthday → Gender → Phone → Welcome → Experience
- * Continuity: visitCount / Welcome back (Return HCI).
+ * Guest continuity memory — visitCount / Welcome back.
+ * Batch 6: no account wall. A QR token is enough to see the menu.
  */
 @Injectable({ providedIn: 'root' })
 export class OnboardingService {
@@ -69,21 +71,19 @@ export class OnboardingService {
     return this.read().completed;
   }
 
+  /** @deprecated Personal signup wall removed — always false for gate purposes. */
   hasPersonalDetails(): boolean {
-    const p = this.read();
-    return !!p.name.trim() && !!p.birthday && !!p.gender;
+    return !!this.read().name.trim();
   }
 
-  /** Ready to load an experience after personal questions. */
+  /** Ready to load an experience — token only (menu first). */
   canEnterExperience(): boolean {
-    const p = this.read();
-    return p.verified && this.hasPersonalDetails() && !!p.entryToken.trim();
+    return canEnterWithToken(this.read().entryToken);
   }
 
   /** Returning guest — completed at least one Leave. */
   isReturningGuest(): boolean {
-    const p = this.read();
-    return p.completed && !!p.name.trim() && (p.visitCount ?? 0) >= 1;
+    return isReturningByVisits(this.read().visitCount);
   }
 
   firstName(): string {

@@ -19,8 +19,8 @@ const DEMO_VENUES: Array<{ token: string; title: string; desc: string }> = [
 ];
 
 /**
- * LEOS Experience Entry — QR deep links hand off to guest onboarding,
- * then load Experience. Demo gallery only with ?demo=1.
+ * LEOS Experience Entry — QR deep links hand off to a short brand splash,
+ * then straight into the Guest menu. No account wall.
  */
 @Component({
   standalone: true,
@@ -200,7 +200,7 @@ export class EntryPageComponent {
       this.state.token = q;
       this.onboarding.save({ entryToken: q });
 
-      // Printed / shared QR → brand splash, then onboarding or experience
+      // Printed / shared QR → short brand splash, then menu
       if (!skipOnboarding) {
         this.stillIn = !!(this.state.sessionId?.trim() && this.state.participantId?.trim());
         this.returning = this.onboarding.isReturningGuest() && !this.stillIn;
@@ -209,7 +209,7 @@ export class EntryPageComponent {
         return;
       }
 
-      // Returning guest who already finished personal onboarding
+      // Skip splash — resolve session and enter
       const profile = this.onboarding.read();
       if (profile.name) this.state.displayName = profile.name;
       this.stillIn = !!(this.state.sessionId?.trim() && this.state.participantId?.trim());
