@@ -30,7 +30,7 @@ gates on a validated role enum (fail-closed) — fix with the same table,
 second. Comments, route strings, and `VALID_ROLES` allowlists are not
 flagged by the narrowed linter.
 
-**Next sequence:** Batch 2 → Batch 3 (or Batch 5 first if showing externally).
+**Next sequence:** Batch 4 (authz nouns) — or Batch 5 if demoing.
 
 ---
 
@@ -452,11 +452,11 @@ What the guest who loses the race actually sees. A 409 is correct and silent.
 “Someone at your table is paying right now — one moment” is correct and
 hospitable. That is a `@brand-architect` call, not this batch.
 
-The expiry sweep rides the outbox publisher loop (Batch 3 still unguarded).
-If that loop dies, abandoned rows wait until the next `requestPayment` —
-which still expires them before reading remaining. That hot-path sweep is
-usually a no-op (15-minute predicate); concurrent pays each run it — lock
-ordering under load is worth watching when Batch 3 lands.
+The expiry sweep rides the outbox publisher loop (Batch 3: durable claim /
+retry / dead-letter). If that loop dies, abandoned rows wait until the next
+`requestPayment` — which still expires them before reading remaining. That
+hot-path sweep is usually a no-op (15-minute predicate); concurrent pays each
+run it — lock ordering under load is worth watching.
 
 ### Migrations / P3005
 
