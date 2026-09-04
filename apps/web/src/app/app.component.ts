@@ -1,4 +1,5 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, PLATFORM_ID, inject, signal } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs/operators';
@@ -41,6 +42,7 @@ function horizonCanvasFor(url: string): boolean {
 })
 export class AppComponent {
   private readonly router = inject(Router);
+  private readonly platformId = inject(PLATFORM_ID);
   readonly showCanvas = signal(horizonCanvasFor(this.router.url));
   private canvasFrame = 0;
 
@@ -61,6 +63,10 @@ export class AppComponent {
           return;
         }
         if (this.showCanvas()) return;
+        if (!isPlatformBrowser(this.platformId)) {
+          this.showCanvas.set(true);
+          return;
+        }
         // Let /signin paint first — mounting four SVGs in the same turn freezes Login.
         this.canvasFrame = requestAnimationFrame(() => {
           this.canvasFrame = 0;

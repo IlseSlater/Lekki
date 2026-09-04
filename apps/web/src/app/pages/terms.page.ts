@@ -1,5 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
+import { Meta, Title } from '@angular/platform-browser';
 import { RouterLink } from '@angular/router';
+import { seoForPath } from '../studio/marketing-seo';
 
 @Component({
   standalone: true,
@@ -40,4 +42,13 @@ import { RouterLink } from '@angular/router';
     `,
   ],
 })
-export class TermsPageComponent {}
+export class TermsPageComponent implements OnInit {
+  private readonly title = inject(Title);
+  private readonly meta = inject(Meta);
+
+  ngOnInit() {
+    const seo = seoForPath('/terms');
+    this.title.setTitle(seo.title);
+    this.meta.updateTag({ name: 'description', content: seo.description });
+  }
+}

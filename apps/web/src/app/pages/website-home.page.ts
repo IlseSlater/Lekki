@@ -1,7 +1,18 @@
-import { AfterViewInit, Component, ElementRef, HostListener, OnDestroy, OnInit, inject } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  ElementRef,
+  HostListener,
+  OnDestroy,
+  OnInit,
+  PLATFORM_ID,
+  inject,
+} from '@angular/core';
+import { isPlatformBrowser, DOCUMENT } from '@angular/common';
 import { Meta, Title } from '@angular/platform-browser';
 import { RouterLink } from '@angular/router';
 import { WebsiteHorizonComponent } from './website-horizon.component';
+import { lekkiJsonLd, seoForPath } from '../studio/marketing-seo';
 
 /**
  * Public marketing site — Fora.so structure, motion, and type language.
@@ -1051,8 +1062,11 @@ export class WebsiteHomePageComponent implements OnInit, AfterViewInit, OnDestro
   private readonly host = inject(ElementRef<HTMLElement>);
   private readonly title = inject(Title);
   private readonly meta = inject(Meta);
+  private readonly document = inject(DOCUMENT);
+  private readonly platformId = inject(PLATFORM_ID);
   private observer?: IntersectionObserver;
   private reducedMotion = false;
+  private jsonLdEl?: HTMLScriptElement;
 
   menuOpen = false;
   feature = 0;
@@ -1175,18 +1189,28 @@ export class WebsiteHomePageComponent implements OnInit, AfterViewInit, OnDestro
   ];
 
   ngOnInit() {
-    this.title.setTitle('Lekki — Your venue deserves its own home');
-    this.meta.updateTag({
-      name: 'description',
-      content:
-        'Lekki gives restaurants, cafés, hotels, and festivals a fully branded guest space with menus, orders, kitchen, and the bill.',
-    });
-    this.meta.updateTag({ property: 'og:title', content: 'Lekki — Your venue deserves its own home' });
+    const seo = seoForPath('/');
+    this.title.setTitle(seo.title);
+    this.meta.updateTag({ name: 'description', content: seo.description });
+    this.meta.updateTag({ property: 'og:title', content: seo.title });
     this.meta.updateTag({
       property: 'og:description',
       content: 'One QR. One floor. Set up in minutes.',
     });
     this.meta.updateTag({ name: 'theme-color', content: '#00070d' });
+    this.ensureJsonLd();
+  }
+
+  private ensureJsonLd() {
+    const id = 'lekki-jsonld';
+    const existing = this.document.getElementById(id);
+    if (existing) return;
+    const el = this.document.createElement('script');
+    el.id = id;
+    el.type = 'application/ld+json';
+    el.text = JSON.stringify(lekkiJsonLd());
+    this.document.head.appendChild(el);
+    this.jsonLdEl = el;
   }
 
   @HostListener('document:keydown.escape')
@@ -1209,6 +1233,7 @@ export class WebsiteHomePageComponent implements OnInit, AfterViewInit, OnDestro
   }
 
   ngAfterViewInit(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
     this.reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
     window.setTimeout(() => this.warmSignin(), 0);
 

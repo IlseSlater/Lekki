@@ -6,8 +6,10 @@ import {
   Input,
   NgZone,
   OnDestroy,
+  PLATFORM_ID,
   inject,
 } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 
 let horizonUid = 0;
 
@@ -243,6 +245,7 @@ export class WebsiteHorizonComponent implements AfterViewInit, OnDestroy {
 
   private readonly host = inject(ElementRef<HTMLElement>);
   private readonly zone = inject(NgZone);
+  private readonly platformId = inject(PLATFORM_ID);
   private ridges: Array<{ el: HTMLElement; lag: number }> = [];
   private copy?: HTMLElement;
   private unlisten: Array<() => void> = [];
@@ -250,6 +253,7 @@ export class WebsiteHorizonComponent implements AfterViewInit, OnDestroy {
   private raf = 0;
 
   ngAfterViewInit() {
+    if (!isPlatformBrowser(this.platformId)) return;
     if (this.variant !== 'hero') return;
     const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
     if (reduce) return;

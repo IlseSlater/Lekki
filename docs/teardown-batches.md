@@ -22,9 +22,9 @@ every later batch easier to debug, because right now a 500 hides the cause.
 | Batch 4 authz nouns | **Landed** — Pack `restaurantStationAccess` table; cellar-bar not bar-by-substring; unknown fail-closed; `KNOWN_OPEN` empty; `check:nouns` exits 0 |
 | Batch 5 menu editor | **Landed** — Studio `/studio/menu`, hospitality fields, guest 86/allergen live path |
 | Batch 6 onboarding wall | **Landed** — menu-first; splash ≤700ms + tap skip; `/onboarding` redirects; no fake OTP |
-| Batch 7 SEO/SSR | Not started |
+| Batch 7 SEO/SSR | **Landed** — SSG prerender `/` `/privacy` `/terms`; Client elsewhere; JSON-LD + per-route titles |
 
-**Next sequence:** Batch 7 (SSR / prerender marketing).
+**Next sequence:** Teardown batches 1–7 complete. Demo token / qr-demo cleanup still noted elsewhere if needed.
 
 ---
 
@@ -368,6 +368,12 @@ DO NOT
 ## Batch 7 — Make the SEO work reach AI crawlers
 
 Half-done: the metadata is real, the rendering is not.
+
+**Fork decision (4 Sept):** Angular SSG — prerender marketing routes only
+(`outputMode: static` + `RenderMode.Prerender` for `/`, `/privacy`, `/terms`).
+Guest/Studio/Operate stay `RenderMode.Client` (robots.txt already disallows them).
+No separate marketing static site. Pricing lives on `/#pricing` until a dedicated
+route exists — the home prerender includes the pricing section HTML.
 
 ```
 @angular-web @engineering-architect
