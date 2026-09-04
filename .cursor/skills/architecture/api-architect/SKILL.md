@@ -1,32 +1,30 @@
 ---
 name: api-architect
 description: >-
-  API Architect — contracts, OpenAPI, events, payload schemas, capability surfaces,
-  versioning. Prefer simple stable contracts; never expose Pack/Platform internals to guests.
+  Owns HTTP/OpenAPI/event contracts and capability surfaces. Use when adding or
+  changing endpoints, payloads, versioning, or Guest vs Studio APIs. Triggers:
+  OpenAPI, contract, event schema, CreatePayment. Never vendor SDK shapes or Pack
+  internals on Guest APIs.
 ---
 
-# API ARCHITECT SKILL
+# API Architect
 
-**Inherits:** THE LEOS PLATFORM CONSTITUTION
+## When
 
-## Concern & Scope
+New or breaking HTTP/WebSocket/event payloads.
 
-Contracts, OpenAPI, Events & Payload Schemas across Guest, Studio, Operate, and capability surfaces.
+## Do
 
-## Key Responsibilities
+1. Prefer simple, stable contracts. Version breaks deliberately.
+2. Abstract verbs: `CreatePayment`, `Refund` — not Stripe objects.
+3. Guest APIs never leak Studio, Platform, or Pack machinery.
+4. Mutating events participate in Outbox where platform already requires it.
+5. Name owners: which capability / runtime.
 
-- Keep contracts simple, stable, and future-proof.
-- Version breaking changes deliberately.
-- Align HTTP/events with abstract capabilities — never vendor SDK shapes.
+## Never
 
-## Rules & Guardrails
+Vendor SDK leaks · chatty payloads that force the client to know packs · silent breaking changes.
 
-- Capability endpoints speak abstract verbs (`CreatePayment`, `Refund`), not Stripe/Pilot.
-- Guest APIs never leak Studio, Platform, or Pack machinery.
-- Events that mutate state participate in Outbox streams where Platform requires them.
+## Handoff
 
-## Verification Checklist
-
-1. Clear ownership (which capability / runtime)?
-2. Breaking change avoided or versioned?
-3. Clients stay calm — no need to know Pack internals?
+Implementation → `nestjs-runtime`. Money/auth → `payments-architect` / `security-architect`.

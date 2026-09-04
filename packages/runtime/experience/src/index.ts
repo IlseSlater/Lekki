@@ -20,6 +20,9 @@ export interface SessionRecord {
     displayName: string;
     role: string;
     joinedAt: Date;
+    participantSecret?: string;
+    departedAt?: Date | null;
+    equalSplitOptIn?: boolean;
   }>;
 }
 
@@ -38,24 +41,40 @@ export type StartOrResumeResult = {
   session: SessionRecord;
   joined: boolean;
   participantId: string;
+  participantSecret: string;
 };
 
 function findResumableParticipant(
   participants: SessionRecord['participants'],
-  incoming: { displayName: string; identityId?: string; resumeParticipantId?: string },
+  incoming: {
+    displayName: string;
+    identityId?: string;
+    resumeParticipantId?: string;
+    participantSecret?: string;
+  },
 ): SessionRecord['participants'][number] | undefined {
+  const secret = incoming.participantSecret?.trim();
+  if (secret) {
+    const bySecret = participants.find(
+      (p) => p.participantSecret === secret && !p.departedAt,
+    );
+    if (bySecret) return bySecret;
+  }
   if (incoming.resumeParticipantId) {
-    const byId = participants.find((p) => p.id === incoming.resumeParticipantId);
+    const byId = participants.find(
+      (p) => p.id === incoming.resumeParticipantId && !p.departedAt,
+    );
     if (byId) return byId;
   }
   const identity = incoming.identityId?.trim();
   if (identity) {
-    const byIdentity = participants.find((p) => (p.identityId ?? '').trim() === identity);
+    const byIdentity = participants.find(
+      (p) => (p.identityId ?? '').trim() === identity && !p.departedAt,
+    );
     if (byIdentity) return byIdentity;
   }
-  const name = incoming.displayName.trim().toLowerCase();
-  if (!name) return undefined;
-  return participants.find((p) => p.displayName.trim().toLowerCase() === name);
+  // Never resume by display name — prevents session hijacking.
+  return undefined;
 }
 
 export class ExperienceRuntime {
@@ -67,7 +86,12 @@ export class ExperienceRuntime {
 
   async startOrResume(
     context: ResolvedContext,
-    participant: { displayName: string; identityId?: string; resumeParticipantId?: string },
+    participant: {
+      displayName: string;
+      identityId?: string;
+      resumeParticipantId?: string;
+      participantSecret?: string;
+    },
   ): Promise<Result<StartOrResumeResult>> {
     const surfaces = context.profile.surfaces;
     if (!surfaces.includes('guest')) {
@@ -80,18 +104,32 @@ export class ExperienceRuntime {
     if (existing && existing.status !== 'completed' && existing.status !== 'archived') {
       const resumed = findResumableParticipant(existing.participants, participant);
       if (resumed) {
-        return ok({ session: existing, joined: false, participantId: resumed.id });
+        return ok({
+          session: existing,
+          joined: false,
+          participantId: resumed.id,
+          participantSecret: resumed.participantSecret ?? '',
+        });
       }
       const participantId = newId('part');
+      const participantSecret = newId('sec');
       existing.participants.push({
         id: participantId,
         identityId: participant.identityId ?? null,
         displayName: participant.displayName,
         role: 'guest',
         joinedAt: new Date(),
+        participantSecret,
+        departedAt: null,
+        equalSplitOptIn: false,
       });
       await this.sessions.save(existing);
-      return ok({ session: existing, joined: true, participantId });
+      return ok({
+        session: existing,
+        joined: true,
+        participantId,
+        participantSecret,
+      });
     }
 
     const sessionId = newId('sess');
@@ -106,6 +144,7 @@ export class ExperienceRuntime {
     });
 
     const participantId = newId('part');
+    const participantSecret = newId('sec');
     aggregate.addParticipant({
       id: participantId,
       identityId: participant.identityId,
@@ -130,12 +169,44 @@ export class ExperienceRuntime {
         displayName: p.displayName,
         role: p.role,
         joinedAt: p.joinedAt,
+        participantSecret: p.id === participantId ? participantSecret : undefined,
+        departedAt: null,
+        equalSplitOptIn: false,
       })),
     };
 
     await this.sessions.save(record);
     await this.contextBinding.bindSession(context.physicalContextId, sessionId);
-    return ok({ session: record, joined: true, participantId });
+    return ok({
+      session: record,
+      joined: true,
+      participantId,
+      participantSecret,
+    });
+  }
+
+  async departParticipant(
+    sessionId: string,
+    participantId: string,
+  ): Promise<Result<{ closed: boolean; session: SessionRecord }>> {
+    const session = await this.sessions.findById(sessionId);
+    if (!session) return err('Session not found');
+
+    const participant = session.participants.find((p) => p.id === participantId);
+    if (!participant) return err('Participant not on this visit');
+    participant.departedAt = new Date();
+    await this.sessions.save(session);
+
+    const activeGuests = session.participants.filter(
+      (p) => p.role === 'guest' && !p.departedAt,
+    );
+    if (activeGuests.length > 0) {
+      return ok({ closed: false, session });
+    }
+
+    const completed = await this.completeSession(sessionId);
+    if (!completed.ok) return completed;
+    return ok({ closed: true, session: completed.value });
   }
 
   async completeSession(sessionId: string): Promise<Result<SessionRecord>> {

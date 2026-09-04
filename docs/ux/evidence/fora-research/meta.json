@@ -1,0 +1,558 @@
+{
+  "title": "Fora — The community platform for creators",
+  "body": {
+    "tag": "BODY",
+    "text": ":root body { background: var(--token-ef8ecd6d-5204-4f29-b3b7-2d4dc011513a, rgb(0, 9, 18)); }AboutFeaturesPricingBlogContactGo to appLoginGet startedhtml body { background: var(--token-ef8ecd6d-5204-4f",
+    "font": "sans-serif",
+    "size": "12px",
+    "weight": "400",
+    "letter": "normal",
+    "color": "rgb(0, 0, 0)",
+    "line": "normal",
+    "bg": "rgb(0, 0, 0)"
+  },
+  "h1": {
+    "tag": "H1",
+    "text": "Your community deserves its own home.",
+    "font": "Inter, \"Inter Placeholder\", sans-serif",
+    "size": "56px",
+    "weight": "400",
+    "letter": "-2.24px",
+    "color": "rgb(255, 243, 240)",
+    "line": "72.8px",
+    "bg": "rgba(0, 0, 0, 0)"
+  },
+  "nav": {
+    "tag": "NAV",
+    "text": "AboutFeaturesPricingBlogContactGo to appLoginGet started",
+    "font": "sans-serif",
+    "size": "12px",
+    "weight": "400",
+    "letter": "normal",
+    "color": "rgb(0, 0, 0)",
+    "line": "normal",
+    "bg": "rgba(0, 7, 13, 0)"
+  },
+  "buttons": [
+    {
+      "text": "",
+      "bg": "rgba(0, 0, 0, 0)",
+      "color": "rgb(0, 0, 238)",
+      "radius": "0px",
+      "font": "sans-serif",
+      "size": "12px"
+    },
+    {
+      "text": "About",
+      "bg": "rgba(0, 0, 0, 0)",
+      "color": "rgba(255, 255, 255, 0.8)",
+      "radius": "0px",
+      "font": "Inter, \"Inter Placeholder\", sans-serif",
+      "size": "14px"
+    },
+    {
+      "text": "Features",
+      "bg": "rgba(0, 0, 0, 0)",
+      "color": "rgba(255, 255, 255, 0.8)",
+      "radius": "0px",
+      "font": "Inter, \"Inter Placeholder\", sans-serif",
+      "size": "14px"
+    },
+    {
+      "text": "Pricing",
+      "bg": "rgba(0, 0, 0, 0)",
+      "color": "rgba(255, 255, 255, 0.8)",
+      "radius": "0px",
+      "font": "Inter, \"Inter Placeholder\", sans-serif",
+      "size": "14px"
+    },
+    {
+      "text": "Blog",
+      "bg": "rgba(0, 0, 0, 0)",
+      "color": "rgba(255, 255, 255, 0.8)",
+      "radius": "0px",
+      "font": "Inter, \"Inter Placeholder\", sans-serif",
+      "size": "14px"
+    },
+    {
+      "text": "Contact",
+      "bg": "rgba(0, 0, 0, 0)",
+      "color": "rgba(255, 255, 255, 0.8)",
+      "radius": "0px",
+      "font": "Inter, \"Inter Placeholder\", sans-serif",
+      "size": "14px"
+    },
+    {
+      "text": "Go to app",
+      "bg": "rgba(255, 255, 255, 0.1)",
+      "color": "rgb(0, 0, 0)",
+      "radius": "768px",
+      "font": "sans-serif",
+      "size": "12px"
+    },
+    {
+      "text": "Login",
+      "bg": "rgba(0, 0, 0, 0)",
+      "color": "rgba(255, 255, 255, 0.8)",
+      "radius": "0px",
+      "font": "Inter, \"Inter Placeholder\", sans-serif",
+      "size": "14px"
+    },
+    {
+      "text": "Get started",
+      "bg": "rgba(255, 255, 255, 0.1)",
+      "color": "rgb(0, 0, 238)",
+      "radius": "768px",
+      "font": "sans-serif",
+      "size": "12px"
+    },
+    {
+      "text": "Community platform for creators",
+      "bg": "rgba(255, 255, 255, 0.1)",
+      "color": "rgb(0, 0, 0)",
+      "radius": "393px",
+      "font": "sans-serif",
+      "size": "12px"
+    },
+    {
+      "text": "Get started free",
+      "bg": "rgba(255, 255, 255, 0.8)",
+      "color": "rgb(0, 0, 238)",
+      "radius": "768px",
+      "font": "sans-serif",
+      "size": "12px"
+    },
+    {
+      "text": "Join now",
+      "bg": "rgba(255, 255, 255, 0.8)",
+      "color": "rgb(0, 0, 0)",
+      "radius": "768px",
+      "font": "sans-serif",
+      "size": "12px"
+    },
+    {
+      "text": "Intro",
+      "bg": "rgba(255, 255, 255, 0.1)",
+      "color": "rgb(0, 0, 0)",
+      "radius": "393px",
+      "font": "sans-serif",
+      "size": "12px"
+    },
+    {
+      "text": "Core Features",
+      "bg": "rgba(255, 255, 255, 0.1)",
+      "color": "rgb(0, 0, 0)",
+      "radius": "393px",
+      "font": "sans-serif",
+      "size": "12px"
+    },
+    {
+      "text": "",
+      "bg": "rgba(255, 255, 255, 0.1)",
+      "color": "rgb(0, 0, 0)",
+      "radius": "768px",
+      "font": "sans-serif",
+      "size": "12px"
+    },
+    {
+      "text": "",
+      "bg": "rgba(255, 255, 255, 0.1)",
+      "color": "rgb(0, 0, 0)",
+      "radius": "768px",
+      "font": "sans-serif",
+      "size": "12px"
+    },
+    {
+      "text": "What you get",
+      "bg": "rgba(255, 255, 255, 0.1)",
+      "color": "rgb(0, 0, 0)",
+      "radius": "393px",
+      "font": "sans-serif",
+      "size": "12px"
+    },
+    {
+      "text": "Your front door",
+      "bg": "rgba(255, 255, 255, 0)",
+      "color": "rgb(0, 0, 0)",
+      "radius": "393px",
+      "font": "sans-serif",
+      "size": "12px"
+    },
+    {
+      "text": "Friendly competition",
+      "bg": "rgba(255, 255, 255, 0)",
+      "color": "rgb(0, 0, 0)",
+      "radius": "393px",
+      "font": "sans-serif",
+      "size": "12px"
+    },
+    {
+      "text": "Courses",
+      "bg": "rgba(255, 255, 255, 0)",
+      "color": "rgb(0, 0, 0)",
+      "radius": "393px",
+      "font": "sans-serif",
+      "size": "12px"
+    }
+  ],
+  "links": [
+    {
+      "rel": "icon",
+      "href": "https://framerusercontent.com/images/EdW8FzX7hXiJh2764mnSZkMcXY.svg"
+    },
+    {
+      "rel": "icon",
+      "href": "https://framerusercontent.com/images/Hd0Enyb4QMy1icBZ0hWTFMGI.svg"
+    },
+    {
+      "rel": "preconnect",
+      "href": "https://fonts.gstatic.com/"
+    },
+    {
+      "rel": "canonical",
+      "href": "https://fora.so/"
+    },
+    {
+      "rel": "stylesheet",
+      "href": "https://unpkg.com/lenis@1.3.19/dist/lenis.css"
+    },
+    {
+      "rel": "modulepreload",
+      "href": "https://framerusercontent.com/sites/4Jv6X7SLoDokETF7LXVtgz/react.BokVrU94.mjs"
+    },
+    {
+      "rel": "modulepreload",
+      "href": "https://framerusercontent.com/sites/4Jv6X7SLoDokETF7LXVtgz/rolldown-runtime.VnHjG-ER.mjs"
+    },
+    {
+      "rel": "modulepreload",
+      "href": "https://framerusercontent.com/sites/4Jv6X7SLoDokETF7LXVtgz/motion.DuRTh0_g.mjs"
+    },
+    {
+      "rel": "modulepreload",
+      "href": "https://framerusercontent.com/sites/4Jv6X7SLoDokETF7LXVtgz/framer.wKXKrXfE.mjs"
+    },
+    {
+      "rel": "modulepreload",
+      "href": "https://framerusercontent.com/sites/4Jv6X7SLoDokETF7LXVtgz/shared-lib.BSwvvwSC.mjs"
+    },
+    {
+      "rel": "modulepreload",
+      "href": "https://framerusercontent.com/sites/4Jv6X7SLoDokETF7LXVtgz/g4qNNeqBo.D80zzFc-.mjs"
+    },
+    {
+      "rel": "modulepreload",
+      "href": "https://framerusercontent.com/sites/4Jv6X7SLoDokETF7LXVtgz/nZtZfLTSW.C-5rfkuO.mjs"
+    },
+    {
+      "rel": "modulepreload",
+      "href": "https://framerusercontent.com/sites/4Jv6X7SLoDokETF7LXVtgz/Bh7brll6H.C5RxlAVm.mjs"
+    },
+    {
+      "rel": "modulepreload",
+      "href": "https://framerusercontent.com/sites/4Jv6X7SLoDokETF7LXVtgz/dvE5DE7ca.CX0xI21W.mjs"
+    },
+    {
+      "rel": "modulepreload",
+      "href": "https://framerusercontent.com/sites/4Jv6X7SLoDokETF7LXVtgz/O0790qsZT.DuaRcciT.mjs"
+    },
+    {
+      "rel": "modulepreload",
+      "href": "https://framerusercontent.com/sites/4Jv6X7SLoDokETF7LXVtgz/LgNu28hAv.ll9mrBwB.mjs"
+    },
+    {
+      "rel": "modulepreload",
+      "href": "https://framerusercontent.com/sites/4Jv6X7SLoDokETF7LXVtgz/Woyrav6aGnMLwx64hs8pMGUXy1RmBr1q2JP9q8AZnoQ.DMW-z5Rl.mjs"
+    },
+    {
+      "rel": "modulepreload",
+      "href": "https://framerusercontent.com/sites/4Jv6X7SLoDokETF7LXVtgz/LOmU9jDw7.DrwzLBLy.mjs"
+    },
+    {
+      "rel": "modulepreload",
+      "href": "https://framerusercontent.com/sites/4Jv6X7SLoDokETF7LXVtgz/uLTHU2gC4.LG9Je5tz.mjs"
+    },
+    {
+      "rel": "modulepreload",
+      "href": "https://framerusercontent.com/sites/4Jv6X7SLoDokETF7LXVtgz/Border_Glow_Card.BWs0GLfK.mjs"
+    },
+    {
+      "rel": "modulepreload",
+      "href": "https://framerusercontent.com/sites/4Jv6X7SLoDokETF7LXVtgz/SVtyO51O3.CcRaOKQR.mjs"
+    },
+    {
+      "rel": "modulepreload",
+      "href": "https://framerusercontent.com/sites/4Jv6X7SLoDokETF7LXVtgz/gk3iglzUb.DJ0UXS5E.mjs"
+    },
+    {
+      "rel": "modulepreload",
+      "href": "https://framerusercontent.com/sites/4Jv6X7SLoDokETF7LXVtgz/EDCfJkePc.Daxt-B54.mjs"
+    },
+    {
+      "rel": "modulepreload",
+      "href": "https://framerusercontent.com/sites/4Jv6X7SLoDokETF7LXVtgz/jOgyCWBcf.Cop5_Fw7.mjs"
+    },
+    {
+      "rel": "modulepreload",
+      "href": "https://framerusercontent.com/sites/4Jv6X7SLoDokETF7LXVtgz/siteMetadata.sr-cA8TA.mjs"
+    },
+    {
+      "rel": "modulepreload",
+      "href": "https://framerusercontent.com/sites/4Jv6X7SLoDokETF7LXVtgz/ZtiWazyOp.BZiTeAlG.mjs"
+    }
+  ],
+  "scripts": [
+    "https://n.fora.so/static/array.js",
+    "https://n.fora.so/array/phc_robCJZjiWdXiFNFSmMtgdSJLVhzYRLe5VSNVbQZDmbxK/config.js",
+    "https://client.crisp.chat/l.js",
+    "https://n.fora.so/static/1.424.1/surveys.js",
+    "https://n.fora.so/static/1.424.1/posthog-recorder.js",
+    "https://n.fora.so/static/1.424.1/dead-clicks-autocapture.js",
+    "https://n.fora.so/static/1.424.1/web-vitals-with-attribution.js",
+    "https://events.framer.com/script?v=2",
+    "https://framerusercontent.com/sites/4Jv6X7SLoDokETF7LXVtgz/script_main.D4KlD04W.mjs"
+  ],
+  "vars": {},
+  "sections": [
+    {
+      "id": "main",
+      "tag": "DIV",
+      "className": "",
+      "text": ":root body { background: var(--token-ef8ecd6d-5204-4f29-b3b7-2d4dc011513a, rgb(0"
+    },
+    {
+      "id": "hero",
+      "tag": "SECTION",
+      "className": "framer-x2ps8j",
+      "text": "Community platform for creatorsYour community deserves its own home.Fora gives c"
+    },
+    {
+      "id": "scroll",
+      "tag": "DIV",
+      "className": "framer-3rmkn8",
+      "text": "Community platform for creatorsYour community deserves its own home.Fora gives c"
+    },
+    {
+      "id": "about",
+      "tag": "SECTION",
+      "className": "framer-15fllh3",
+      "text": "IntroFora is a community platform built for creators, educators, and coaches. Co"
+    },
+    {
+      "id": "scroll-1",
+      "tag": "DIV",
+      "className": "framer-m3bcqs",
+      "text": "IntroFora is a community platform built for creators, educators, and coaches. Co"
+    },
+    {
+      "id": "intro-1",
+      "tag": "DIV",
+      "className": "framer-1pcb04q",
+      "text": ""
+    },
+    {
+      "id": "intro-2",
+      "tag": "DIV",
+      "className": "framer-nbchg8",
+      "text": ""
+    },
+    {
+      "id": "intro-3",
+      "tag": "DIV",
+      "className": "framer-11wo8rc",
+      "text": ""
+    },
+    {
+      "id": "intro4",
+      "tag": "DIV",
+      "className": "framer-8smx0p",
+      "text": ""
+    },
+    {
+      "id": "features",
+      "tag": "SECTION",
+      "className": "framer-95w5xq",
+      "text": "Core FeaturesOne platform to run right your entire community.Fora brings your co"
+    },
+    {
+      "id": "what-you-get",
+      "tag": "SECTION",
+      "className": "framer-fdt3dq",
+      "text": "What you getSet up once. Run it the way you want.Fora is built so you spend time"
+    },
+    {
+      "id": "0",
+      "tag": "DIV",
+      "className": "framer-1ch6fzi",
+      "text": "What you getSet up once. Run it the way you want.Fora is built so you spend time"
+    },
+    {
+      "id": "trig-1",
+      "tag": "DIV",
+      "className": "framer-mn7kj6",
+      "text": ""
+    },
+    {
+      "id": "trig-2",
+      "tag": "DIV",
+      "className": "framer-10bbo8m",
+      "text": ""
+    },
+    {
+      "id": "trig-3",
+      "tag": "DIV",
+      "className": "framer-8cfxw4",
+      "text": ""
+    },
+    {
+      "id": "1",
+      "tag": "DIV",
+      "className": "framer-d07aw3",
+      "text": "Your front doorA community overview page that sells itself.Customize your hero w"
+    },
+    {
+      "id": "2",
+      "tag": "DIV",
+      "className": "framer-1wb6mxc",
+      "text": "Friendly competitionA leaderboard your members actually check.Rankings based on "
+    },
+    {
+      "id": "3",
+      "tag": "DIV",
+      "className": "framer-1nlqg8s",
+      "text": "CoursesBuild your course the way you teach.Structure your content into chapters "
+    },
+    {
+      "id": "pricing",
+      "tag": "SECTION",
+      "className": "framer-idr5wb",
+      "text": "PricingClear pricing plans that scale with youSTARTER$9/monthEverything you need"
+    },
+    {
+      "id": "4-3",
+      "tag": "DIV",
+      "className": "framer-z5oue5",
+      "text": "PricingClear pricing plans that scale with you"
+    },
+    {
+      "id": "",
+      "tag": "SECTION",
+      "className": "framer-1hob6cd",
+      "text": "FAQAnswers to the questions that come up most.Learn how Fora works, what's inclu"
+    },
+    {
+      "id": "4-4",
+      "tag": "DIV",
+      "className": "framer-1tcq7j",
+      "text": "FAQAnswers to the questions that come up most.Learn how Fora works, what's inclu"
+    },
+    {
+      "id": "",
+      "tag": "SECTION",
+      "className": "framer-1y74ji6",
+      "text": "BlogIdeas, updates, and practical AI workflowsVisit blog →Fora vs Mighty Network"
+    },
+    {
+      "id": "4-6",
+      "tag": "DIV",
+      "className": "framer-58a3p9",
+      "text": "BlogIdeas, updates, and practical AI workflowsVisit blog →"
+    },
+    {
+      "id": "overlay",
+      "tag": "DIV",
+      "className": "",
+      "text": ""
+    },
+    {
+      "id": "",
+      "tag": "SECTION",
+      "className": "framer-aofqy9",
+      "text": "Your community is one sec away.Fora is in beta and free to join. Set up your spa"
+    },
+    {
+      "id": "template-overlay",
+      "tag": "DIV",
+      "className": "",
+      "text": ""
+    },
+    {
+      "id": "__framer__appearAnimationsContent",
+      "tag": "SCRIPT",
+      "className": "",
+      "text": "{\"1xw88z8\":{\"default\":{\"initial\":{\"opacity\":0.001,\"rotate\":0,\"rotateX\":0,\"rotate"
+    },
+    {
+      "id": "__framer__breakpoints",
+      "tag": "SCRIPT",
+      "className": "",
+      "text": "[{\"hash\":\"kj696b\",\"mediaQuery\":\"(min-width: 1280px)\"},{\"hash\":\"3job37\",\"mediaQue"
+    },
+    {
+      "id": "__framer__handoverData",
+      "tag": "SCRIPT",
+      "className": "",
+      "text": "[{\"0\":1,\"1\":137},[\"Map\",2,3,56,57,60,61,83,84,130,131],\"{\\\"from\\\":{\\\"constraint\\"
+    },
+    {
+      "id": "svg-templates",
+      "tag": "DIV",
+      "className": "",
+      "text": ""
+    },
+    {
+      "id": "b3D8Qa1Zn",
+      "tag": "path",
+      "className": "[object SVGAnimatedString]",
+      "text": ""
+    },
+    {
+      "id": "nY6NEyY8o",
+      "tag": "path",
+      "className": "[object SVGAnimatedString]",
+      "text": ""
+    },
+    {
+      "id": "wkOguib3l",
+      "tag": "path",
+      "className": "[object SVGAnimatedString]",
+      "text": ""
+    },
+    {
+      "id": "i5oDhfGPs",
+      "tag": "path",
+      "className": "[object SVGAnimatedString]",
+      "text": ""
+    },
+    {
+      "id": "g08Nvj3MZ",
+      "tag": "path",
+      "className": "[object SVGAnimatedString]",
+      "text": ""
+    },
+    {
+      "id": "NQvjzSBYl",
+      "tag": "path",
+      "className": "[object SVGAnimatedString]",
+      "text": ""
+    },
+    {
+      "id": "osy16rK1T",
+      "tag": "path",
+      "className": "[object SVGAnimatedString]",
+      "text": ""
+    },
+    {
+      "id": "X_Idh03Ov",
+      "tag": "path",
+      "className": "[object SVGAnimatedString]",
+      "text": ""
+    },
+    {
+      "id": "vSZLR32LV",
+      "tag": "path",
+      "className": "[object SVGAnimatedString]",
+      "text": ""
+    }
+  ]
+}

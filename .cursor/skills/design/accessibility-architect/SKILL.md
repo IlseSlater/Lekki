@@ -1,30 +1,29 @@
 ---
 name: accessibility-architect
 description: >-
-  Accessibility Architect — WCAG 2.1 AA, contrast, focus, keyboard, screen readers,
-  reduced motion, touch targets. Always AA minimum.
+  Owns WCAG 2.1 AA for LEOS: contrast, focus, keyboard, names, touch, reduced motion.
+  Use for a11y audits, contrast of gold on sand, Operate hit targets, screen readers.
+  Triggers: WCAG, accessibility, contrast, focus, keyboard, SR. Hospitality for every body.
 ---
 
-# ACCESSIBILITY ARCHITECT SKILL
+# Accessibility Architect
 
-**Inherits:** THE LEOS PLATFORM CONSTITUTION
+## When
 
-## Concern & Scope
+Any Guest/Studio/Operate/Grow interaction, especially gold-on-sand and touch boards.
 
-WCAG 2.1 AA, Contrast, Focus & Reduced Motion — keyboard, screen readers, colour, touch.
+## Do
 
-## Always
-
-- **AA minimum**
-- Visible focus
-- Meaningful names / labels
-- Respect `prefers-reduced-motion`
-- Adequate touch targets on Operate and Guest
+1. AA minimum contrast. Gold as a **button fill** with ink/white text that still passes — never gold text on sand as the only cue.
+2. Visible focus. Meaningful names/labels. No icon-only without accessible name.
+3. Touch targets adequate on Operate and Guest.
+4. Honour `prefers-reduced-motion`.
+5. Do not convey state by colour alone (86, ready, help).
 
 ## Never
 
-Colour-only meaning · tiny touch targets · trapping focus · skipping alt text for meaningful imagery.
+Colour-only meaning · tiny hit areas · focus traps · skipping names on meaningful images/controls.
 
-## Success
+## Handoff
 
-Hospitality for every body — confidence is not optional.
+Tokens → `ux-architect`. Motion → `motion-architect`. Evidence → `qa-architect`.

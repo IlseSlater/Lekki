@@ -176,36 +176,6 @@ const TIP_OPTIONS = [0, 10, 15, 18, 20];
       @if (trustLine) {
         <p class="gb__trust">{{ trustLine }}</p>
       }
-      @if (savedPaymentMethodStatus !== 'none') {
-        <div class="gb__payment-method">
-          <span class="gb__payment-method-label">Payment method</span>
-          <button
-            type="button"
-            class="gb__payment-method-link"
-            (click)="openPaymentMethods.emit()"
-          >
-            <span class="gb__payment-method-value">
-              {{
-                savedPaymentMethodStatus === 'locked'
-                  ? paymentMethodLabel || 'Card · remembered'
-                  : paymentMethodLabel || 'Card'
-              }}
-            </span>
-            <span class="gb__payment-method-edit">Change</span>
-          </button>
-        </div>
-      } @else {
-        <div class="gb__payment-method">
-          <span class="gb__payment-method-label">Payment method</span>
-          <button
-            type="button"
-            class="leos-btn leos-btn--secondary gb__payment-method-cta"
-            (click)="openPaymentMethods.emit()"
-          >
-            Choose how to pay
-          </button>
-        </div>
-      }
       @if (error) {
         <p class="leos-error-banner" role="alert">{{ error }}</p>
       }
@@ -222,14 +192,16 @@ const TIP_OPTIONS = [0, 10, 15, 18, 20];
         >
           {{ busy ? 'Securing…' : error ? 'Try again' : 'Pay ' + (total | leosMoney: currency) }}
         </button>
-        <div class="gb__help-actions">
-          <button type="button" class="leos-btn leos-btn--secondary" (click)="serviceHelp.emit()">
-            {{ serviceHelpLabel }}
-          </button>
-          <button type="button" class="leos-btn leos-btn--secondary" (click)="managerHelp.emit()">
-            {{ managerHelpLabel }}
-          </button>
-        </div>
+        @if (allowHelp) {
+          <div class="gb__help-actions">
+            <button type="button" class="leos-btn leos-btn--secondary" (click)="serviceHelp.emit()">
+              {{ serviceHelpLabel }}
+            </button>
+            <button type="button" class="leos-btn leos-btn--secondary" (click)="managerHelp.emit()">
+              {{ managerHelpLabel }}
+            </button>
+          </div>
+        }
       </div>
     </div>
   `,
@@ -510,6 +482,8 @@ export class GuestBillComponent {
   @Input() visitLabel = 'This visit';
   @Input() showScope = true;
   @Input() allowTip = true;
+  /** Call Staff Continuity — Studio callStaff. */
+  @Input() allowHelp = true;
   @Input() trustLine = 'Nothing is charged until you confirm.';
   @Input() savedPaymentMethodStatus: 'none' | 'locked' | 'ready' = 'none';
   /** Visit-scoped display label from payment methods panel (e.g. Card · •••• 4242). */

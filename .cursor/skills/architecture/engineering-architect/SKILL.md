@@ -1,35 +1,32 @@
 ---
 name: engineering-architect
 description: >-
-  Engineering Architect — Nx monorepo, Angular standalone, NestJS layers, routing,
-  performance, state, testing, builds. Simple, composable, readable — reject framework cleverness.
+  Owns Nx monorepo boundaries, Angular/Nest layering policy, and “simple over clever.”
+  Use for project graph, lib tags, shared packages, performance policy, or when someone
+  wants a new framework. Triggers: Nx, monorepo, refactor, new library.
+  Implementation details live in angular-web and nestjs-runtime.
 ---
 
-# ENGINEERING ARCHITECT SKILL
+# Engineering Architect
 
-**Inherits:** THE LEOS PLATFORM CONSTITUTION  
-**Related:** Frontend / Backend Builder agents
+**Related:** Frontend / Backend Builder agents · `angular-web` · `nestjs-runtime`
 
-## Concern & Scope
+## When
 
-Nx Monorepo, Angular Standalone & NestJS Layers — routing, performance, state, testing, builds.
+Nx project boundaries, new libs, cross-app sharing, framework proposals.
 
-## Key Responsibilities
+## Do
 
-- Match existing patterns in `apps/web`, `apps/runtime`, and shared libs.
-- Prefer simple, composable, readable code over clever abstractions.
-- Keep project boundaries clear (Nx tags / libs).
+1. Match existing patterns in `apps/web`, `apps/runtime`, shared libs.
+2. Prefer simple, composable, readable code.
+3. Keep Nx tags / project boundaries clear.
+4. Guest/Studio must stay calm on mobile — no ornamental GPU (blur/parallax on every page).
+5. Reject new libraries without a caller and proof.
 
-## Rejects
+## Never
 
-Framework cleverness · drive-by refactors · abstractions without callers.
+Framework cleverness · drive-by refactors · abstractions without callers · React-in-Angular.
 
-## Checks
+## Handoff
 
-- Fits existing Nx project boundaries?
-- Testable without heroics?
-- Guest / Studio performance calm on mobile?
-
-## Success
-
-Code a new engineer can read in one sitting.
+File-level Angular → `angular-web`. File-level Nest → `nestjs-runtime`. New concept → `chief-architect`.

@@ -5,7 +5,15 @@ import type { ResolvedContext } from '@lekki/contracts';
 import { ok } from '@lekki/shared';
 
 function guest(id: string, displayName: string, identityId?: string | null) {
-  return { id, displayName, identityId: identityId ?? null, role: 'guest' };
+  return {
+    id,
+    displayName,
+    identityId: identityId ?? null,
+    role: 'guest',
+    participantSecret: `sec_${id}`,
+    departedAt: null,
+    equalSplitOptIn: false,
+  };
 }
 
 function sessionRecord(participants: SessionRecord['participants']): SessionRecord {
@@ -57,6 +65,9 @@ async function checkResume() {
       displayName: 'Ilse',
       role: 'guest',
       joinedAt: new Date(),
+      participantSecret: 'sec_ilse',
+      departedAt: null,
+      equalSplitOptIn: false,
     },
   ]);
   let saved = 0;
@@ -77,7 +88,7 @@ async function checkResume() {
 
   const resumed = await runtime.startOrResume(context, {
     displayName: 'Ilse',
-    resumeParticipantId: 'part_ilse',
+    participantSecret: 'sec_ilse',
   });
   assert.equal(resumed.ok, true);
   if (!resumed.ok) return;
@@ -86,12 +97,15 @@ async function checkResume() {
   assert.equal(resumed.value.session.participants.length, 1);
   assert.equal(saved, 0, 'resume must not write another participant');
 
-  const byName = await runtime.startOrResume(context, { displayName: 'Ilse' });
+  const byName = await runtime.startOrResume(context, {
+    displayName: 'Ilse',
+    participantSecret: 'wrong-secret',
+  });
   assert.equal(byName.ok, true);
   if (!byName.ok) return;
-  assert.equal(byName.value.joined, false);
-  assert.equal(byName.value.participantId, 'part_ilse');
-  assert.equal(existing.participants.length, 1);
+  assert.equal(byName.value.joined, true, 'wrong secret must create new participant');
+  assert.notEqual(byName.value.participantId, 'part_ilse');
+  assert.equal(existing.participants.length, 2);
 }
 
 async function run() {

@@ -2,7 +2,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { EntryRuntime } from '@lekki/runtime-entry';
 import { ContextRuntime } from '@lekki/runtime-context';
 import { ExperienceRuntime } from '@lekki/runtime-experience';
-import { CapabilityRuntime } from '@lekki/runtime-capability';
+import { CapabilityRuntime, paymentTenantKey, type PaymentTenantRef } from '@lekki/runtime-capability';
 import { ProfileEngine } from '@lekki/profile-engine';
 import {
   createManualPaymentBinding,
@@ -68,13 +68,14 @@ export class LeosBootstrapService implements OnModuleInit {
 
   async onModuleInit() {
     try {
-      const active = await this.prisma.paymentConnectorInstall.findFirst({
+      const actives = await this.prisma.paymentConnectorInstall.findMany({
         where: { status: 'active' },
         orderBy: { updatedAt: 'desc' },
       });
-      if (active) {
+      for (const active of actives) {
+        if (!active.organisationId) continue;
         await this.activatePaymentConnector({
-          organisationId: active.organisationId ?? undefined,
+          organisationId: active.organisationId,
           venueId: active.venueId ?? undefined,
           connectorId: active.connectorId,
           environment: (active.environment as 'sandbox' | 'production') ?? 'sandbox',
@@ -82,7 +83,12 @@ export class LeosBootstrapService implements OnModuleInit {
           merchantKeySecretRef: active.merchantKeySecretRef ?? undefined,
           passphraseSecretRef: active.passphraseSecretRef ?? undefined,
         });
-        this.logger.log(`Restored active payment connector: ${active.connectorId}`);
+        this.logger.log(
+          `Restored active payment connector: ${active.connectorId} (${paymentTenantKey({
+            organisationId: active.organisationId,
+            venueId: active.venueId ?? undefined,
+          })})`,
+        );
       }
     } catch (err) {
       this.logger.warn(
@@ -93,12 +99,20 @@ export class LeosBootstrapService implements OnModuleInit {
 
   async activatePaymentConnector(input: ActivatePaymentInput) {
     const binding = this.buildPaymentBinding(input);
-    this.capabilityRuntime.replacePaymentConnector(binding);
+    if (input.organisationId) {
+      const tenant: PaymentTenantRef = {
+        organisationId: input.organisationId,
+        venueId: input.venueId,
+      };
+      this.capabilityRuntime.replacePaymentConnectorForTenant(tenant, binding);
+    } else {
+      this.capabilityRuntime.replacePaymentConnector(binding);
+    }
     return binding.connectorId;
   }
 
-  activePaymentConnectorId(): string | undefined {
-    return this.capabilityRuntime.peekPaymentConnectorId();
+  activePaymentConnectorId(tenant?: PaymentTenantRef): string | undefined {
+    return this.capabilityRuntime.peekPaymentConnectorId(tenant);
   }
 
   private buildPaymentBinding(input: ActivatePaymentInput) {

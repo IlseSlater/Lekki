@@ -7,20 +7,27 @@ alwaysApply: false
 
 Invoke matching skills under `.cursor/skills/` (see README). All inherit **THE LEOS PLATFORM CONSTITUTION**.
 
+Skills are **how-to** (progressive disclosure). Agents under `.cursor/agents/` are the **delivery cast**. Do not invent LEKs or expand LEO. EO still owns delivery sequencing.
+
 | Signal | Invoke |
 |--------|--------|
 | Platform / Pack boundary · ADR · LEK | `@chief-architect` · `@platform-architect` · `@pack-architect` |
-| Guest Shell · QR · HCI 3 questions | `@experience-architect` |
+| Angular `apps/web` | `@angular-web` |
+| NestJS `apps/runtime` | `@nestjs-runtime` |
+| HCI / confidence score | `@hci-confidence` |
+| Guest Shell · QR · three questions | `@experience-architect` |
 | Studio dual-pane · 1Q/1A · gold CTA | `@studio-architect` |
-| Task boards · Mint/Coral/Blue · sticky CTA | `@operate-architect` |
+| Task boards · 86 · sticky CTA | `@operate-architect` |
 | Grow calm metrics | `@growth-architect` |
 | LVES tokens · layout | `@ux-architect` |
+| Voice · copy · hospitality language | `@brand-architect` |
 | Motion 160/220/280/360 | `@motion-architect` |
 | WCAG AA | `@accessibility-architect` |
-| PaymentCapability · basis-points · no SDK leak | `@payments-architect` |
-| Outbox · audit · truth | `@data-architect` |
-| Identity · RBAC · vault | `@security-architect` |
+| PaymentCapability · basis-points | `@payments-architect` |
+| Money / split / Decimal proof | `@money-invariants` |
+| Unit tests (`node:test`, `.test.ts`) | `@unit-proof` |
+| Outbox · audit · truth · migrations | `@data-architect` |
+| Identity · RBAC · vault · auth loops | `@security-architect` |
 | Neo · Context Dock | `@ai-architect` |
-| Playwright · evidence · HCI gate | `@qa-architect` |
-
-Do **not** invent LEKs or expand LEO. EO still owns delivery sequencing.
+| Playwright · unit proof · evidence · HCI gate | `@qa-architect` |
+| Writing/updating skills | `@leo-skill-authoring` |

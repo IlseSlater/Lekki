@@ -15,51 +15,53 @@ import { composeGrowBreath } from '../studio/grow-breath';
   imports: [RouterLink],
   template: `
     <div class="studio-grow studio-motion-appear">
-      <header class="studio-grow__hero">
-        <p class="studio-grow__greeting">{{ greeting }}</p>
-        @if (!live) {
-          <p class="studio-grow__story">Go live first. Memory fills in after you welcome guests.</p>
-        } @else if (loading) {
-          <p class="studio-grow__story">Gathering today’s story…</p>
-        } @else if (error) {
-          <p class="studio-grow__story" role="alert">{{ error }}</p>
-        } @else {
-          <p class="studio-grow__story">{{ welcomeLine }}</p>
-          @if (tradingLine) {
-            <p class="studio-grow__story studio-grow__story--trade">{{ tradingLine }}</p>
+      <div class="studio-grow__tray">
+        <header class="studio-grow__hero">
+          <p class="studio-grow__greeting">{{ greeting }}</p>
+          @if (!live) {
+            <p class="studio-grow__story">Go live first. Memory fills in after you welcome guests.</p>
+          } @else if (loading) {
+            <p class="studio-grow__story">Gathering today’s story…</p>
+          } @else if (error) {
+            <p class="studio-grow__story" role="alert">{{ error }}</p>
+          } @else {
+            <p class="studio-grow__story">{{ welcomeLine }}</p>
+            @if (tradingLine) {
+              <p class="studio-grow__story studio-grow__story--trade">{{ tradingLine }}</p>
+            }
+            @if (favouriteLine) {
+              <p class="studio-grow__story studio-grow__story--soft">{{ favouriteLine }}</p>
+            }
+            @if (showWait) {
+              <p class="studio-grow__wait-label">Average wait</p>
+              <p class="studio-grow__wait">{{ waitLine }}</p>
+            }
+            @if (healthLine) {
+              <p class="studio-grow__health">{{ healthLine }}</p>
+            }
+            <p
+              class="studio-grow__delight"
+              [class.studio-grow__delight--soft]="!delighted"
+            >
+              {{ delightLine }}
+            </p>
           }
-          @if (favouriteLine) {
-            <p class="studio-grow__story studio-grow__story--soft">{{ favouriteLine }}</p>
-          }
-          @if (showWait) {
-            <p class="studio-grow__wait-label">Average wait</p>
-            <p class="studio-grow__wait">{{ waitLine }}</p>
-          }
-          @if (healthLine) {
-            <p class="studio-grow__health">{{ healthLine }}</p>
-          }
-          <p
-            class="studio-grow__delight"
-            [class.studio-grow__delight--soft]="!delighted"
-          >
-            {{ delightLine }}
-          </p>
-        }
-      </header>
+        </header>
 
-      @if (live && !loading && !error) {
-        <section class="studio-grow__suggest studio-motion-appear-delay" aria-label="One suggestion">
-          <p class="studio-grow__suggest-label">One suggestion</p>
-          <p class="studio-grow__suggest-body">{{ suggestion }}</p>
-        </section>
-      }
-
-      <div class="studio-grow__doors studio-motion-appear-delay-2">
-        @if (live) {
-          <a class="leos-btn leos-btn--primary" routerLink="/studio/operate">Back to Operate</a>
-        } @else {
-          <a class="leos-btn leos-btn--primary" routerLink="/studio">Continue setup</a>
+        @if (live && !loading && !error) {
+          <section class="studio-grow__suggest studio-motion-appear-delay" aria-label="One suggestion">
+            <p class="studio-grow__suggest-label">One suggestion</p>
+            <p class="studio-grow__suggest-body">{{ suggestion }}</p>
+          </section>
         }
+
+        <div class="studio-grow__doors studio-motion-appear-delay-2">
+          @if (live) {
+            <a class="leos-btn leos-btn--primary" routerLink="/studio/operate">Back to Operate</a>
+          } @else {
+            <a class="leos-btn leos-btn--primary" routerLink="/studio">Continue setup</a>
+          }
+        </div>
       </div>
     </div>
   `,

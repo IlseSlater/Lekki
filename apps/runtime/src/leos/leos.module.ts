@@ -1,5 +1,6 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { EventsModule } from '../events/events.module';
+import { StaffAuthModule } from '../staff-auth/staff-auth.module';
 import { LeosBootstrapService } from './leos-bootstrap.service';
 import { ProfileStoreService } from './profile-store.service';
 import { PrismaEntryTokenRepository } from './repositories/entry-token.repository';
@@ -11,9 +12,11 @@ import {
 import { LeosService } from './leos.service';
 import { SetupPaymentsService } from './setup-payments.service';
 import { SecretsVaultService } from './secrets-vault.service';
+import { SessionAccessService } from './session-access.service';
+import { PaymentExpiryService } from './payment-expiry.service';
 
 @Module({
-  imports: [EventsModule],
+  imports: [forwardRef(() => EventsModule), StaffAuthModule],
   providers: [
     ProfileStoreService,
     PrismaEntryTokenRepository,
@@ -24,6 +27,8 @@ import { SecretsVaultService } from './secrets-vault.service';
     LeosService,
     SetupPaymentsService,
     SecretsVaultService,
+    SessionAccessService,
+    PaymentExpiryService,
   ],
   exports: [
     LeosService,
@@ -31,6 +36,8 @@ import { SecretsVaultService } from './secrets-vault.service';
     LeosBootstrapService,
     SetupPaymentsService,
     SecretsVaultService,
+    SessionAccessService,
+    PaymentExpiryService,
   ],
 })
 export class LeosModule {}

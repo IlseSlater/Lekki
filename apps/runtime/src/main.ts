@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import { loadEnvFile } from 'node:process';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { DomainExceptionFilter } from './http/domain-exception.filter';
 
 for (const candidate of [
   resolve(process.cwd(), '.env'),
@@ -37,18 +38,24 @@ function lanIpv4(): string | null {
 }
 
 async function bootstrap() {
+  validateRequiredSecrets();
+
   const app = await NestFactory.create(AppModule, { cors: true });
   const port = Number(process.env.RUNTIME_PORT ?? 3000);
   // Reflect request origin so phone → LAN IP:4200 can call API (dev).
+  app.useGlobalFilters(new DomainExceptionFilter());
+
   app.enableCors({
     origin: true,
     credentials: true,
   });
 
-  const http = app.getHttpAdapter().getInstance();
-  http.get('/dev/lan', (_req: unknown, res: { json: (b: unknown) => void }) => {
-    res.json({ host: lanIpv4() });
-  });
+  if (process.env.NODE_ENV !== 'production') {
+    const http = app.getHttpAdapter().getInstance();
+    http.get('/dev/lan', (_req: unknown, res: { json: (b: unknown) => void }) => {
+      res.json({ host: lanIpv4() });
+    });
+  }
 
   await app.listen(port, '0.0.0.0');
   const lan = lanIpv4();
@@ -60,3 +67,22 @@ async function bootstrap() {
 }
 
 bootstrap();
+
+function validateRequiredSecrets() {
+  const devStaff = 'leos-dev-staff-token-secret';
+  const devVault = 'lekki-dev-vault-key';
+  const staff = process.env.STAFF_TOKEN_SECRET?.trim();
+  const vault = process.env.LEKKI_VAULT_KEY?.trim();
+  if (!staff || staff === devStaff) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('STAFF_TOKEN_SECRET must be set to a non-default value in production');
+    }
+    console.warn('[LEOS] STAFF_TOKEN_SECRET unset — using dev default (local only)');
+  }
+  if (!vault || vault === devVault) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('LEKKI_VAULT_KEY must be set to a non-default value in production');
+    }
+    console.warn('[LEOS] LEKKI_VAULT_KEY unset — using dev default (local only)');
+  }
+}

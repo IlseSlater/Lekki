@@ -2,178 +2,143 @@ import { Component, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { ConfidenceIndicatorComponent } from '../leos/confidence-indicator.component';
 import { ExperienceScreenComponent } from '../leos/experience-screen.component';
-import { LiveExperiencePanelComponent } from '../leos/live-experience-panel.component';
+import { StudioWorkspaceComponent } from '../leos/studio-workspace.component';
 import {
   EXPERIENCE_REGISTRY,
   type ExperienceTypeId,
 } from '../studio/experience-registry';
 import { StudioContextService } from '../services/studio-context.service';
 
-/** Choose Experience — typography-led; Live Experience beside; never say Pack. */
+/** Studio S1 — Choose Experience (Surgical White & Rose-Gold Dual-Pane) */
 @Component({
   standalone: true,
   imports: [
     ExperienceScreenComponent,
     RouterLink,
     ConfidenceIndicatorComponent,
-    LiveExperiencePanelComponent,
+    StudioWorkspaceComponent,
   ],
   template: `
-    <div class="create-engine">
-      <div class="create-engine__body">
-        <div class="create-engine__studio studio-motion-appear">
-          <leos-experience-screen
-            [purpose]="purpose"
-            [lead]="lead"
-            help=""
-            [showFooter]="true"
-          >
-            <div
-              config
-              class="studio-create-list"
-              role="listbox"
-              [attr.aria-activedescendant]="selected || null"
-            >
-              @for (e of experiences; track e.id) {
-                <button
-                  type="button"
-                  role="option"
-                  class="studio-create-row"
-                  [id]="e.id"
-                  [class.studio-create-row--selected]="selected === e.id"
-                  [attr.aria-selected]="selected === e.id"
-                  (click)="select(e.id)"
-                >
-                  <span class="studio-create-row__mark" aria-hidden="true">{{ e.label.charAt(0) }}</span>
-                  <span class="studio-create-row__text">
-                    <span class="studio-create-row__label">{{ e.label }}</span>
-                    <span class="studio-create-row__blurb">{{ e.blurb }}</span>
-                  </span>
-                </button>
-              }
-            </div>
-
-            <leos-confidence-indicator
-              confidence
-              eyebrow="You’ll create"
-              [fact]="selectedLabel"
-              [ready]="!!selected"
-              okLabel="Looks good"
-              waiting="Choose an experience type to continue"
-            />
-
-            <a escape class="leos-btn leos-btn--secondary" routerLink="/studio/welcome">Back</a>
+    <leos-studio-workspace>
+      <leos-experience-screen
+        [purpose]="purpose"
+        [lead]="lead"
+        help=""
+        [showFooter]="true"
+      >
+        <div
+          config
+          class="studio-create-list"
+          role="listbox"
+          [attr.aria-activedescendant]="selected || null"
+        >
+          @for (e of experiences; track e.id) {
             <button
-              primary
               type="button"
-              class="leos-btn leos-btn--primary"
-              [disabled]="!selected"
-              (click)="continue()"
+              role="option"
+              class="studio-create-row"
+              [id]="e.id"
+              [class.studio-create-row--selected]="selected === e.id"
+              [attr.aria-selected]="selected === e.id"
+              (click)="select(e.id)"
             >
-              Continue
+              <span class="studio-create-row__mark" aria-hidden="true">
+                {{ e.label.charAt(0) }}
+              </span>
+              <span class="studio-create-row__text">
+                <span class="studio-create-row__label">{{ e.label }}</span>
+                <span class="studio-create-row__blurb">{{ e.blurb }}</span>
+              </span>
             </button>
-          </leos-experience-screen>
+          }
         </div>
-        <div class="create-engine__live studio-motion-appear-delay">
-          <leos-live-experience-panel />
-        </div>
-      </div>
-    </div>
+
+        <leos-confidence-indicator
+          confidence
+          eyebrow="You’ll create"
+          [fact]="selectedLabel"
+          [ready]="!!selected"
+          okLabel="Looks good"
+          waiting="Choose an experience type to continue"
+        />
+
+        <a escape class="leos-btn leos-btn--secondary" routerLink="/studio/welcome">Back</a>
+        <button
+          primary
+          type="button"
+          class="leos-btn leos-btn--primary"
+          [disabled]="!selected"
+          (click)="continue()"
+        >
+          Continue
+        </button>
+      </leos-experience-screen>
+    </leos-studio-workspace>
   `,
   styles: [
     `
-      .create-engine {
-        width: 100%;
-        max-width: calc(var(--studio-studio-width, 640px) + var(--studio-live-width, 420px) + 6rem);
-        margin: 0 auto;
-        padding: var(--studio-pad-outer, 48px) var(--studio-pad-outer, 48px) 3rem;
-        box-sizing: border-box;
-      }
-      .create-engine__body {
-        display: grid;
-        gap: 3rem;
-        align-items: start;
-      }
-      @media (min-width: 1024px) {
-        .create-engine__body {
-          grid-template-columns: minmax(0, var(--studio-studio-width, 640px)) var(--studio-live-width, 420px);
-          justify-content: space-between;
-        }
-      }
-      .create-engine__studio {
-        min-width: 0;
-        max-width: var(--studio-studio-width, 640px);
-      }
-      .create-engine__live {
-        min-width: 0;
-        display: flex;
-        justify-content: center;
-        padding-top: 0.5rem;
-      }
-      @media (max-width: 1023px) {
-        .create-engine__live {
-          order: -1;
-        }
-        .create-engine {
-          padding: 1.5rem 1.25rem 2.5rem;
-        }
-      }
       .studio-create-list {
         display: flex;
         flex-direction: column;
-        gap: 0.25rem;
-        margin: 0;
+        gap: 0.5rem;
+        margin: 0 0 1.5rem;
       }
       .studio-create-row {
         display: grid;
         grid-template-columns: 2.75rem 1fr;
         align-items: center;
-        column-gap: 0.85rem;
+        column-gap: 1rem;
         width: 100%;
-        min-height: 2.75rem;
-        padding: 1.1rem 0;
-        border: 0;
-        border-bottom: 1px solid var(--studio-line, #e7e2db);
-        border-radius: 0;
-        background: transparent;
+        min-height: 3.5rem;
+        padding: 1rem 1.25rem;
+        border: 1px solid var(--leos-border, #eae6e1);
+        border-radius: 16px;
+        background: var(--leos-surface, #ffffff);
         text-align: left;
         cursor: pointer;
-        transition: color var(--studio-duration-fast, 160ms) var(--studio-ease);
+        box-shadow: var(--leos-shadow-card, 0 1px 3px rgba(15, 23, 42, 0.04));
+        color: inherit;
+        transition:
+          border-color var(--leos-duration-fast, 160ms) var(--leos-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+          box-shadow var(--leos-duration-fast, 160ms) var(--leos-ease, cubic-bezier(0.22, 1, 0.36, 1));
       }
-      .studio-create-row:last-child {
-        border-bottom: none;
+      .studio-create-row:hover {
+        border-color: var(--leos-warm-sand-focus, #d8d2c9);
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+      }
+      .studio-create-row.studio-create-row--selected {
+        border-color: var(--leos-gold, #d7a14a);
+        box-shadow: 0 0 0 3px var(--leos-gold-soft, rgba(215, 161, 74, 0.12));
       }
       .studio-create-row__mark {
         display: grid;
         place-items: center;
-        width: 2.75rem;
-        height: 2.75rem;
+        width: 2.5rem;
+        height: 2.5rem;
         border-radius: 12px;
-        background: color-mix(in srgb, var(--leos-gold, #d7a14a) 18%, #fff);
-        color: var(--studio-ink, #1b2230);
+        background: var(--leos-gold-soft, rgba(215, 161, 74, 0.12));
+        color: var(--leos-gold-dark, #a96f20);
         font-weight: 700;
         font-size: 1rem;
       }
       .studio-create-row--selected .studio-create-row__mark {
-        background: color-mix(in srgb, var(--leos-gold, #d7a14a) 42%, #fff);
+        background: var(--leos-gold, #d7a14a);
+        color: var(--leos-on-brand-inverse, #ffffff);
       }
       .studio-create-row__text {
         display: flex;
         flex-direction: column;
-        gap: 0.25rem;
+        gap: 0.15rem;
         min-width: 0;
       }
-      .studio-create-row--selected .studio-create-row__label {
-        color: var(--leos-gold-dark, #a96f20);
-      }
       .studio-create-row__label {
-        font-size: 1.0625rem;
+        font-size: 1rem;
         font-weight: 600;
-        color: var(--studio-ink, #1b2230);
+        color: var(--leos-ink, #0f172a);
       }
       .studio-create-row__blurb {
-        font-size: 0.875rem;
-        color: var(--studio-ink-secondary, #6b7280);
+        font-size: 0.8125rem;
+        color: var(--leos-ink-secondary, #64748b);
       }
     `,
   ],
@@ -186,7 +151,6 @@ export class StudioCreatePageComponent {
   selected: ExperienceTypeId | '' =
     (this.ctx.activeExperience()?.typeId as ExperienceTypeId | undefined) ?? '';
 
-  /** Second+ experience inherits venue identity — Never Ask a Human to Remember. */
   inheriting = this.ctx.hasExperiences() && !!this.ctx.displayVenue()?.trim();
   purpose = this.inheriting
     ? 'What else are you creating?'

@@ -1,0 +1,2 @@
+# Skills and docs: LF only. CRLF breaks tools that match ^---$ on frontmatter.
+*.md text eol=lf

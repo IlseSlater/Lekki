@@ -1,26 +1,36 @@
 ---
 name: payments-architect
 description: >-
-  Payments Architect — Payment Engine, allocations, splits, tips, refunds, connectors.
-  Abstract PaymentCapability only; never hardcode Stripe/PayFast/Pilot; basis-points math.
+  Owns Payment Engine: allocations, splits, tips, refunds, connectors. Use for pay,
+  claim lines, equal share, settlement, “connect payments.” Triggers: PaymentCapability,
+  split, tip, refund, Stripe (must stay behind capability). Basis-points integer math.
+  Proof of arithmetic → money-invariants (not this skill).
 ---
 
-# PAYMENTS ARCHITECT SKILL
+# Payments Architect
 
-**Inherits:** THE LEOS PLATFORM CONSTITUTION
+## When
 
-## Concern & Scope
+Guest pay, splits, tips, refunds, Studio “how pay”, connectors.
 
-Payment Engine (`packages/runtime/capability/payments`), bill splitting, tip calculations, allocations, and connectors.
+## Current risk
 
-## Core Rules
+Law is capability + minor units. Proof is incomplete — see
+`money-invariants` / `references/invariants.md` (concurrency, secrets,
+refunds, server tip still **open**).
 
-- ALWAYS route payment execution through abstract `PaymentCapability` bindings (`CreatePayment`, `Authorise`, `Refund`, `Settlement`).
-- NEVER hardcode provider SDKs (`Stripe`, `PayFast`, `Pilot`) in core services.
-- ALWAYS use basis-points integer math (e.g., `5000` = `50.00%`) for fractional item claim allocations to prevent floating-point errors.
-- Connect & Forget — operators connect once; guests pay with certainty.
-- NEVER expose gateway complexity to Guest or Studio.
+## Do
 
-## Success
+1. Route through `PaymentCapability` (`CreatePayment`, `Authorise`, `Refund`, `Settlement`).
+2. Basis-points integers (`5000` = 50%). No float money.
+3. Connect once in Studio; guests never see gateway complexity.
+4. Split/claim must stay fair and explainable in guest language.
+5. Any arithmetic change: load `money-invariants` and land the test first.
 
-Money moments feel as hospitable as the meal.
+## Never
+
+Stripe/PayFast/Pilot SDKs in core · exposing PCI/gateway UI to Guest or Setup chrome · float percents · ship a split without a unit assertion.
+
+## Handoff
+
+Proof → `money-invariants` / `unit-proof`. HTTP → `api-architect` / `nestjs-runtime`. Vault → `security-architect`. Guest copy → `brand-architect`.

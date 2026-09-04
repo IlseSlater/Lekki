@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Post } from '@nestjs/common';
 import { LeosService } from '../leos/leos.service';
 
 @Controller('entry')
@@ -8,7 +8,13 @@ export class EntryController {
   @Post('resolve')
   resolve(
     @Body()
-    body: { token: string; displayName: string; identityId?: string; participantId?: string },
+    body: {
+      token: string;
+      displayName: string;
+      identityId?: string;
+      participantId?: string;
+      participantSecret?: string;
+    },
   ) {
     return this.leos.resolveEntryAndStartSession(body);
   }

@@ -1,23 +1,29 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { RequireStaffPermission, StaffAuthGuard } from '../staff-auth/staff-auth.guard';
+import type { StaffTokenClaims } from '../staff-auth/staff-token.service';
 
 /**
  * Operate floor — live places/sessions for Waiter (LEK-027 Floor / Live Sessions).
+ * Staff token required — org derived from token, never from query alone.
  */
 @Controller('operate')
+@UseGuards(StaffAuthGuard)
+@RequireStaffPermission('session.read')
 export class OperateController {
   constructor(private readonly prisma: PrismaService) {}
 
   @Get('floor')
   async floor(
+    @Req() req: { staff: StaffTokenClaims },
     @Query('venueId') venueId?: string,
-    @Query('organisationId') organisationId?: string,
   ) {
+    const organisationId = req.staff.org;
     const sessions = await this.prisma.experienceSession.findMany({
       where: {
+        organisationId,
         status: { in: ['created', 'active', 'settling'] },
         ...(venueId ? { venueId } : {}),
-        ...(organisationId ? { organisationId } : {}),
       },
       include: {
         physicalContext: true,

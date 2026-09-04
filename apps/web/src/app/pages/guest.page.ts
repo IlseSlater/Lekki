@@ -8,7 +8,6 @@ import { OrderTotalComponent } from '../leos/order-total.component';
 import { MenuCardComponent } from '../leos/menu-card.component';
 import { CartSummaryComponent } from '../leos/cart-summary.component';
 import { GuestBillComponent, type BillDisplayLine, type BillLine } from '../leos/guest-bill.component';
-import { GuestPaymentMethodsPanelComponent } from '../leos/guest-payment-methods-panel.component';
 import { GuestOrdersComponent, type GuestOrder } from '../leos/guest-orders.component';
 import { GuestTabBarComponent, type GuestTabId } from '../leos/guest-tab-bar.component';
 import {
@@ -35,15 +34,25 @@ import { TerminologyService } from '../services/terminology.service';
 import { OnboardingService } from '../services/onboarding.service';
 import { StudioContextService } from '../services/studio-context.service';
 import { resolveAllowTip } from '../studio/tip-continuity';
+import { resolveAllowPay } from '../studio/pay-continuity';
+import { resolveAllowHelp } from '../studio/help-continuity';
 import { livePayCtaLabel, liveReadyLead } from '../studio/ready-pay-continuity';
 import { composeLeaveOpenCopy } from '../studio/leave-open-continuity';
 import { composeStillInBanner } from '../studio/mid-visit-resume';
+import { guestPlaceSpoken } from '../studio/place-continuity';
+import {
+  featuredMenuItems,
+  menuWithoutSpecialsSurface,
+  resolveShowSpecials,
+  specialsCarouselItems,
+} from '../studio/specials-continuity';
+import { resolveMenuBrand } from '../studio/menu-brand-continuity';
 import { offlineQueue } from '../services/offline-queue';
 import { LeosMoneyPipe } from '../leos/leos-money.pipe';
 import { firstValueFrom } from 'rxjs';
 import { timeout } from 'rxjs/operators';
 
-type GuestPhase = 'browse' | 'cart' | 'live' | 'payment' | 'receipt' | 'leave';
+type GuestPhase = 'browse' | 'specials' | 'cart' | 'live' | 'payment' | 'receipt' | 'leave';
 
 type CatalogueItem = {
   id: string;
@@ -130,7 +139,6 @@ function equalShareState(
     CartSummaryComponent,
     MenuCardComponent,
     GuestBillComponent,
-    GuestPaymentMethodsPanelComponent,
     GuestOrdersComponent,
     GuestTabBarComponent,
     GuestHelpSheetComponent,
@@ -139,15 +147,19 @@ function equalShareState(
   ],
   template: `
     <div
-      class="leos-guest-chrome"
+      class="leos-guest-chrome leos-guest-chrome--atmosphere"
+      [class.leos-guest-chrome--browse]="(phase === 'browse' || phase === 'specials') && !!state.sessionId"
+      [class.leos-guest-chrome--specials]="phase === 'specials'"
       [class.leos-guest-chrome--with-chip]="showCartChip"
       [class.leos-guest-chrome--with-cart-actions]="phase === 'cart'"
       [class.leos-guest-chrome--with-live-actions]="phase === 'live'"
     >
     <leos-experience-screen
       [purpose]="purpose"
-      [lead]="lead"
+      [lead]="browseDenseLead"
       [help]="help"
+      [place]="placeSpoken"
+      [hospitality]="true"
       [compact]="true"
       [showFooter]="showFooter"
       [docked]="!!state.sessionId"
@@ -158,48 +170,52 @@ function equalShareState(
           Go to Entry
         </button>
       } @else {
-        <p class="leos-context-banner" role="status" aria-live="polite">
-          <span class="leos-pill">{{ state.profileLabel || 'Experience' }}</span>
-          @if (state.physicalContextCode) {
-            <span>
-              {{ terms.term('physicalContext', 'Place') }}
-              <strong>{{ state.physicalContextCode }}</strong>
-            </span>
-          }
-        </p>
-
-        @if (phase === 'browse') {
-          @if (catalogueLoading) {
+        @if (phase === 'browse' || phase === 'specials') {
+          @if (phase === 'browse' && catalogueLoading) {
             <p class="leos-muted" aria-live="polite">
               Getting {{ terms.term('catalogue', 'menu') }} ready…
             </p>
           }
 
-          <div class="leos-browse-tools">
-            <div class="leos-field leos-browse-tools__search" role="search">
-              <div class="leos-browse-search">
-                <input
-                  class="leos-field__input"
-                  [(ngModel)]="search"
-                  [placeholder]="'Search the ' + terms.term('catalogue', 'menu') + '…'"
-                  [attr.aria-label]="'Search the ' + terms.term('catalogue', 'menu')"
-                  autocomplete="off"
-                />
-                @if (search.trim()) {
-                  <button
-                    type="button"
-                    class="leos-browse-search__clear"
-                    (click)="search = ''"
-                    aria-label="Clear search"
-                  >
-                    Clear
-                  </button>
-                }
-              </div>
+          @if (tablePeople.length >= 2) {
+            <div
+              class="leos-chip-row leos-chip-row--scroll leos-chip-row--calm leos-browse-tools__chips"
+              role="status"
+              aria-label="People at your table"
+            >
+              @for (name of tablePeople; track name) {
+                <span class="leos-chip leos-chip--readonly">{{ name }}</span>
+              }
             </div>
+          }
+        }
 
+        @if (phase === 'browse') {
+          <div class="leos-browse-tools">
+            @if (showMenuBrand) {
+              <div
+                class="leos-menu-brand"
+                [style.--menu-brand-progress]="menuBrandProgress"
+                [style.--menu-brand-colour]="menuBrandColour"
+                aria-hidden="true"
+              >
+                <div class="leos-menu-brand__fill">
+                  @if (menuBrandCover) {
+                    <img class="leos-menu-brand__cover" [src]="menuBrandCover" alt="" />
+                  }
+                  <span class="leos-menu-brand__shade"></span>
+                  @if (menuBrandLogo) {
+                    <img class="leos-menu-brand__logo" [src]="menuBrandLogo" alt="" />
+                  }
+                </div>
+              </div>
+            }
             @if (categories.length > 1) {
-              <div class="leos-chip-row leos-chip-row--scroll" role="toolbar" aria-label="Categories">
+              <div
+                class="leos-chip-row leos-chip-row--scroll leos-chip-row--calm leos-browse-tools__chips"
+                role="toolbar"
+                aria-label="Categories"
+              >
                 <button
                   type="button"
                   class="leos-chip"
@@ -220,6 +236,36 @@ function equalShareState(
                 }
               </div>
             }
+
+            @if (!searchOpen && !search.trim()) {
+              <button
+                type="button"
+                class="leos-browse-search-toggle"
+                (click)="openBrowseSearch()"
+              >
+                Search {{ terms.term('catalogue', 'menu').toLowerCase() }}
+              </button>
+            } @else {
+              <div class="leos-field leos-browse-tools__search" role="search">
+                <div class="leos-browse-search">
+                  <input
+                    class="leos-field__input leos-browse-search__input"
+                    [(ngModel)]="search"
+                    [placeholder]="'Search the ' + terms.term('catalogue', 'menu') + '…'"
+                    [attr.aria-label]="'Search the ' + terms.term('catalogue', 'menu')"
+                    autocomplete="off"
+                  />
+                  <button
+                    type="button"
+                    class="leos-browse-search__clear"
+                    (click)="closeBrowseSearch()"
+                    [attr.aria-label]="search.trim() ? 'Clear search' : 'Close search'"
+                  >
+                    {{ search.trim() ? 'Clear' : 'Close' }}
+                  </button>
+                </div>
+              </div>
+            }
           </div>
 
           @for (section of browseSections; track section.category) {
@@ -227,7 +273,7 @@ function equalShareState(
               @if (showSectionTitles) {
                 <h2 class="leos-menu-section__title">{{ section.category }}</h2>
               }
-              <div class="leos-menu-grid" role="list">
+              <div class="leos-menu-grid leos-menu-grid--hero" role="list">
                 @for (item of section.items; track item.id) {
                   <leos-menu-card
                     [label]="item.label"
@@ -265,6 +311,97 @@ function equalShareState(
                 }
               </div>
             }
+          }
+        }
+
+        @if (phase === 'specials') {
+          @if (showMenuBrand) {
+            <div
+              class="leos-menu-brand"
+              [style.--menu-brand-progress]="menuBrandProgress"
+              [style.--menu-brand-colour]="menuBrandColour"
+              aria-hidden="true"
+            >
+              <div class="leos-menu-brand__fill">
+                @if (menuBrandCover) {
+                  <img class="leos-menu-brand__cover" [src]="menuBrandCover" alt="" />
+                }
+                <span class="leos-menu-brand__shade"></span>
+                @if (menuBrandLogo) {
+                  <img class="leos-menu-brand__logo" [src]="menuBrandLogo" alt="" />
+                }
+              </div>
+            </div>
+          }
+          @if (catalogueLoading) {
+            <p class="leos-muted" aria-live="polite">Getting today’s specials ready…</p>
+          } @else {
+            <section class="leos-specials" aria-label="Specials">
+              @if (specialsCarousel.length) {
+                <h2 class="leos-specials__eyebrow">Today</h2>
+                <div
+                  class="leos-specials-carousel"
+                  role="list"
+                  aria-label="Current specials"
+                >
+                  @for (item of specialsCarousel; track item.id) {
+                    <article class="leos-specials-card" role="listitem">
+                      <div
+                        class="leos-specials-card__media"
+                        [attr.data-has-image]="item.imageUrl ? 'true' : 'false'"
+                      >
+                        @if (item.imageUrl) {
+                          <img [src]="item.imageUrl" alt="" />
+                        }
+                      </div>
+                      <div class="leos-specials-card__body">
+                        <h3 class="leos-specials-card__title">{{ item.label }}</h3>
+                        @if (item.description) {
+                          <p class="leos-specials-card__desc">{{ item.description }}</p>
+                        }
+                        <p class="leos-specials-card__price">
+                          {{ item.unitPrice | leosMoney }}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        class="leos-specials-card__add"
+                        (click)="addFromMenu(item)"
+                        [attr.aria-label]="'Add ' + item.label"
+                      >
+                        +
+                      </button>
+                    </article>
+                  }
+                </div>
+              } @else {
+                <p class="leos-muted leos-specials__empty">
+                  No specials on the board right now — here are favourites from the
+                  {{ terms.term('catalogue', 'menu').toLowerCase() }}.
+                </p>
+              }
+
+              @if (featuredSpecials.length) {
+                <h2 class="leos-specials__section">Most ordered</h2>
+                <div class="leos-menu-grid leos-menu-grid--hero" role="list">
+                  @for (item of featuredSpecials; track item.id) {
+                    <leos-menu-card
+                      [label]="item.label"
+                      [category]="item.category"
+                      [unitPrice]="item.unitPrice"
+                      [description]="item.description || ''"
+                      [imageUrl]="item.imageUrl || null"
+                      [showFoodImages]="showFoodImages"
+                      [quantity]="lineQty(item.id)"
+                      [requiresChoices]="hasChoices(item)"
+                      (add)="addFromMenu(item)"
+                      (quantityChange)="setMenuQty(item, $event)"
+                      (remove)="removeFromMenu(item)"
+                    />
+                  }
+                </div>
+              }
+            </section>
           }
         }
 
@@ -328,7 +465,7 @@ function equalShareState(
           }
         }
 
-        @if (phase === 'payment') {
+        @if (phase === 'payment' && allowPay) {
           @if (offline) {
             <div class="leos-offline-banner" role="status">You’re offline — pay when you’re back online.</div>
           }
@@ -362,6 +499,7 @@ function equalShareState(
               [visitLabel]="billVisitLabel"
               [showScope]="true"
               [allowTip]="allowTip"
+              [allowHelp]="allowHelp"
               [trustLine]="paymentTrustLine"
               [savedPaymentMethodStatus]="savedPaymentMethodStatus"
               [paymentMethodLabel]="paymentMethodLabel"
@@ -374,7 +512,6 @@ function equalShareState(
               (serviceHelp)="requestHelp('service')"
               (managerHelp)="requestHelp('manager')"
               (claimLine)="claimOneLine($event)"
-              (openPaymentMethods)="openPaymentMethodsPanel()"
             />
 
             @if (claimUndo) {
@@ -384,16 +521,6 @@ function equalShareState(
               </div>
             }
 
-            @if (paymentMethodsPanelOpen) {
-              <leos-guest-payment-methods-panel
-                [open]="true"
-                [savedPaymentMethodStatus]="savedPaymentMethodStatus"
-                (dismiss)="paymentMethodsPanelOpen = false"
-                (added)="onPaymentMethodAdded($event)"
-                (unlockedChange)="onPaymentMethodUnlockedChange($event)"
-                (labelChange)="onPaymentMethodLabelChange($event)"
-              />
-            }
           }
         }
 
@@ -408,8 +535,10 @@ function equalShareState(
                 We hope to see you again soon.
               }
             </p>
-            @if (lastOrderTotal > 0) {
-              <p class="leos-muted">Paid {{ lastOrderTotal | leosMoney: 'ZAR' }}</p>
+            @if (receiptPaidTotal > 0) {
+              <p class="leos-muted">Paid {{ receiptPaidTotal | leosMoney: state.currency }}</p>
+            } @else {
+              <p class="leos-muted">Settle with the team before you go.</p>
             }
             <p class="leos-muted" style="margin-top:0.75rem;">
               When you’re ready, {{ leavePrompt }} and return to the welcome screen.
@@ -439,12 +568,17 @@ function equalShareState(
         }
       }
 
-      @if (state.sessionId && phase === 'live' && balanceDue) {
+      @if (state.sessionId && phase === 'live' && allowPay && balanceDue) {
         <button primary type="button" class="leos-btn leos-btn--primary" (click)="openBill()">
           {{ livePayLabel }}
         </button>
       }
       @if (state.sessionId && phase === 'live' && !balanceDue && (lastOrderTotal > 0 || fulfilments.length)) {
+        <button primary type="button" class="leos-btn leos-btn--primary" (click)="phase = 'receipt'">
+          Finish
+        </button>
+      }
+      @if (state.sessionId && phase === 'live' && !allowPay && balanceDue) {
         <button primary type="button" class="leos-btn leos-btn--primary" (click)="phase = 'receipt'">
           Finish
         </button>
@@ -513,15 +647,16 @@ function equalShareState(
       }
       <leos-guest-tab-bar
         [active]="activeTab"
-        [leaveActive]="phase === 'leave'"
+        [showSpecials]="showSpecials"
+        [showPay]="allowPay"
+        [showHelp]="allowHelp"
         (tabSelect)="onTabSelect($event)"
         (help)="openHelpSheet()"
-        (leave)="requestLeave()"
       />
     </div>
 
     <leos-guest-help-sheet
-      [open]="helpSheetOpen"
+      [open]="helpSheetOpen && allowHelp"
       [busy]="helpBusy"
       [servicePending]="serviceHelpPending"
       [managerPending]="managerHelpPending"
@@ -566,6 +701,16 @@ export class GuestPageComponent implements OnInit, OnDestroy {
   phase: GuestPhase = 'browse';
   /** Tip Continuity — false until refresh; never flash tips when Setup Tips is off. */
   allowTip = false;
+  /** Pay Continuity — false until refresh; never flash Bill when Studio Pay is off. */
+  allowPay = false;
+  /** Call Staff Continuity — false until refresh; never flash Help when Call Staff is off. */
+  allowHelp = false;
+  /** Specials Continuity — Studio guestDesign.specials. */
+  showSpecials = false;
+  /** Menu half-moon brand — Identity toggle. */
+  menuBrandProgress = 0;
+  private menuBrandScrollBound = false;
+  private readonly onMenuBrandScroll = () => this.updateMenuBrandProgress();
   catalogue: CatalogueItem[] = [];
   catalogueLoading = false;
   cart: CartLine[] = [];
@@ -590,8 +735,11 @@ export class GuestPageComponent implements OnInit, OnDestroy {
   private claimFlashTimer?: ReturnType<typeof setTimeout>;
   private minePulseTimer?: ReturnType<typeof setTimeout>;
   private participantCount = 0;
+  tablePeople: string[] = [];
   /** One-shot: open bill preferring Mine when shares differ. */
   private preferMineScope = false;
+  /** Land on Specials once when Studio has Specials on for this visit. */
+  private preferSpecialsLanding = true;
   orderRecordedFlash = false;
   paymentMethodHint = 'You’ll confirm on a secure payment page if needed.';
   paymentMethodsPanelOpen = false;
@@ -600,9 +748,14 @@ export class GuestPageComponent implements OnInit, OnDestroy {
   awaitingPaymentConfirm = false;
   /** Continuity — calm moment after Mine pay while visit still open. */
   shareSettledMoment = false;
-  /** Set after Mine completePayment — refreshLive decides settle vs receipt. */
+  /** Set after payment request — refreshLive decides settle vs receipt. */
   private pendingMineSettleCheck = false;
+  /** Honest receipt — sum of completed payments only. */
+  receiptPaidTotal = 0;
+  /** Restore Stay from leave confirm. */
+  private phaseBeforeLeave: GuestPhase = 'browse';
   search = '';
+  searchOpen = false;
   categoryFilter = '';
   fulfilments: FulfilmentRow[] = [];
   timelineSteps: StatusTimelineStep[] = [];
@@ -734,16 +887,26 @@ export class GuestPageComponent implements OnInit, OnDestroy {
   }
 
   get categories(): string[] {
-    return [...new Set(this.catalogue.map((i) => i.category))].sort();
+    const base = menuWithoutSpecialsSurface(this.catalogue, this.showSpecials);
+    return [...new Set(base.map((i) => i.category))].sort();
   }
 
   get filteredCatalogue(): CatalogueItem[] {
     const q = this.search.trim().toLowerCase();
-    return this.catalogue.filter((i) => {
+    const base = menuWithoutSpecialsSurface(this.catalogue, this.showSpecials);
+    return base.filter((i) => {
       if (this.categoryFilter && i.category !== this.categoryFilter) return false;
       if (!q) return true;
       return i.label.toLowerCase().includes(q) || i.category.toLowerCase().includes(q);
     });
+  }
+
+  get specialsCarousel(): CatalogueItem[] {
+    return specialsCarouselItems(this.catalogue);
+  }
+
+  get featuredSpecials(): CatalogueItem[] {
+    return featuredMenuItems(this.catalogue);
   }
 
   /** Grouped menu for Browse confidence (sections when All). */
@@ -772,7 +935,29 @@ export class GuestPageComponent implements OnInit, OnDestroy {
 
   clearBrowseFilters() {
     this.search = '';
+    this.searchOpen = false;
     this.categoryFilter = '';
+  }
+
+  openBrowseSearch() {
+    this.searchOpen = true;
+    queueMicrotask(() => {
+      const el = document.querySelector(
+        '.leos-browse-search__input',
+      ) as HTMLInputElement | null;
+      el?.focus();
+    });
+  }
+
+  closeBrowseSearch() {
+    this.search = '';
+    this.searchOpen = false;
+  }
+
+  /** Browse yields vertical space to the catalogue — lead stays on other phases. */
+  get browseDenseLead(): string {
+    if (this.phase === 'browse' || this.phase === 'specials') return '';
+    return this.lead;
   }
 
   get cartCount(): number {
@@ -810,20 +995,32 @@ export class GuestPageComponent implements OnInit, OnDestroy {
 
   get activeTab(): GuestTabId {
     switch (this.phase) {
+      case 'specials':
+        return 'specials';
       case 'live':
       case 'receipt':
         return 'orders';
       case 'payment':
-        return 'bill';
+        return this.allowPay ? 'bill' : 'orders';
       default:
         return 'menu';
     }
+  }
+
+  /** Place confidence hero — same spoken form Kitchen sees. */
+  get placeSpoken(): string {
+    return guestPlaceSpoken(
+      this.terms.term('physicalContext', 'Table'),
+      this.state.physicalContextCode,
+    );
   }
 
   get purpose(): string {
     const txn = this.terms.term('transaction', 'order');
     const pay = this.terms.term('payment', 'bill');
     switch (this.phase) {
+      case 'specials':
+        return 'Specials';
       case 'cart':
         return `Your ${txn.toLowerCase()}`;
       case 'live':
@@ -856,6 +1053,32 @@ export class GuestPageComponent implements OnInit, OnDestroy {
     return `Hi ${name}!`;
   }
 
+  get showMenuBrand(): boolean {
+    return !!(this.menuBrand.enabled && this.state.sessionId);
+  }
+
+  get menuBrandColour(): string {
+    return this.menuBrand.brandColour || '#d7a14a';
+  }
+
+  get menuBrandCover(): string | null {
+    return safeGuestImageUrl(this.menuBrand.coverUrl);
+  }
+
+  get menuBrandLogo(): string | null {
+    return safeGuestImageUrl(this.menuBrand.logoUrl);
+  }
+
+  private get menuBrand() {
+    const ws = this.studio.readWorkspace();
+    return resolveMenuBrand(this.state.token, ws.experiences, {
+      enabled: this.state.menuBrandEnabled,
+      brandColour: this.state.brandColour,
+      logoUrl: '',
+      coverUrl: '',
+    });
+  }
+
   get paymentTrustLine(): string {
     const mine = this.mineRemaining;
     const visit = this.visitRemaining;
@@ -878,13 +1101,15 @@ export class GuestPageComponent implements OnInit, OnDestroy {
   get lead(): string {
     const txn = this.terms.term('transaction', 'order').toLowerCase();
     switch (this.phase) {
+      case 'specials':
+        return 'Today’s picks — add anything you like.';
       case 'cart':
         return 'Looks right? Place when you’re ready — the team will see it straight away.';
       case 'live':
         return this.isReady
           ? liveReadyLead(this.readyHint, this.balanceDue)
           : this.timelineGuidance ||
-              `We’ve got your ${txn} — updates appear here as the team progresses.`;
+              `We’ve got your ${txn} — we’ll let you know when it’s ready.`;
       case 'payment':
         if (this.shareSettledMoment) {
           return (this.visitRemaining ?? 0) > 0.001
@@ -922,6 +1147,10 @@ export class GuestPageComponent implements OnInit, OnDestroy {
   }
 
   onTabSelect(tab: GuestTabId) {
+    if (tab === 'specials') {
+      this.phase = 'specials';
+      return;
+    }
     if (tab === 'menu') {
       this.phase = 'browse';
       return;
@@ -935,66 +1164,37 @@ export class GuestPageComponent implements OnInit, OnDestroy {
       return;
     }
     if (tab === 'bill') {
+      if (!this.allowPay) return;
       this.openBill();
     }
   }
 
   requestLeave() {
+    this.phaseBeforeLeave = this.phase;
     this.phase = 'leave';
   }
 
   stayFromLeave() {
-    this.phase =
-      this.lastOrderTotal > 0 || this.fulfilments.length ? 'receipt' : 'browse';
+    this.phase = this.phaseBeforeLeave === 'leave' ? 'live' : this.phaseBeforeLeave;
   }
 
   openHelpSheet() {
-    if (!this.state.sessionId) return;
+    this.refreshAllowHelp();
+    if (!this.allowHelp || !this.state.sessionId) return;
     this.helpSheetOpen = true;
     this.refreshHelpStatus();
-  }
-
-  openPaymentMethodsPanel() {
-    this.paymentMethodsPanelOpen = true;
-  }
-
-  onPaymentMethodAdded(label?: string) {
-    this.savedPaymentMethodStatus = 'ready';
-    if (label?.trim()) this.paymentMethodLabel = label.trim();
-    this.paymentMethodsPanelOpen = true;
-  }
-
-  onPaymentMethodUnlockedChange(unlocked: boolean) {
-    this.savedPaymentMethodStatus = unlocked ? 'ready' : 'locked';
-  }
-
-  onPaymentMethodLabelChange(label: string) {
-    if (label?.trim()) this.paymentMethodLabel = label.trim();
-  }
-
-  private restoreVisitPaymentMethod() {
-    try {
-      const raw = sessionStorage.getItem('leos.guest.payMethod');
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as { brand?: string; last4?: string };
-      const brand = (parsed.brand || 'Card').trim() || 'Card';
-      const digits = (parsed.last4 || '••••').replace(/\D/g, '').slice(-4) || '••••';
-      this.paymentMethodLabel = `${brand} · •••• ${digits}`;
-      if (this.savedPaymentMethodStatus === 'none') {
-        this.savedPaymentMethodStatus = 'ready';
-      }
-    } catch {
-      /* ignore */
-    }
   }
 
   ngOnInit() {
     this.state.restore();
     this.refreshAllowTip();
-    this.restoreVisitPaymentMethod();
+    this.refreshAllowPay();
+    this.refreshAllowHelp();
+    this.refreshShowSpecials();
     this.offline = typeof navigator !== 'undefined' && !navigator.onLine;
     window.addEventListener('online', this.onlineHandler);
     window.addEventListener('offline', this.offlineHandler);
+    this.bindMenuBrandScroll();
     const paymentResult = this.route.snapshot.queryParamMap.get('payment');
     const welcomeBack = this.route.snapshot.queryParamMap.get('welcome') === 'back';
     const welcomeStill = this.route.snapshot.queryParamMap.get('welcome') === 'still';
@@ -1025,11 +1225,22 @@ export class GuestPageComponent implements OnInit, OnDestroy {
       this.showJoined();
     }
     if (this.state.sessionId) {
+      this.restoreGuestPersist();
       this.onboarding.noteOpenSession(this.state.sessionId);
       this.refreshLive();
       this.bindLiveSocket();
       this.startLivePoll();
-      this.api.getSession(this.state.sessionId).subscribe({
+      this.api.getSession(this.state.sessionId, this.state.participantSecret).subscribe({
+        next: (session) => {
+          if (session.guestDesign && typeof session.guestDesign === 'object') {
+            this.state.guestDesign = session.guestDesign;
+            this.state.persist();
+          }
+          this.refreshAllowPay();
+          this.refreshAllowTip();
+          this.refreshAllowHelp();
+          this.refreshShowSpecials();
+        },
         error: () => this.resetStaleSession(),
       });
     }
@@ -1117,6 +1328,29 @@ export class GuestPageComponent implements OnInit, OnDestroy {
     this.unsubPlatform = undefined;
     window.removeEventListener('online', this.onlineHandler);
     window.removeEventListener('offline', this.offlineHandler);
+    this.unbindMenuBrandScroll();
+  }
+
+  private bindMenuBrandScroll() {
+    if (this.menuBrandScrollBound || typeof window === 'undefined') return;
+    window.addEventListener('scroll', this.onMenuBrandScroll, { passive: true });
+    this.menuBrandScrollBound = true;
+    this.updateMenuBrandProgress();
+  }
+
+  private unbindMenuBrandScroll() {
+    if (!this.menuBrandScrollBound || typeof window === 'undefined') return;
+    window.removeEventListener('scroll', this.onMenuBrandScroll);
+    this.menuBrandScrollBound = false;
+  }
+
+  private updateMenuBrandProgress() {
+    if (!this.showMenuBrand || (this.phase !== 'browse' && this.phase !== 'specials')) {
+      this.menuBrandProgress = 0;
+      return;
+    }
+    const y = window.scrollY || document.documentElement.scrollTop || 0;
+    this.menuBrandProgress = Math.min(1, Math.max(0, y / 140));
   }
 
   private onConnectivityChange(online: boolean) {
@@ -1136,16 +1370,17 @@ export class GuestPageComponent implements OnInit, OnDestroy {
           participantId?: string;
           lines: Array<{
             catalogueItemId: string;
-            label: string;
             quantity: number;
-            unitPrice: number;
-            routingTags: string[];
+            notes?: string;
+            selectionsJson?: unknown;
           }>;
         };
         await firstValueFrom(
           this.api.createTransaction({
-            ...payload,
+            sessionId: payload.sessionId,
             participantId: payload.participantId || this.state.participantId || undefined,
+            participantSecret: this.state.participantSecret,
+            lines: payload.lines,
           }),
         );
         return;
@@ -1172,7 +1407,7 @@ export class GuestPageComponent implements OnInit, OnDestroy {
   private bindLiveSocket() {
     if (!this.state.sessionId || !this.state.organisationId) return;
     this.unsubPlatform?.();
-    this.api.ensureSocket(this.state.organisationId, this.state.sessionId);
+    this.api.ensureSocket(this.state.organisationId, this.state.sessionId, this.state.participantSecret);
     this.unsubPlatform = this.api.onPlatformEvent((envelope) => this.onLiveEvent(envelope));
   }
 
@@ -1180,6 +1415,21 @@ export class GuestPageComponent implements OnInit, OnDestroy {
     const name = envelope?.eventName ?? '';
     const sessionInPayload = envelope?.payload?.['sessionId'] as string | undefined;
     if (sessionInPayload && sessionInPayload !== this.state.sessionId) return;
+
+    if (name === 'ParticipantJoined') {
+      const joinedName = (envelope?.payload?.['displayName'] as string | undefined)?.trim();
+      const myName = (this.state.displayName || '').trim();
+      if (joinedName && joinedName.toLowerCase() !== myName.toLowerCase()) {
+        const first = joinedName.split(/\s+/)[0];
+        const notice = `${first} joined`;
+        this.message = notice;
+        setTimeout(() => {
+          if (this.message === notice) this.message = '';
+        }, 4200);
+      }
+      this.refreshLive();
+      return;
+    }
 
     const refreshOn = new Set([
       'FulfilmentCreated',
@@ -1391,7 +1641,12 @@ export class GuestPageComponent implements OnInit, OnDestroy {
       offlineQueue.enqueue('transaction.create', {
         sessionId: this.state.sessionId,
         participantId: this.state.participantId || undefined,
-        lines: this.cart,
+        lines: this.cart.map((line) => ({
+          catalogueItemId: line.catalogueItemId,
+          quantity: line.quantity,
+          notes: line.specialRequest?.trim() || undefined,
+          selectionsJson: line.selections ?? undefined,
+        })),
       });
       this.message = `Offline — ${this.terms.term('transaction', 'order')} queued for sync`;
       this.lastOrderTotal = this.cartTotal;
@@ -1413,7 +1668,13 @@ export class GuestPageComponent implements OnInit, OnDestroy {
       .createTransaction({
         sessionId: this.state.sessionId,
         participantId: this.state.participantId || undefined,
-        lines: this.cart,
+        participantSecret: this.state.participantSecret,
+        lines: this.cart.map((line) => ({
+          catalogueItemId: line.catalogueItemId,
+          quantity: line.quantity,
+          notes: line.specialRequest?.trim() || undefined,
+          selectionsJson: line.selections ?? undefined,
+        })),
       })
       .pipe(timeout(20000))
       .subscribe({
@@ -1421,6 +1682,7 @@ export class GuestPageComponent implements OnInit, OnDestroy {
         this.message = `${this.terms.term('transaction', 'Order')} received — the team can see it`;
         this.lastOrderTotal = total;
         this.cart = [];
+        this.persistGuestState();
         this.phase = 'live';
         this.submitting = false;
         this.orderRecordedFlash = true;
@@ -1449,10 +1711,24 @@ export class GuestPageComponent implements OnInit, OnDestroy {
       this.offline = true;
       return;
     }
-    this.api.getSession(this.state.sessionId).subscribe({
+    this.api.getSession(this.state.sessionId, this.state.participantSecret).subscribe({
       next: (session) => {
         this.offline = false;
         this.liveError = '';
+        if (typeof session.menuBrandEnabled === 'boolean') {
+          this.state.menuBrandEnabled = session.menuBrandEnabled;
+          this.state.brandColour = session.brandColour || this.state.brandColour || '#d7a14a';
+          if (session.venueName) this.state.venueName = session.venueName;
+          this.state.persist();
+        }
+        if (session.guestDesign && typeof session.guestDesign === 'object') {
+          this.state.guestDesign = session.guestDesign;
+          this.state.persist();
+        }
+        this.refreshAllowPay();
+        this.refreshAllowTip();
+        this.refreshAllowHelp();
+        this.refreshShowSpecials();
         const lineLabels = new Map<string, string>();
         let orderTotal = 0;
         let openTotal = 0;
@@ -1464,10 +1740,18 @@ export class GuestPageComponent implements OnInit, OnDestroy {
         const share = equalShareState(guests, new Set(), myPart);
         const multiGuest = share.distinct >= 2;
         const participantFirstName = new Map<string, string>();
+        const peopleSeen = new Set<string>();
+        const peopleNames: string[] = [];
         for (const p of session.participants ?? []) {
+          if (p.role && p.role !== 'guest') continue;
           const first = p.displayName?.trim().split(/\s+/)[0];
           if (first) participantFirstName.set(p.id, first);
+          const key = guestShareKey(p);
+          if (!first || peopleSeen.has(key)) continue;
+          peopleSeen.add(key);
+          peopleNames.push(first);
         }
+        this.tablePeople = peopleNames;
         for (const tx of session.transactions ?? []) {
           orderTotal += Number(tx.total) || 0;
           if (tx.status === 'settled') continue;
@@ -1553,6 +1837,7 @@ export class GuestPageComponent implements OnInit, OnDestroy {
             (sum, p) => sum + Math.max(0, Number(p.amount) - Number(p.tipAmount ?? 0)),
             0,
           );
+        this.receiptPaidTotal = paidToward;
         const visitOpen = Math.max(0, Math.round((openTotal - paidToward) * 100) / 100);
         const mineOpen = Math.max(
           0,
@@ -1692,6 +1977,12 @@ export class GuestPageComponent implements OnInit, OnDestroy {
 
   openBill() {
     this.refreshAllowTip();
+    this.refreshAllowPay();
+    this.refreshShowSpecials();
+    if (!this.allowPay) {
+      this.phase = 'live';
+      return;
+    }
     if (!this.billLines.length && this.cart.length) {
       this.billLines = this.cart.map((l) => ({
         label: l.choiceSummary ? `${l.label} · ${l.choiceSummary}` : l.label,
@@ -1716,7 +2007,42 @@ export class GuestPageComponent implements OnInit, OnDestroy {
   /** Studio Tips → Guest Bill (Blueprint tip example · No Drift). */
   private refreshAllowTip() {
     const ws = this.studio.readWorkspace();
-    this.allowTip = resolveAllowTip(this.state.token, ws.experiences);
+    const sessionDesign = this.state.guestDesign as Partial<import('../studio/guest-experience-design').GuestExperienceDesign> | null;
+    this.allowTip = resolveAllowTip(this.state.token, ws.experiences, sessionDesign);
+  }
+
+  /** Studio Pay → Guest Bill / dock (Pay Continuity · No Drift). */
+  private refreshAllowPay() {
+    const ws = this.studio.readWorkspace();
+    const sessionDesign = this.state.guestDesign as Partial<import('../studio/guest-experience-design').GuestExperienceDesign> | null;
+    const next = resolveAllowPay(this.state.token, ws.experiences, sessionDesign);
+    this.allowPay = next;
+    if (!next && this.phase === 'payment') {
+      this.phase = 'live';
+    }
+  }
+
+  /** Studio Call Staff → Guest Help (Help Continuity · No Drift). */
+  private refreshAllowHelp() {
+    const ws = this.studio.readWorkspace();
+    const sessionDesign = this.state.guestDesign as Partial<import('../studio/guest-experience-design').GuestExperienceDesign> | null;
+    this.allowHelp = resolveAllowHelp(this.state.token, ws.experiences, sessionDesign);
+    if (!this.allowHelp) this.helpSheetOpen = false;
+  }
+
+  /** Studio Specials → Guest Specials tab (add/remove without new architecture). */
+  private refreshShowSpecials() {
+    const ws = this.studio.readWorkspace();
+    const sessionDesign = this.state.guestDesign as Partial<import('../studio/guest-experience-design').GuestExperienceDesign> | null;
+    const next = resolveShowSpecials(this.state.token, ws.experiences, sessionDesign);
+    this.showSpecials = next;
+    if (!next && this.phase === 'specials') {
+      this.phase = 'browse';
+    }
+    if (next && this.phase === 'browse' && this.preferSpecialsLanding) {
+      this.phase = 'specials';
+      this.preferSpecialsLanding = false;
+    }
   }
 
   /** Inline claim — one tap, item becomes yours; undo toast + Mine pulse (no extra screens). */
@@ -1729,6 +2055,7 @@ export class GuestPageComponent implements OnInit, OnDestroy {
       .claimLines(this.state.sessionId, {
         participantId: this.state.participantId,
         lineIds: [lineId],
+        participantSecret: this.state.participantSecret,
       })
       .subscribe({
         next: (res) => {
@@ -1759,6 +2086,7 @@ export class GuestPageComponent implements OnInit, OnDestroy {
       .claimLines(this.state.sessionId, {
         participantId: previousParticipantId,
         lineIds: [lineId],
+        participantSecret: this.state.participantSecret,
       })
       .subscribe({
         next: () => {
@@ -1829,7 +2157,8 @@ export class GuestPageComponent implements OnInit, OnDestroy {
   }
 
   requestHelp(kind: GuestHelpKind) {
-    if (!this.state.sessionId || this.helpBusy) return;
+    this.refreshAllowHelp();
+    if (!this.allowHelp || !this.state.sessionId || this.helpBusy) return;
     this.helpBusy = true;
     this.error = '';
     const message =
@@ -1870,12 +2199,15 @@ export class GuestPageComponent implements OnInit, OnDestroy {
     if (this.paying || this.offline) return;
     this.paying = true;
     const tipAmount = this.bill?.tipAmount ?? 0;
+    const tipPercent = this.bill?.customTip ? undefined : this.bill?.tipPercent;
     const scope = this.bill?.scope ?? 'visit';
     this.api
       .requestPayment(this.state.sessionId, {
-        tipAmount,
+        tipAmount: this.bill?.customTip ? tipAmount : undefined,
+        tipPercent,
         scope,
         participantId: this.state.participantId || undefined,
+        participantSecret: this.state.participantSecret,
       })
       .subscribe({
       next: (res) => {
@@ -1886,37 +2218,70 @@ export class GuestPageComponent implements OnInit, OnDestroy {
           return;
         }
         this.paymentMethodHint = 'Confirming your payment…';
-        this.api.completePayment(res.paymentId).subscribe({
-          next: () => {
-            this.paying = false;
-            if (scope === 'visit') {
-              this.message = 'You’re all set';
-              this.balanceDue = false;
-              this.shareSettledMoment = false;
-              this.pendingMineSettleCheck = false;
-              this.phase = 'receipt';
-              this.refreshLive();
-              return;
-            }
-            // Mine or equal share — settle moment when visit still open.
-            this.pendingMineSettleCheck = true;
-            this.refreshLive();
-          },
-          error: (err) => {
-            this.paying = false;
-            this.pendingMineSettleCheck = false;
-            if (this.isStale(err)) this.resetStaleSession();
-            else
-              this.paymentError =
-                'Payment didn’t go through — nothing was taken. You can try again.';
-          },
-        });
+        this.awaitingPaymentConfirm = true;
+        this.pollPaymentUntilSettled(res.paymentId, scope);
       },
       error: (err) => {
         this.paying = false;
         this.pendingMineSettleCheck = false;
         if (this.isStale(err)) this.resetStaleSession();
         else this.paymentError = 'Couldn’t start payment — try again when you’re ready.';
+      },
+    });
+  }
+
+  private pollPaymentUntilSettled(
+    paymentId: string,
+    scope: 'visit' | 'mine' | 'equal',
+    attempt = 0,
+  ) {
+    if (!this.state.sessionId) {
+      this.paying = false;
+      return;
+    }
+    this.api.getSession(this.state.sessionId, this.state.participantSecret).subscribe({
+      next: (session) => {
+        const payment = session.payments?.find((p) => p.id === paymentId);
+        const status = payment?.status ?? '';
+        if (status === 'completed' || status === 'settled') {
+          this.paying = false;
+          this.awaitingPaymentConfirm = false;
+          if (scope === 'visit') {
+            this.message = 'You’re all set';
+            this.balanceDue = false;
+            this.shareSettledMoment = false;
+            this.pendingMineSettleCheck = false;
+            this.phase = 'receipt';
+            this.refreshLive();
+            return;
+          }
+          this.pendingMineSettleCheck = true;
+          this.refreshLive();
+          return;
+        }
+        if (status === 'failed') {
+          this.paying = false;
+          this.awaitingPaymentConfirm = false;
+          this.pendingMineSettleCheck = false;
+          this.paymentError =
+            'Payment didn’t go through — nothing was taken. You can try again.';
+          return;
+        }
+        if (attempt >= 30) {
+          this.paying = false;
+          this.paymentError =
+            'Waiting for payment confirmation — ask the team if this takes a while.';
+          return;
+        }
+        setTimeout(() => this.pollPaymentUntilSettled(paymentId, scope, attempt + 1), 2000);
+      },
+      error: () => {
+        if (attempt >= 30) {
+          this.paying = false;
+          this.paymentError = 'Couldn’t confirm payment — try again.';
+          return;
+        }
+        setTimeout(() => this.pollPaymentUntilSettled(paymentId, scope, attempt + 1), 2000);
       },
     });
   }
@@ -1947,21 +2312,59 @@ export class GuestPageComponent implements OnInit, OnDestroy {
       this.state.profileLabel ||
       this.onboarding.read().lastVenueLabel ||
       '';
-    this.message = 'Ending your visit…';
-    this.api.closeSession(this.state.sessionId).subscribe({
-      next: () => {
+    if (!this.state.participantId) {
+      this.error = 'Couldn’t leave just yet — try again';
+      return;
+    }
+    this.message = 'Leaving your seat…';
+    this.api.leaveSession(this.state.sessionId, this.state.participantId, this.state.participantSecret).subscribe({
+      next: (res) => {
         this.onboarding.recordVisit(venue);
         this.onboarding.clearReturnGreetingFlag();
+        this.clearGuestPersist();
         this.state.clear();
         this.message = '';
         this.error = '';
         this.serviceHelpPending = false;
         this.managerHelpPending = false;
-        // Complete stays Complete — Welcome back only on a later scan.
-        void this.router.navigate(['/entry'], { queryParams: { done: '1' } });
+        void this.router.navigate(['/entry'], {
+          queryParams: res.closed ? { done: '1' } : {},
+        });
       },
       error: () => (this.error = 'Couldn’t leave just yet — try again'),
     });
+  }
+
+  private guestPersistKey() {
+    return `leos.guest.visit.${this.state.sessionId}`;
+  }
+
+  private persistGuestState() {
+    if (!this.state.sessionId || typeof sessionStorage === 'undefined') return;
+    sessionStorage.setItem(
+      this.guestPersistKey(),
+      JSON.stringify({ cart: this.cart, phase: this.phase }),
+    );
+  }
+
+  private restoreGuestPersist() {
+    if (typeof sessionStorage === 'undefined') return;
+    try {
+      const raw = sessionStorage.getItem(this.guestPersistKey());
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as { cart?: CartLine[]; phase?: GuestPhase };
+      if (Array.isArray(parsed.cart)) this.cart = parsed.cart;
+      if (parsed.phase && parsed.phase !== 'leave' && parsed.phase !== 'receipt') {
+        this.phase = parsed.phase;
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  private clearGuestPersist() {
+    if (typeof sessionStorage === 'undefined' || !this.state.sessionId) return;
+    sessionStorage.removeItem(this.guestPersistKey());
   }
 
   private submitGatewayCheckout(checkout: {

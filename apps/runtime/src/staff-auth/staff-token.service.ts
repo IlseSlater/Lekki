@@ -136,8 +136,17 @@ export class StaffTokenService {
   }
 
   async assertActive(claims: StaffTokenClaims) {
-    const row = await this.prisma.staffSession.findUnique({ where: { id: claims.sid } });
+    const row = await this.prisma.staffSession.findUnique({
+      where: { id: claims.sid },
+      include: { staffMember: { select: { active: true, organisationId: true } } },
+    });
     if (!row || row.revokedAt) throw new UnauthorizedException('Staff session ended');
+    if (row.staffMemberId !== claims.sub || row.organisationId !== claims.org) {
+      throw new UnauthorizedException('Staff session mismatch');
+    }
+    if (row.staffMember && !row.staffMember.active) {
+      throw new UnauthorizedException('Staff account inactive');
+    }
     void this.touch(claims.sid);
     return claims;
   }

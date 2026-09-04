@@ -1,22 +1,22 @@
-/* LEKKI Visual Language v2 — Studio shares the same warm gold system.
-   Design System v1 tokens — never dark mode.
+/* LEKKI Visual Language — Studio · Surgical White & Rose-Gold Edition.
+   Design System v1 — never dark mode · never blue interactive chroma.
 */
 
 .leos-studio-shell {
-  --studio-bg: #faf7f2;
-  --studio-surface: #ffffff;
-  --studio-surface-secondary: #f4efe8;
-  --studio-ink: #1b2230;
-  --studio-ink-secondary: #6b7280;
-  --studio-ink-tertiary: #8f96a3;
-  --studio-line: #e7e2db;
-  --studio-accent: #d7a14a;
-  --studio-accent-hover: #c98f33;
-  --studio-accent-soft: rgba(215, 161, 74, 0.14);
-  --studio-success: #4f8a6b;
-  --studio-success-soft: rgba(79, 138, 107, 0.12);
+  --studio-bg: var(--leos-warm-sand, #ffffff);
+  --studio-surface: var(--leos-surface, #ffffff);
+  --studio-surface-secondary: var(--leos-surface-secondary, #f9f8f6);
+  --studio-ink: var(--leos-ink, #0f172a);
+  --studio-ink-secondary: var(--leos-ink-secondary, #64748b);
+  --studio-ink-tertiary: var(--leos-ink-tertiary, #94a3b8);
+  --studio-line: var(--leos-border, #eae6e1);
+  --studio-accent: var(--leos-gold, #d7a14a);
+  --studio-accent-hover: var(--leos-gold-hover, #c48f38);
+  --studio-accent-soft: var(--leos-gold-soft, rgba(215, 161, 74, 0.12));
+  --studio-success: var(--leos-success, #4f8a6b);
+  --studio-success-soft: var(--leos-success-bg, rgba(79, 138, 107, 0.12));
   --studio-radius: 16px;
-  --studio-radius-lg: 20px;
+  --studio-radius-lg: 24px;
   --studio-pad-outer: 48px;
   --studio-pad-section: 40px;
   --studio-pad-card: 32px;
@@ -31,21 +31,30 @@
   --studio-duration-settle: 360ms;
   --studio-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --studio-ease-soft: cubic-bezier(0.33, 1, 0.68, 1);
-  --studio-shadow: 0 1px 3px rgba(45, 30, 15, 0.08);
-  --studio-shadow-device: 0 4px 12px rgba(45, 30, 15, 0.1);
-  --studio-shadow-hover: 0 4px 12px rgba(45, 30, 15, 0.12);
-  --studio-font: 'Sora', system-ui, -apple-system, sans-serif;
+  --studio-shadow: var(--leos-shadow-card, 0 1px 3px rgba(15, 23, 42, 0.05));
+  --studio-shadow-device: 0 8px 24px rgba(15, 23, 42, 0.08);
+  --studio-shadow-hover: var(--leos-shadow-hover, 0 8px 24px rgba(15, 23, 42, 0.08));
+  --studio-font: var(--leos-font-sans, 'Sora', system-ui, -apple-system, sans-serif);
+
+  --studio-nav-width: 13.75rem;
+  --studio-nav-width-collapsed: 4.5rem;
+  --studio-story-width: 14rem;
 
   min-height: 100dvh;
   display: flex;
-  flex-direction: column;
-  background: var(--studio-bg);
+  flex-direction: row;
+  align-items: stretch;
+  background: transparent;
   color: var(--studio-ink);
   font-family: var(--studio-font);
   -webkit-font-smoothing: antialiased;
 }
 
-/* Permanent frame — no traditional sidebar (Design System v1) */
+.leos-studio-shell[data-nav-collapsed='true'] {
+  --studio-nav-width: var(--studio-nav-width-collapsed);
+}
+
+/* Permanent frame — left mode rail + main craft surface */
 .leos-studio-shell__main {
   flex: 1;
   min-width: 0;
@@ -56,8 +65,21 @@
 
 .leos-studio-shell:not([data-setup-engine='true']) .leos-studio-shell__main {
   max-width: calc(var(--studio-studio-width) + var(--studio-pad-outer) * 2);
-  margin: 0 auto;
+  margin: 1.25rem auto;
   padding: var(--studio-pad-outer);
+  background: color-mix(in srgb, var(--studio-surface) 90%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: var(--studio-radius-lg);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
+}
+
+/* Team — fill craft surface (people + editor rail, no dead right gutter) */
+.leos-studio-shell[data-mode='team']:not([data-setup-engine='true']) .leos-studio-shell__main {
+  max-width: none;
+  width: auto;
+  margin: 1.25rem;
+  padding: var(--studio-pad-outer) clamp(1.25rem, 3vw, var(--studio-pad-outer));
 }
 
 .leos-studio-shell[data-setup-engine='true'] .leos-studio-shell__main,
@@ -69,78 +91,210 @@
 
 .leos-studio-shell[data-pre-engine='true'] .leos-studio-shell__main {
   max-width: calc(var(--studio-studio-width) + var(--studio-pad-outer) * 2);
-  margin: 0 auto;
+  margin: 1.25rem auto;
   padding: var(--studio-pad-outer);
+  color: #fff;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.12), rgba(18, 18, 18, 0.82));
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 1.75rem;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
 }
 
-.leos-studio-shell__topbar {
+.leos-studio-shell[data-setup-engine='true'] .studio-ws__studio .leos-screen {
+  padding: 1.35rem 1.35rem 1.5rem;
+  color: var(--studio-ink);
+  background: #fff;
+  border: 1px solid var(--studio-line, #eae6e1);
+  border-radius: 1.5rem;
+  box-shadow: 0 1px 2px rgba(27, 34, 48, 0.04);
+}
+
+.leos-studio-shell[data-setup-engine='true'] .leos-card {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+}
+
+.leos-studio-shell[data-setup-engine='true'] .leos-card:hover {
+  box-shadow: none;
+  border: 0;
+}
+
+.leos-studio-shell[data-setup-engine='true'] .leos-screen__footer {
+  background: #fff;
+  border-top-color: var(--studio-line, #eae6e1);
+}
+
+.leos-studio-shell[data-pre-engine='true'] .leos-screen__purpose,
+.leos-studio-shell[data-pre-engine='true'] .welcome-back__venue {
+  color: #fff;
+}
+
+.leos-studio-shell[data-pre-engine='true'] .leos-screen__lead,
+.leos-studio-shell[data-pre-engine='true'] .leos-muted,
+.leos-studio-shell[data-pre-engine='true'] .welcome-back__greeting,
+.leos-studio-shell[data-pre-engine='true'] .welcome-back__ready {
+  color: rgba(255, 255, 255, 0.58);
+}
+
+.leos-studio-shell[data-pre-engine='true'] .leos-card {
+  background: rgba(255, 255, 255, 0.1);
+  border: 0;
+  box-shadow: none;
+}
+
+.leos-studio-shell[data-pre-engine='true'] .leos-card:hover {
+  box-shadow: none;
+  border: 0;
+}
+
+.leos-studio-shell[data-pre-engine='true'] .leos-studio-steps,
+.leos-studio-shell[data-pre-engine='true'] .welcome-back__list li {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.leos-studio-shell[data-pre-engine='true'] .welcome-back__list li {
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+.leos-studio-shell[data-pre-engine='true'] .leos-screen__footer {
+  border-top-color: rgba(255, 255, 255, 0.1);
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.leos-studio-shell[data-pre-engine='true'] .leos-btn--secondary {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.62);
+  border: 0;
+}
+
+.leos-studio-shell[data-pre-engine='true'] .leos-btn--secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border: 0;
+}
+
+.leos-studio-shell__nav {
+  flex: 0 0 var(--studio-nav-width);
+  width: var(--studio-nav-width);
+  box-sizing: border-box;
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem 1.5rem;
-  padding: 0.85rem var(--studio-pad-outer);
-  border-bottom: 1px solid var(--studio-line);
-  background: var(--studio-surface);
+  flex-direction: column;
+  gap: 1.25rem;
+  min-height: 100dvh;
+  padding: 1.15rem 0.65rem 1.1rem;
+  color: #fff;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.12), rgba(18, 18, 18, 0.82));
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
   position: sticky;
   top: 0;
+  align-self: flex-start;
   z-index: 20;
-  box-shadow: var(--studio-shadow);
+  transition: width var(--studio-duration) var(--studio-ease), flex-basis var(--studio-duration) var(--studio-ease);
 }
 
-.leos-studio-shell__topbar-left {
+.leos-studio-shell__nav-head {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 1.25rem 2rem;
+  justify-content: space-between;
+  gap: 0.35rem;
+  min-height: 2.5rem;
+  padding: 0 0.2rem;
 }
 
-.leos-studio-shell__topbar .leos-studio-shell__modes {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.15rem;
+.leos-studio-shell__nav-toggle {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
   margin: 0;
   padding: 0;
   border: none;
-}
-
-.leos-studio-shell__topbar .leos-studio-shell__modes a {
-  padding: 0.45rem 0.85rem;
-  border-radius: 0;
-  font-size: 0.8125rem;
-  font-weight: 550;
-  color: var(--studio-ink-tertiary);
-  text-decoration: none;
+  border-radius: 8px;
   background: transparent;
-  box-shadow: none;
-  transition: color var(--studio-duration-fast) var(--studio-ease);
+  color: rgba(255, 255, 255, 0.62);
+  cursor: pointer;
 }
 
-.leos-studio-shell__topbar .leos-studio-shell__modes a:hover {
-  color: var(--studio-ink);
-  background: transparent;
+.leos-studio-shell__nav-toggle:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
 }
 
-.leos-studio-shell__topbar .leos-studio-shell__modes a.active {
-  background: transparent;
-  color: var(--studio-ink);
-  font-weight: 650;
-  box-shadow: inset 0 -2px 0 var(--studio-accent);
-  border-radius: 0;
-  padding-bottom: 0.35rem;
+.leos-studio-shell__modes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0;
+  border: none;
+  flex: 1;
 }
 
-.leos-studio-shell__topbar .leos-studio-shell__modes a.leos-studio-shell__mode--quiet {
-  font-weight: 500;
-  opacity: 0.85;
-}
-
-.leos-studio-shell__topbar-right {
+.leos-studio-shell__modes a,
+.leos-studio-shell__signout {
   display: flex;
   align-items: center;
-  gap: 0.85rem;
+  gap: 0.7rem;
+  min-height: 2.5rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 550;
+  color: rgba(255, 255, 255, 0.62);
+  text-decoration: none;
+  background: transparent;
+  transition:
+    color var(--studio-duration-fast) var(--studio-ease),
+    background var(--studio-duration-fast) var(--studio-ease);
+}
+
+.leos-studio-shell__modes a:hover,
+.leos-studio-shell__signout:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.leos-studio-shell__modes a.active {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-weight: 650;
+  box-shadow: none;
+}
+
+.leos-studio-shell__modes a.leos-studio-shell__mode--quiet {
+  font-weight: 500;
+  opacity: 0.9;
+}
+
+.leos-studio-shell__mode-icon {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex: 0 0 auto;
+  display: block;
+}
+
+.leos-studio-shell__mode-label {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.leos-studio-shell__nav-foot {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.5rem;
 }
 
 .leos-studio-shell__live-pill {
@@ -148,13 +302,13 @@
   align-items: center;
   gap: 0.45rem;
   margin: 0;
-  padding: 0.4rem 0.85rem;
-  border-radius: 999px;
-  border: 1px solid var(--studio-line);
-  background: var(--studio-bg);
-  font-size: 0.75rem;
+  padding: 0.45rem 0.7rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 0.72rem;
   font-weight: 650;
-  color: var(--studio-ink);
+  color: #fff;
 }
 
 .leos-studio-shell__live-dot {
@@ -163,52 +317,48 @@
   border-radius: 999px;
   background: var(--studio-success);
   box-shadow: 0 0 0 3px var(--studio-success-soft);
+  flex: 0 0 auto;
 }
 
 .leos-studio-shell__venue-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
   margin: 0;
-  padding: 0.35rem 0.75rem;
-  border-radius: 999px;
-  border: 1px solid var(--studio-line);
-  background: var(--studio-bg);
+  padding: 0.55rem 0.7rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.1);
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--studio-ink);
-  max-width: 14rem;
+  color: #fff;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.leos-studio-shell__venue-name {
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .leos-studio-shell__venue-state {
-  color: var(--studio-ink-tertiary);
+  color: rgba(255, 255, 255, 0.45);
   font-weight: 550;
-}
-
-.leos-studio-shell__topbar .leos-studio-shell__signout {
-  margin: 0;
-  padding: 0.35rem 0.5rem;
-  border: none;
-  background: transparent;
-  font-size: 0.8125rem;
-  color: var(--studio-ink-secondary);
-  cursor: pointer;
-  font-family: inherit;
-}
-
-.leos-studio-shell__topbar .leos-studio-shell__signout:hover {
-  color: var(--studio-ink);
+  font-size: 0.7rem;
 }
 
 .leos-studio-shell__brand {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
+  gap: 0.55rem;
+  min-width: 0;
   text-decoration: none;
   color: inherit;
+  padding: 0.1rem 0.25rem;
+  flex: 1;
 }
 
 .leos-studio-shell__logo {
@@ -224,29 +374,168 @@
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--studio-ink);
-}
-
-/* Legacy aside removed from permanent frame — keep inert if referenced */
-.leos-studio-shell__aside {
-  display: none;
+  color: #fff;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .leos-studio-shell__signout {
-  margin-top: 0;
+  margin: 0;
   border: 0;
   background: transparent;
-  padding: 0;
   font: inherit;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--studio-ink-secondary);
   cursor: pointer;
   text-align: left;
+  font-family: inherit;
+  width: 100%;
 }
 
 .leos-studio-shell__signout:hover {
-  color: var(--studio-ink);
+  color: #fff;
+}
+
+/* Collapsed: icons stay, labels tuck away */
+.leos-studio-shell[data-nav-collapsed='true'] .leos-studio-shell__nav {
+  padding-left: 0.55rem;
+  padding-right: 0.55rem;
+  align-items: center;
+}
+
+.leos-studio-shell[data-nav-collapsed='true'] .leos-studio-shell__nav-head {
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.leos-studio-shell[data-nav-collapsed='true'] .leos-studio-shell__brand {
+  justify-content: center;
+  padding: 0;
+  flex: none;
+}
+
+.leos-studio-shell[data-nav-collapsed='true'] .leos-studio-shell__mark,
+.leos-studio-shell[data-nav-collapsed='true'] .leos-studio-shell__mode-label,
+.leos-studio-shell[data-nav-collapsed='true'] .leos-studio-shell__live-label,
+.leos-studio-shell[data-nav-collapsed='true'] .leos-studio-shell__venue-name,
+.leos-studio-shell[data-nav-collapsed='true'] .leos-studio-shell__venue-state {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.leos-studio-shell[data-nav-collapsed='true'] .leos-studio-shell__modes a,
+.leos-studio-shell[data-nav-collapsed='true'] .leos-studio-shell__signout {
+  justify-content: center;
+  padding: 0.55rem;
+  width: 2.5rem;
+  margin-inline: auto;
+}
+
+.leos-studio-shell[data-nav-collapsed='true'] .leos-studio-shell__live-pill {
+  justify-content: center;
+  padding: 0.55rem;
+  width: 2.5rem;
+  box-sizing: border-box;
+  margin-inline: auto;
+}
+
+.leos-studio-shell[data-nav-collapsed='true'] .leos-studio-shell__venue-chip {
+  display: none;
+}
+
+.leos-studio-shell[data-nav-collapsed='true'] .leos-studio-shell__nav-foot {
+  align-items: center;
+}
+
+/* Narrow: rail collapses to a horizontal strip so craft stays usable */
+@media (max-width: 860px) {
+  .leos-studio-shell {
+    flex-direction: column;
+  }
+
+  .leos-studio-shell__nav {
+    width: 100%;
+    flex: none;
+    min-height: 0;
+    position: sticky;
+    top: 0;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1rem;
+    padding: 0.75rem 1rem;
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.12), rgba(18, 18, 18, 0.82));
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .leos-studio-shell__nav-head {
+    width: auto;
+  }
+
+  .leos-studio-shell__nav-toggle {
+    display: none;
+  }
+
+  .leos-studio-shell__modes {
+    flex: 1 1 auto;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.15rem;
+  }
+
+  .leos-studio-shell__modes a {
+    padding: 0.45rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.8125rem;
+    width: auto;
+  }
+
+  .leos-studio-shell__modes a.active {
+    background: rgba(255, 255, 255, 0.16);
+    color: #fff;
+  }
+
+  .leos-studio-shell__nav-foot {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 0;
+    padding-top: 0;
+    margin-left: auto;
+    gap: 0.5rem;
+  }
+
+  .leos-studio-shell__venue-chip {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.45rem;
+    white-space: nowrap;
+    max-width: 10rem;
+  }
+
+  .leos-studio-shell__signout {
+    width: auto;
+  }
+
+  .leos-studio-shell[data-nav-collapsed='true'] .leos-studio-shell__mark,
+  .leos-studio-shell[data-nav-collapsed='true'] .leos-studio-shell__mode-label,
+  .leos-studio-shell[data-nav-collapsed='true'] .leos-studio-shell__live-label,
+  .leos-studio-shell[data-nav-collapsed='true'] .leos-studio-shell__venue-name,
+  .leos-studio-shell[data-nav-collapsed='true'] .leos-studio-shell__venue-state {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0;
+    clip: auto;
+    overflow: visible;
+  }
 }
 
 @keyframes studio-fade {
@@ -350,6 +639,12 @@
   max-width: var(--studio-studio-width);
 }
 
+/* Setup Engine: craft column fills between story and phone */
+.leos-studio-shell .studio-ws--with-story .leos-screen {
+  max-width: none;
+  width: 100%;
+}
+
 .leos-studio-shell .leos-screen__purpose {
   font-family: 'Fraunces', Georgia, serif;
   font-size: 2rem;
@@ -375,7 +670,7 @@
 .leos-studio-shell .leos-card {
   background: var(--studio-surface);
   border: 1px solid var(--studio-line);
-  box-shadow: var(--studio-shadow);
+  box-shadow: var(--leos-shadow-card, 0 12px 36px rgba(15, 23, 42, 0.05));
   padding: var(--studio-pad-card);
   border-radius: var(--studio-radius-lg);
   transition:
@@ -384,7 +679,7 @@
 }
 
 .leos-studio-shell .leos-card:hover {
-  box-shadow: var(--studio-shadow-hover);
+  box-shadow: var(--leos-shadow-hover, 0 16px 40px rgba(15, 23, 42, 0.07));
 }
 
 .leos-studio-shell .leos-screen__footer {
@@ -398,8 +693,9 @@
   border-top: 1px solid var(--studio-line);
   position: sticky;
   bottom: 0;
-  background: color-mix(in srgb, var(--studio-bg) 94%, #fff);
+  background: rgba(255, 255, 255, 0.88);
   backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   z-index: 5;
 }
 
@@ -427,14 +723,26 @@
 }
 
 .leos-studio-shell .leos-btn--primary {
-  background: var(--studio-accent);
-  color: #fff;
-  box-shadow: 0 10px 30px rgba(45, 30, 15, 0.08);
-  border: 0;
+  background: var(--leos-gradient-cta, linear-gradient(180deg, #d9a85b 0%, #b88339 100%));
+  color: var(--leos-on-brand, #1b2230);
+  box-shadow: var(--leos-shadow-cta);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--leos-radius-button, 14px);
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .leos-studio-shell .leos-btn--primary:hover {
-  background: var(--studio-accent-hover, #c98f33);
+  filter: brightness(1.04);
+  transform: translateY(-1px);
+  background: var(--leos-gradient-cta, linear-gradient(180deg, #d9a85b 0%, #b88339 100%));
+  box-shadow: var(--leos-shadow-cta-hover);
+}
+
+.leos-studio-shell .leos-btn--primary:active:not(:disabled) {
+  filter: none;
+  transform: scale(0.985) translateY(0);
+  box-shadow: var(--leos-shadow-cta-active);
 }
 
 .leos-studio-shell .leos-btn--ghost {
@@ -522,20 +830,25 @@
 
 .leos-studio-shell .leos-field__input {
   min-height: 3.25rem;
-  padding: 0.85rem 1rem;
+  padding: 0 1.125rem;
   border-radius: 12px;
   border: 1px solid var(--studio-line);
   background: var(--studio-surface);
   color: var(--studio-ink);
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-family: inherit;
-  box-shadow: none;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.03);
+  transition:
+    border-color 200ms var(--studio-ease),
+    box-shadow 200ms var(--studio-ease),
+    background 200ms var(--studio-ease);
 }
 
 .leos-studio-shell .leos-field__input:focus {
   outline: none;
-  border-color: var(--studio-accent);
-  box-shadow: 0 0 0 4px var(--studio-accent-soft);
+  background: #ffffff;
+  border-color: var(--leos-gold-focus, #c48f38);
+  box-shadow: var(--leos-shadow-focus);
 }
 
 .leos-studio-shell .leos-studio-steps {
@@ -577,22 +890,12 @@
   color: var(--studio-success);
 }
 
-.leos-studio-shell a:not(.leos-btn):not(.leos-visual-card):not(.studio-home__check):not(.studio-home__aside-a) {
+.leos-studio-shell__main a:not(.leos-btn):not(.leos-visual-card):not(.studio-home__check):not(.studio-home__aside-a) {
   color: var(--studio-ink-secondary);
   font-weight: 500;
 }
 
-.leos-studio-shell__topbar .leos-studio-shell__modes a {
-  color: var(--studio-ink-tertiary);
-  font-weight: 550;
-}
-
-.leos-studio-shell__topbar .leos-studio-shell__modes a.active {
-  color: var(--studio-ink);
-  font-weight: 650;
-}
-
-.leos-studio-shell a:not(.leos-btn):not(.leos-visual-card):not(.studio-home__door):hover {
+.leos-studio-shell__main a:not(.leos-btn):not(.leos-visual-card):not(.studio-home__door):hover {
   color: var(--studio-ink);
 }
 
@@ -724,28 +1027,32 @@
   user-select: none;
 }
 
-/* Mode switcher lives in topbar only — permanent frame (do not restore sidebar stack) */
+/* Mode switcher lives in left rail — Setup Engine progress story stays in-page */
 
-/* Operate — same warm palette, slightly denser (never dark) */
+/* Operate — same surgical white, slightly denser (never dark · never cream) */
 .leos-studio-shell[data-mode='operate'] {
-  --studio-bg: #f4efe8;
+  --studio-bg: #ffffff;
   --studio-surface: #ffffff;
-  --studio-ink: #1b2230;
-  --studio-ink-secondary: #6b7280;
-  --studio-ink-tertiary: #8f96a3;
-  --studio-line: #e7e2db;
+  --studio-surface-secondary: #f9f8f6;
+  --studio-ink: #0f172a;
+  --studio-ink-secondary: #64748b;
+  --studio-ink-tertiary: #94a3b8;
+  --studio-line: #eae6e1;
   --studio-accent: #d7a14a;
-  --studio-accent-soft: rgba(215, 161, 74, 0.16);
+  --studio-accent-soft: rgba(215, 161, 74, 0.12);
   --studio-success: #4f8a6b;
 }
 
 .leos-studio-shell[data-mode='operate'] .leos-btn--primary {
-  background: var(--studio-accent);
-  color: #ffffff;
+  background: var(--leos-gradient-cta, linear-gradient(180deg, #d9a85b 0%, #b88339 100%));
+  color: var(--leos-on-brand, #1b2230);
+  box-shadow: var(--leos-shadow-cta);
 }
 
 .leos-studio-shell[data-mode='operate'] .leos-btn--primary:hover {
-  background: var(--studio-accent-hover, #c98f33);
+  filter: brightness(1.04);
+  background: var(--leos-gradient-cta, linear-gradient(180deg, #d9a85b 0%, #b88339 100%));
+  box-shadow: var(--leos-shadow-cta-hover);
 }
 
 .studio-operate {
@@ -754,6 +1061,19 @@
   gap: var(--studio-pad-section);
   max-width: var(--studio-studio-width);
   animation: studio-fade var(--studio-duration-enter) var(--studio-ease);
+}
+
+/* Operate Overview — fill craft surface for glance + staff rail */
+.leos-studio-shell[data-mode='operate']:not([data-setup-engine='true']) .leos-studio-shell__main {
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  padding: var(--studio-pad-outer) clamp(1.25rem, 3vw, var(--studio-pad-outer));
+}
+
+.leos-studio-shell[data-mode='operate'] .studio-operate {
+  max-width: none;
+  width: 100%;
 }
 
 .studio-operate__now {
@@ -862,7 +1182,7 @@
 }
 
 .studio-operate__row--pulse .studio-operate__age {
-  color: color-mix(in srgb, var(--leos-gold, #d7a14a) 55%, #1b2230);
+  color: color-mix(in srgb, var(--leos-gold, #d7a14a) 55%, #0f172a);
 }
 
 .studio-operate__place {
@@ -1016,8 +1336,21 @@
   display: flex;
   flex-direction: column;
   gap: var(--studio-pad-section);
-  max-width: 32rem;
+  max-width: 36rem;
   animation: studio-fade var(--studio-duration-enter) var(--studio-ease);
+}
+
+.studio-grow__tray {
+  display: flex;
+  flex-direction: column;
+  gap: var(--studio-pad-section);
+  width: 100%;
+  padding: 1.35rem 1.35rem 1.5rem;
+  border-radius: 1.5rem;
+  background: #fff;
+  border: 1px solid var(--studio-line, #eae6e1);
+  box-shadow: 0 1px 2px rgba(27, 34, 48, 0.04);
+  box-sizing: border-box;
 }
 
 .studio-grow__greeting {

@@ -163,10 +163,13 @@ export class SetupPaymentsService {
     }));
   }
 
-  async getInstall() {
+  async getInstall(organisationId?: string) {
     const row =
       (await this.prisma.paymentConnectorInstall.findFirst({
-        where: { status: { in: ['draft', 'verified', 'active'] } },
+        where: {
+          status: { in: ['draft', 'verified', 'active'] },
+          ...(organisationId ? { organisationId } : {}),
+        },
         orderBy: { updatedAt: 'desc' },
       })) ?? null;
     if (!row) return null;
@@ -189,6 +192,10 @@ export class SetupPaymentsService {
     const merchantKey = (body.merchantKey ?? '').trim();
     if (!merchantId || !merchantKey) {
       throw new BadRequestException('Merchant ID and Merchant Key are required');
+    }
+    const passphrase = (body.passphrase ?? '').trim();
+    if (!passphrase) {
+      throw new BadRequestException('PayFast passphrase is required — ITN cannot be verified without it');
     }
     if (merchantId.length < 5 || merchantKey.length < 5) {
       throw new BadRequestException('Credentials look incomplete — check your PayFast dashboard');
@@ -342,8 +349,9 @@ export class SetupPaymentsService {
     return maskInstall(updated);
   }
 
-  async activate() {
+  async activate(organisationId?: string) {
     const row = await this.prisma.paymentConnectorInstall.findFirst({
+      where: organisationId ? { organisationId } : undefined,
       orderBy: { updatedAt: 'desc' },
     });
     if (!row) throw new NotFoundException('No payment connector draft to activate');
@@ -353,10 +361,16 @@ export class SetupPaymentsService {
       if (!row.merchantId || !row.merchantKeySecretRef) {
         throw new BadRequestException('Verify merchant credentials before activating');
       }
+      if (!row.passphraseSecretRef) {
+        throw new BadRequestException('PayFast passphrase is required before activation');
+      }
     }
 
     await this.prisma.paymentConnectorInstall.updateMany({
-      where: { status: 'active' },
+      where: {
+        status: 'active',
+        ...(organisationId ? { organisationId } : {}),
+      },
       data: { status: 'draft' },
     });
 
@@ -378,7 +392,10 @@ export class SetupPaymentsService {
     return {
       ok: true,
       connectorId: activated.connectorId,
-      activeConnectorId: this.leos.activePaymentConnectorId(),
+      activeConnectorId: this.leos.activePaymentConnectorId({
+        organisationId: activated.organisationId ?? '',
+        venueId: activated.venueId ?? undefined,
+      }),
       install: maskInstall(activated),
     };
   }

@@ -1,34 +1,37 @@
 ---
 name: studio-architect
 description: >-
-  Studio Architect — Setup shell, dual-pane layout (60/40), one question / one gold
-  action, Live Experience phone frame. Reject multi-primary buttons, manual save,
-  admin jargon.
+  Owns Lekki Studio Setup: dual-pane 60/40, one question per screen, one gold primary,
+  live Guest phone (real shell, never a fake preview). Use for setup steps, welcome,
+  go-live. Triggers: Studio, Setup, 1Q/1A, dual-pane, go live. Setup v1 is frozen.
+paths:
+  - "apps/web/src/app/pages/setup-*.ts"
+  - "apps/web/src/app/pages/studio-*.ts"
 ---
 
-# STUDIO ARCHITECT SKILL
+# Studio Architect
 
-**Inherits:** THE LEOS PLATFORM CONSTITUTION
+## When
 
-## Concern & Scope
+`apps/web` Studio / setup flows, welcome, choose-venue, go live.
 
-Lekki Setup Studio (`apps/web/src/app/pages/setup/`), onboarding flows, and dual-pane layout architecture.
+## Do
 
-## Dual-Pane Layout Rule
+1. **Left ~60%:** one human question, white paper card, **one** gold primary (`#D7A14A`).
+2. **Right ~40%:** live Guest Experience phone — the running shell, not a mock.
+3. Auto-save. No Save / Apply / Publish row.
+4. No admin jargon (`tenant`, `schema`, `runtime`, `connector`).
+5. Frozen v1 sequence: Who → What guests experience (toggles, not menu CRUD) → Where → How pay → Go Live.
+6. Menu compose / 86 belongs in Operate (station), not Setup experience toggles.
 
-- **Left Pane (60%):** Asks ONE human question; contains white card container (`#FFFFFF`) and ONE gold primary button (`#D7A14A`).
-- **Right Pane (40%):** Live Experience Phone Frame projecting real-time updates of the exact Guest Shell.
+## Never
 
-## Strict Rejections
+Multi-primary buttons · fake previews · unfreezing Setup structure · glass-everywhere (welcome may be glass; create/setup is white paper).
 
-- REJECT any screen with multiple competing primary buttons (`Save`, `Apply`, `Publish`).
-- REJECT manual save triggers (all fields must auto-save dynamically).
-- REJECT administrative/technical jargon (`tenant`, `schema`, `runtime`, `connector`).
+## Handoff
 
-## Knows
+Guest shell quality → `experience-architect`. Tokens → `ux-architect`. Payments connect → `payments-architect`.
 
-Identity · Experience · Places · Payments · Go Live · Operate · Grow
+## Read
 
-## Success
-
-Operators go live in minutes and feel in control without training.
+`docs/ux/LEOS-Studio-Design-Blueprint.md`

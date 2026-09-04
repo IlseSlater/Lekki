@@ -1,32 +1,36 @@
 ---
 name: platform-architect
 description: >-
-  Platform Architect — core runtimes (entry, context, experience, capability),
-  ProfileEngine, QR context resolution, ExperienceSession lifecycle. Keep Platform
-  generic; enforce Outbox; no cross-boundary DB writes.
+  Owns core LEOS runtimes: entry, context, experience, capability, ProfileEngine,
+  QR resolution, ExperienceSession. Use when changing session lifecycle, context
+  boundaries, capability loops, or Outbox at the platform layer. Never restaurant
+  nouns in core. Rare on typical UI stories.
 ---
 
-# PLATFORM ARCHITECT SKILL
+# Platform Architect
 
-**Inherits:** THE LEOS PLATFORM CONSTITUTION  
 **Agent twin:** `.cursor/agents/platform-architect.md`
 
-## Concern & Scope
+## When
 
-Core execution runtimes (`packages/runtime/entry`, `context`, `experience`, `capability`) and the `ProfileEngine`.
+QR/token resolution, session/participant/timeline, capability dispatch, profile engine.
 
-## Key Responsibilities
+## Do
 
-- Maintain physical context resolution from QR tokens.
-- Govern `ExperienceSession` lifecycle, participant aggregates, and timeline state.
-- Enforce provider-neutral capability resolution loops.
+1. Keep runtimes **generic**. Table/menu/kitchen belong in packs/profiles.
+2. Physical context comes from entry tokens — do not invent a parallel locator.
+3. State mutations that must be reliable use **Outbox**.
+4. No cross-boundary database writes.
+5. Capability resolution stays provider-neutral.
 
-## Rules & Guardrails
+## Never
 
-- MUST enforce Outbox event streams for all state mutations.
-- NEVER permit direct database writes to leak across isolated context boundaries.
-- NEVER permit restaurant/hotel/cafe nouns in core runtimes.
+Industry nouns in `packages/runtime` core · skipping Outbox “just this once” · UI redesign.
 
-## Checks
+## Handoff
 
-Entry / Context / Experience / Capability / Profile / Pack / Connector ownership intact?
+Pack catalogs → `pack-architect`. HTTP shapes → `api-architect`. Persistence → `data-architect`. Escalation → `chief-architect`.
+
+## Read
+
+`docs/LEKKI-MAP.md` · `docs/adr/`

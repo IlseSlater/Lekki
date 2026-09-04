@@ -5,6 +5,7 @@ import { ConfidenceIndicatorComponent } from '../leos/confidence-indicator.compo
 import { ExperienceScreenComponent } from '../leos/experience-screen.component';
 import { SETUP_STEPS, experienceLabel, getExperience } from '../studio/experience-registry';
 import { StudioContextService } from '../services/studio-context.service';
+import { LeosApiService } from '../services/leos-api.service';
 
 /** Setup — Who you are. Name · Logo · Colour · Location (conversation). */
 @Component({
@@ -63,6 +64,39 @@ import { StudioContextService } from '../services/studio-context.service';
               placeholder="#d7a14a"
             />
           </div>
+          <p class="id-hint">Tints the menu half-moon when you show it.</p>
+        </div>
+
+        <div class="leos-field">
+          <span class="leos-field__label">Menu brand</span>
+          <label class="id-toggle">
+            <input
+              type="checkbox"
+              [(ngModel)]="menuBrandEnabled"
+              (ngModelChange)="onMenuBrandToggle()"
+            />
+            <span>Show half-moon on menu</span>
+          </label>
+          <p class="id-hint">Sits above filters. Fades as guests scroll into the menu.</p>
+          @if (menuBrandEnabled) {
+            <div class="id-cover">
+              @if (menuCoverUrl) {
+                <img class="id-cover__preview" [src]="menuCoverUrl" alt="" />
+              } @else {
+                <span class="id-cover__placeholder" aria-hidden="true">Cover</span>
+              }
+              <div class="id-logo__actions">
+                <label class="id-logo__pick">
+                  <input type="file" accept="image/*" (change)="onCoverPick($event)" />
+                  {{ menuCoverUrl ? 'Change cover' : 'Add cover image' }}
+                </label>
+                @if (menuCoverUrl) {
+                  <button type="button" class="id-logo__clear" (click)="clearCover()">Remove</button>
+                }
+              </div>
+            </div>
+            <p class="id-hint">Logo (above) centres on the moon. Colour tints the dark overlay.</p>
+          }
         </div>
 
         <div class="leos-field">
@@ -109,7 +143,43 @@ import { StudioContextService } from '../services/studio-context.service';
       .id-config {
         display: flex;
         flex-direction: column;
-        gap: var(--studio-gap-controls, 20px);
+        gap: 1.25rem;
+        margin-bottom: 1.5rem;
+      }
+      .id-config .leos-field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        margin-bottom: 0;
+      }
+      .id-config .leos-field__label {
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--leos-ink-tertiary, #94a3b8);
+      }
+      .id-config .leos-field__input {
+        width: 100%;
+        min-height: 3.25rem;
+        padding: 0.85rem 1rem;
+        border-radius: 12px;
+        border: 1px solid var(--leos-border, #eae6e1);
+        background: var(--leos-surface, #ffffff);
+        color: var(--leos-ink, #0f172a);
+        font-size: 1rem;
+        font-family: inherit;
+        box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.03);
+        transition:
+          border-color var(--leos-duration-fast, 160ms) var(--leos-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+          box-shadow var(--leos-duration-fast, 160ms) var(--leos-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+          background var(--leos-duration-fast, 160ms) var(--leos-ease, cubic-bezier(0.22, 1, 0.36, 1));
+      }
+      .id-config .leos-field__input:focus {
+        outline: none;
+        background: #ffffff;
+        border-color: var(--leos-gold-focus, #c48f38);
+        box-shadow: var(--leos-shadow-focus);
       }
       .id-logo {
         display: flex;
@@ -121,7 +191,7 @@ import { StudioContextService } from '../services/studio-context.service';
         height: 3.5rem;
         border-radius: 12px;
         object-fit: cover;
-        border: 1px solid var(--studio-line, #e7e2db);
+        border: 1px solid var(--leos-border, #eae6e1);
       }
       .id-logo__placeholder {
         display: grid;
@@ -129,11 +199,11 @@ import { StudioContextService } from '../services/studio-context.service';
         width: 3.5rem;
         height: 3.5rem;
         border-radius: 12px;
-        background: color-mix(in srgb, var(--id-accent, #d7a14a) 22%, #fff);
-        color: var(--studio-ink, #1b2230);
+        background: var(--leos-gold-soft, rgba(215, 161, 74, 0.12));
+        color: var(--leos-gold-dark, #a96f20);
         font-weight: 700;
         font-size: 1.25rem;
-        border: 1px solid var(--studio-line, #e7e2db);
+        border: 1px solid var(--leos-border, #eae6e1);
       }
       .id-logo__actions {
         display: flex;
@@ -144,7 +214,7 @@ import { StudioContextService } from '../services/studio-context.service';
       .id-logo__pick {
         font-size: 0.875rem;
         font-weight: 600;
-        color: var(--studio-ink, #1b2230);
+        color: var(--leos-ink, #0f172a);
         cursor: pointer;
         min-height: 2.75rem;
         display: inline-flex;
@@ -163,7 +233,7 @@ import { StudioContextService } from '../services/studio-context.service';
         font: inherit;
         font-size: 0.8125rem;
         font-weight: 600;
-        color: var(--studio-ink-secondary, #6b7280);
+        color: var(--leos-ink-secondary, #64748b);
         cursor: pointer;
         padding: 0;
       }
@@ -176,7 +246,7 @@ import { StudioContextService } from '../services/studio-context.service';
         width: 2.75rem;
         height: 2.75rem;
         padding: 0;
-        border: 1px solid var(--studio-line, #e7e2db);
+        border: 1px solid var(--leos-border, #eae6e1);
         border-radius: 10px;
         background: transparent;
         cursor: pointer;
@@ -185,11 +255,59 @@ import { StudioContextService } from '../services/studio-context.service';
         max-width: 8rem;
         font-family: ui-monospace, monospace;
       }
+      .id-hint {
+        margin: 0.15rem 0 0;
+        font-size: 0.8125rem;
+        font-weight: 500;
+        color: var(--leos-ink-secondary, #64748b);
+        line-height: 1.35;
+      }
+      .id-toggle {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        min-height: 2.75rem;
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: var(--leos-ink, #0f172a);
+        cursor: pointer;
+      }
+      .id-toggle input {
+        width: 1.15rem;
+        height: 1.15rem;
+        accent-color: var(--leos-gold, #d7a14a);
+      }
+      .id-cover {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-top: 0.65rem;
+      }
+      .id-cover__preview {
+        width: 5.5rem;
+        height: 3.25rem;
+        border-radius: 12px 12px 999px 999px;
+        object-fit: cover;
+        border: 1px solid var(--leos-border, #eae6e1);
+      }
+      .id-cover__placeholder {
+        display: grid;
+        place-items: center;
+        width: 5.5rem;
+        height: 3.25rem;
+        border-radius: 12px 12px 999px 999px;
+        background: #1b2230;
+        color: #94a3b8;
+        font-size: 0.75rem;
+        font-weight: 650;
+        border: 1px solid var(--leos-border, #eae6e1);
+      }
     `,
   ],
 })
 export class SetupIdentityPageComponent implements OnInit, OnDestroy {
   private readonly ctx = inject(StudioContextService);
+  private readonly api = inject(LeosApiService);
   private readonly router = inject(Router);
   private saveTimer?: ReturnType<typeof setTimeout>;
   private flashTimer?: ReturnType<typeof setTimeout>;
@@ -200,6 +318,8 @@ export class SetupIdentityPageComponent implements OnInit, OnDestroy {
   venueName = '';
   logoUrl = '';
   brandColour = '#d7a14a';
+  menuBrandEnabled = false;
+  menuCoverUrl = '';
   location = '';
   typeLabel = 'Restaurant';
   savedFlash = false;
@@ -229,7 +349,17 @@ export class SetupIdentityPageComponent implements OnInit, OnDestroy {
     this.venueName = active.venueName || def?.defaults.venueName || '';
     this.logoUrl = active.logoUrl || '';
     this.brandColour = active.brandColour || '#d7a14a';
+    this.menuBrandEnabled = !!active.menuBrandEnabled;
+    this.menuCoverUrl = active.menuCoverUrl || '';
     this.location = active.location || '';
+    this.api.getGrowOverview().subscribe({
+      next: (overview) => {
+        if (overview.venueId) {
+          this.ctx.upsertActive({ venueId: overview.venueId });
+        }
+      },
+      error: () => undefined,
+    });
   }
 
   ngOnDestroy() {
@@ -264,6 +394,33 @@ export class SetupIdentityPageComponent implements OnInit, OnDestroy {
     this.scheduleSave();
   }
 
+  onCoverPick(ev: Event) {
+    const input = ev.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    if (file.size > 1_800_000) {
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      this.menuCoverUrl = String(reader.result || '');
+      this.scheduleSave();
+    };
+    reader.readAsDataURL(file);
+    input.value = '';
+  }
+
+  clearCover() {
+    this.menuCoverUrl = '';
+    this.scheduleSave();
+  }
+
+  onMenuBrandToggle() {
+    // Save immediately so Live Experience switches to the menu shell with the moon.
+    if (this.saveTimer) clearTimeout(this.saveTimer);
+    this.persist(false);
+  }
+
   scheduleSave() {
     if (this.saveTimer) clearTimeout(this.saveTimer);
     this.saveTimer = setTimeout(() => this.persist(false), 220);
@@ -276,19 +433,51 @@ export class SetupIdentityPageComponent implements OnInit, OnDestroy {
   }
 
   private persist(markDone: boolean) {
-    const name = this.venueName.trim();
+    const name =
+      this.venueName.trim() || this.ctx.activeExperience()?.venueName?.trim() || '';
     if (!name && !markDone) return;
     this.ctx.upsertActive({
       venueName: name || this.venueName,
       logoUrl: this.logoUrl,
       brandColour: this.brandColour || '#d7a14a',
+      menuBrandEnabled: this.menuBrandEnabled,
+      menuCoverUrl: this.menuCoverUrl,
       location: this.location.trim(),
     });
+    this.publishBrandToRuntime(name || this.venueName);
     if (markDone) this.ctx.markStep('identity');
     this.savedFlash = true;
     if (this.flashTimer) clearTimeout(this.flashTimer);
     this.flashTimer = setTimeout(() => {
       this.savedFlash = false;
     }, 1800);
+  }
+
+  /** Publish brand + guestDesign to runtime for guest entry resolve. */
+  private publishBrandToRuntime(venueName: string) {
+    const active = this.ctx.activeExperience();
+    const send = (venueId: string) => {
+      this.api
+        .saveVenueBrand({
+          venueId,
+          menuBrandEnabled: this.menuBrandEnabled,
+          brandColour: this.brandColour || '#d7a14a',
+          venueName: venueName.trim() || undefined,
+          guestDesignJson: active?.guestDesign as Record<string, unknown> | undefined,
+        })
+        .subscribe({ error: () => undefined });
+    };
+    const venueId = active?.venueId?.trim();
+    if (venueId) {
+      send(venueId);
+      return;
+    }
+    this.api.resolveSetupEntryContext(active?.placeCode || undefined).subscribe({
+      next: (ctx) => {
+        this.ctx.upsertActive({ venueId: ctx.venueId, organisationId: ctx.organisationId });
+        send(ctx.venueId);
+      },
+      error: () => undefined,
+    });
   }
 }

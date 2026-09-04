@@ -4,8 +4,8 @@ import { OnboardingService } from '../services/onboarding.service';
 import { LeosApiService, SessionStateService } from '../services/leos-api.service';
 import { isSameOpenSessionResume } from '../studio/mid-visit-resume';
 
-const FIRST_SPLASH_MS = 5000;
-const RETURN_SPLASH_MS = 1400;
+const FIRST_SPLASH_MS = 2800;
+const RETURN_SPLASH_MS = 900;
 
 /**
  * Brand intro after QR scan — hospitality splash,
@@ -41,7 +41,7 @@ const RETURN_SPLASH_MS = 1400;
         position: fixed;
         inset: 0;
         z-index: 50;
-        background: var(--leos-warm-sand, #faf7f2);
+        background: var(--leos-warm-sand, #ffffff);
         overflow: hidden;
         opacity: 1;
         transition: opacity 420ms ease;
@@ -225,7 +225,16 @@ export class GuestSplashPageComponent implements OnInit, OnDestroy {
         this.state.profileId = res.session.profileId ?? res.context.profile.id ?? '';
         this.state.physicalContextCode = res.context.physicalContextCode ?? '';
         this.state.venueName = res.venueName ?? '';
+        this.state.menuBrandEnabled = !!res.menuBrandEnabled;
+        this.state.brandColour = res.brandColour || '#d7a14a';
         this.state.participantId = res.joinedParticipantId ?? '';
+        if (res.participantSecret) this.state.participantSecret = res.participantSecret;
+        if (res.guestDesign && typeof res.guestDesign === 'object') {
+          this.state.guestDesign = res.guestDesign;
+        } else {
+          this.state.guestDesign = null;
+        }
+        if (res.currency) this.state.currency = res.currency;
         this.state.token = this.token;
         this.state.displayName = displayName;
         this.state.persist();

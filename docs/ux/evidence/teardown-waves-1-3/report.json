@@ -1,0 +1,144 @@
+{
+  "findings": [
+    {
+      "wave": 1,
+      "id": "guest-complete-blocked",
+      "label": "Guest cannot POST /payments/:id/complete",
+      "ok": true,
+      "error": null
+    },
+    {
+      "wave": 1,
+      "id": "server-price",
+      "label": "Server reprices catalogue — client unitPrice ignored",
+      "ok": true,
+      "error": null
+    },
+    {
+      "wave": 1,
+      "id": "participant-leave",
+      "label": "Leave one guest does not close shared session",
+      "ok": true,
+      "error": null
+    },
+    {
+      "wave": 1,
+      "id": "decimal-migration",
+      "label": "Prisma baseline migration + Decimal money columns",
+      "ok": true,
+      "error": null
+    },
+    {
+      "wave": 1,
+      "id": "mint-qr",
+      "label": "Go Live mint returns token ≠ qr-demo-restaurant",
+      "ok": true,
+      "error": null
+    },
+    {
+      "wave": 1,
+      "id": "marketing-meta",
+      "label": "Marketing head has description + OG tags",
+      "ok": true,
+      "error": null
+    },
+    {
+      "wave": 1,
+      "id": "robots-sitemap",
+      "label": "/robots.txt and /sitemap.xml exist",
+      "ok": true,
+      "error": null
+    },
+    {
+      "wave": 2,
+      "id": "guest-design-pay",
+      "label": "guestDesign.payAtTable=false returned on entry resolve",
+      "ok": true,
+      "error": null
+    },
+    {
+      "wave": 2,
+      "id": "payfast-passphrase",
+      "label": "PayFast activate without passphrase is refused",
+      "ok": true,
+      "error": null
+    },
+    {
+      "wave": 2,
+      "id": "kitchen-notes",
+      "label": "Special request on transaction reaches fulfilment line",
+      "ok": true,
+      "error": null
+    },
+    {
+      "wave": 2,
+      "id": "dual-order-pay",
+      "label": "Two orders: requestPayment amount matches visit total",
+      "ok": true,
+      "error": null
+    },
+    {
+      "wave": 1,
+      "id": "studio-team-guard",
+      "label": "Unsigned /studio/team redirects to sign-in",
+      "ok": true,
+      "error": null
+    },
+    {
+      "wave": 2,
+      "id": "menu-first-entry",
+      "label": "First-time scan shows menu — no OTP / birthday wall",
+      "ok": true,
+      "error": null
+    },
+    {
+      "wave": 2,
+      "id": "pay-off-ui",
+      "label": "Guest UI hides Bill tab when payAtTable is off",
+      "ok": true,
+      "error": null
+    },
+    {
+      "wave": 3,
+      "id": "live-venue-catalogue",
+      "label": "Studio Live phone shows venue catalogue item (not only Classic Burger)",
+      "ok": true,
+      "error": null
+    },
+    {
+      "wave": 3,
+      "id": "tab-bar-calm",
+      "label": "Guest tab bar has ≤4 tabs and no Leave tab",
+      "ok": true,
+      "error": null
+    },
+    {
+      "wave": 3,
+      "id": "table-people",
+      "label": "Second guest sees join notice / people strip",
+      "ok": true,
+      "error": null
+    },
+    {
+      "wave": 3,
+      "id": "honest-receipt",
+      "label": "No •••• 4242 row; unpaid receipt says settle with team",
+      "ok": true,
+      "error": null
+    },
+    {
+      "wave": 3,
+      "id": "muted-contrast",
+      "label": "Muted body text ≥ 4.5:1 on warm sand",
+      "ok": true,
+      "error": null
+    },
+    {
+      "wave": 3,
+      "id": "reduced-motion",
+      "label": "Global reduced-motion guard present in guest styles",
+      "ok": true,
+      "error": null
+    }
+  ]
+}

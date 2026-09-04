@@ -4,16 +4,20 @@ import { filter, Subscription } from 'rxjs';
 import {
   defaultDesignForType,
   projectionCatalogueForType,
+  projectionItemsFromVenueCatalogue,
   type GuestExperienceDesign,
+  type ProjectionItem,
 } from '../studio/guest-experience-design';
 import { getExperience, type SetupStepSlug } from '../studio/experience-registry';
 import { StudioContextService } from '../services/studio-context.service';
+import { LeosApiService } from '../services/leos-api.service';
 import { GuestShellProjectionComponent } from './guest-shell-projection.component';
 import { safeGuestImageUrl } from './catalogue-parity';
+import { guestPlaceSpoken } from '../studio/place-continuity';
 
 /**
  * Live Experience — phone on the desk (Design System v1).
- * Not a card. Not a browser. Same Experience Shell guests get after Go Live.
+ * Arrival mirrors Guest Entry welcome — never a second UI.
  */
 @Component({
   selector: 'leos-live-experience-panel',
@@ -27,24 +31,26 @@ import { safeGuestImageUrl } from './catalogue-parity';
         <div class="phone__screen">
           @if (mode === 'arrival') {
             <div class="phone-arrival" [style.--brand]="brandColour">
-              <p class="phone-arrival__welcome">Welcome</p>
-              @if (placeLabel) {
-                <p class="phone-arrival__place-line">
-                  {{ placeNoun }}
-                  <strong>{{ placeLabel }}</strong>
+              <p class="phone-arrival__eyebrow" [class.phone-venue--morph]="pulse">
+                {{ arrivalEyebrow }}
+              </p>
+              @if (placeSpoken) {
+                <p class="phone-arrival__place">
+                  <strong>{{ placeSpoken }}</strong>
                 </p>
               }
-              <p class="phone-arrival__join">You’re in.</p>
-              <p class="phone-arrival__reassure">
-                @if (placeLabel) {
-                  {{ placeNoun }}
-                  <strong>{{ placeLabel }}</strong>
+              <p class="phone-arrival__reassure">You’re in.</p>
+              <p class="phone-arrival__muted">
+                @if (placeSpoken) {
+                  <strong>{{ placeSpoken }}</strong>
                   — the team can see you. Browse when you’re ready.
                 } @else {
                   The team can see you. Browse when you’re ready.
                 }
               </p>
-              <p class="phone-arrival__cta">{{ catalogueLabel }}</p>
+              <button type="button" class="phone-arrival__cta" tabindex="-1">
+                {{ catalogueLabel }}
+              </button>
             </div>
           } @else if (mode === 'pay') {
             <div class="phone-pay" [style.--brand]="brandColour">
@@ -87,12 +93,15 @@ import { safeGuestImageUrl } from './catalogue-parity';
                 [greeting]="greeting"
                 [brandColour]="brandColour"
                 [logoUrl]="logoUrl"
+                [menuBrandEnabled]="menuBrandEnabled"
+                [menuCoverUrl]="menuCoverUrl"
                 [catalogueLabel]="catalogueLabel"
                 [paymentLabel]="paymentLabel"
                 [placeNoun]="placeNoun"
                 [transactionLabel]="transactionLabel"
                 [leaveLabel]="leaveLabel"
                 [sampleItemLabel]="sampleItemLabel"
+                [venueCatalogue]="venueCatalogue"
                 [experienceTypeId]="experienceTypeId"
                 [payMethods]="payMethods"
               />
@@ -114,24 +123,26 @@ import { safeGuestImageUrl } from './catalogue-parity';
           <div class="phone__screen">
             @if (mode === 'arrival') {
               <div class="phone-arrival" [style.--brand]="brandColour">
-                <p class="phone-arrival__welcome">Welcome</p>
-                @if (placeLabel) {
-                  <p class="phone-arrival__place-line">
-                    {{ placeNoun }}
-                    <strong>{{ placeLabel }}</strong>
+                <p class="phone-arrival__eyebrow" [class.phone-venue--morph]="pulse">
+                  {{ arrivalEyebrow }}
+                </p>
+                @if (placeSpoken) {
+                  <p class="phone-arrival__place">
+                    <strong>{{ placeSpoken }}</strong>
                   </p>
                 }
-                <p class="phone-arrival__join">You’re in.</p>
-                <p class="phone-arrival__reassure">
-                  @if (placeLabel) {
-                    {{ placeNoun }}
-                    <strong>{{ placeLabel }}</strong>
+                <p class="phone-arrival__reassure">You’re in.</p>
+                <p class="phone-arrival__muted">
+                  @if (placeSpoken) {
+                    <strong>{{ placeSpoken }}</strong>
                     — the team can see you. Browse when you’re ready.
                   } @else {
                     The team can see you. Browse when you’re ready.
                   }
                 </p>
-                <p class="phone-arrival__cta">{{ catalogueLabel }}</p>
+                <button type="button" class="phone-arrival__cta" tabindex="-1">
+                  {{ catalogueLabel }}
+                </button>
               </div>
             } @else if (mode === 'pay') {
               <div class="phone-pay" [style.--brand]="brandColour">
@@ -171,6 +182,8 @@ import { safeGuestImageUrl } from './catalogue-parity';
                   [greeting]="greeting"
                   [brandColour]="brandColour"
                   [logoUrl]="logoUrl"
+                  [menuBrandEnabled]="menuBrandEnabled"
+                  [menuCoverUrl]="menuCoverUrl"
                   [fillFrame]="true"
                   [catalogueLabel]="catalogueLabel"
                   [paymentLabel]="paymentLabel"
@@ -178,6 +191,7 @@ import { safeGuestImageUrl } from './catalogue-parity';
                   [transactionLabel]="transactionLabel"
                   [leaveLabel]="leaveLabel"
                   [sampleItemLabel]="sampleItemLabel"
+                  [venueCatalogue]="venueCatalogue"
                   [experienceTypeId]="experienceTypeId"
                   [payMethods]="payMethods"
                 />
@@ -190,6 +204,11 @@ import { safeGuestImageUrl } from './catalogue-parity';
   `,
   styles: [
     `
+      :host {
+        display: block;
+        width: 100%;
+        min-width: 0;
+      }
       .phone-desk {
         display: flex;
         flex-direction: column;
@@ -198,6 +217,7 @@ import { safeGuestImageUrl } from './catalogue-parity';
         width: 100%;
         max-width: var(--studio-live-width, 420px);
         padding: 1.5rem 1rem 0;
+        box-sizing: border-box;
       }
       .phone-desk__label {
         margin: 0;
@@ -215,7 +235,11 @@ import { safeGuestImageUrl } from './catalogue-parity';
         color: #4f8a6b;
       }
       .phone {
-        width: min(100%, 20.5rem);
+        /* Fixed frame across Setup steps — never shrink with short pay/shell copy */
+        width: 20.5rem;
+        max-width: 100%;
+        flex-shrink: 0;
+        box-sizing: border-box;
         border-radius: 2rem;
         background: #1b2230;
         padding: 0.7rem;
@@ -225,8 +249,35 @@ import { safeGuestImageUrl } from './catalogue-parity';
           transform var(--studio-duration, 220ms) var(--studio-ease);
       }
       .phone--pulse {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(45, 30, 15, 0.14);
+        transform: translateY(-1px);
+        box-shadow:
+          0 0 0 2px rgba(215, 161, 74, 0.45),
+          0 0 0 6px rgba(215, 161, 74, 0.12),
+          0 8px 24px rgba(15, 23, 42, 0.1);
+        animation: phone-sync-glow 360ms cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      @keyframes phone-sync-glow {
+        0% {
+          box-shadow:
+            0 0 0 0 rgba(215, 161, 74, 0.55),
+            0 0 0 0 rgba(215, 161, 74, 0),
+            0 4px 12px rgba(15, 23, 42, 0.08);
+        }
+        55% {
+          box-shadow:
+            0 0 0 2px rgba(215, 161, 74, 0.5),
+            0 0 0 8px rgba(215, 161, 74, 0.16),
+            0 8px 24px rgba(15, 23, 42, 0.1);
+        }
+        100% {
+          box-shadow:
+            0 0 0 2px rgba(215, 161, 74, 0.45),
+            0 0 0 6px rgba(215, 161, 74, 0.12),
+            0 8px 24px rgba(15, 23, 42, 0.1);
+        }
+      }
+      .phone--pulse .phone__screen {
+        opacity: 1;
       }
       .phone__notch {
         width: 5.5rem;
@@ -238,13 +289,10 @@ import { safeGuestImageUrl } from './catalogue-parity';
       .phone__screen {
         border-radius: 1.45rem;
         overflow: hidden;
-        background: #faf7f2;
+        background: #ffffff;
         min-height: 28rem;
         height: min(62dvh, 34rem);
         transition: opacity var(--studio-duration, 220ms) var(--studio-ease-soft, cubic-bezier(0.33, 1, 0.68, 1));
-      }
-      .phone--pulse .phone__screen {
-        opacity: 0.72;
       }
       .phone__screen leos-guest-shell-projection {
         display: block;
@@ -284,24 +332,56 @@ import { safeGuestImageUrl } from './catalogue-parity';
           opacity: 1;
         }
       }
-      .phone-arrival__welcome {
-        margin: 0 0 0.75rem;
+      .phone-arrival__eyebrow {
+        margin: 0;
         font-size: 0.75rem;
         font-weight: 650;
-        letter-spacing: 0.06em;
+        letter-spacing: 0.14em;
         text-transform: uppercase;
         color: #6b7280;
       }
-      .phone-arrival__place-line {
-        margin: 0 0 1.25rem;
-        font-size: 0.9375rem;
+      .phone-arrival__place {
+        margin: 1rem 0 0;
+        font-size: 1.65rem;
+        line-height: 1.2;
+        font-weight: 500;
+        color: #1b2230;
+      }
+      .phone-arrival__place strong {
+        font-weight: 650;
+      }
+      .phone-arrival__reassure {
+        margin: 0.85rem 0 0;
+        font-family: 'Fraunces', Georgia, serif;
+        font-size: 1.35rem;
+        font-weight: 650;
+        letter-spacing: -0.02em;
+        color: #1b2230;
+      }
+      .phone-arrival__muted {
+        margin: 0.65rem 0 1.75rem;
+        font-size: 0.875rem;
+        line-height: 1.45;
         color: #6b7280;
       }
-      .phone-arrival__place-line strong {
+      .phone-arrival__muted strong {
         color: #1b2230;
         font-weight: 650;
       }
-      .phone-arrival__logo,
+      .phone-arrival__cta {
+        margin: 0 auto;
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 999px;
+        background: var(--brand, var(--leos-gold, #d7a14a));
+        color: var(--leos-on-brand, #1b2230);
+        font-size: 0.875rem;
+        font-weight: 650;
+        font-family: inherit;
+        width: fit-content;
+        cursor: default;
+        pointer-events: none;
+      }
       .phone-pay__logo {
         width: 2.5rem;
         height: 2.5rem;
@@ -309,46 +389,6 @@ import { safeGuestImageUrl } from './catalogue-parity';
         object-fit: cover;
         margin-bottom: 0.25rem;
         border: 2px solid color-mix(in srgb, var(--brand, #d7a14a) 55%, #fff);
-      }
-      .phone-arrival__loc {
-        margin: -1rem 0 1.25rem;
-        font-size: 0.75rem;
-        color: #6b7280;
-      }
-      .phone-arrival__venue {
-        margin: 0.35rem 0 1.5rem;
-        font-family: 'Fraunces', Georgia, serif;
-        font-size: 1.65rem;
-        font-weight: 650;
-        letter-spacing: -0.03em;
-      }
-      .phone-arrival__join {
-        margin: 0;
-        font-family: 'Fraunces', Georgia, serif;
-        font-size: 1.5rem;
-        font-weight: 650;
-        letter-spacing: -0.02em;
-        color: #1b2230;
-      }
-      .phone-arrival__reassure {
-        margin: 0.75rem 0 1.75rem;
-        font-size: 0.875rem;
-        line-height: 1.45;
-        color: #6b7280;
-      }
-      .phone-arrival__reassure strong {
-        color: #1b2230;
-        font-weight: 650;
-      }
-      .phone-arrival__cta {
-        margin: 0 auto;
-        padding: 0.75rem 1.5rem;
-        border-radius: 999px;
-        background: var(--brand, var(--leos-gold, #d7a14a));
-        color: #fff;
-        font-size: 0.875rem;
-        font-weight: 650;
-        width: fit-content;
       }
       .phone-pay {
         height: 100%;
@@ -459,6 +499,7 @@ import { safeGuestImageUrl } from './catalogue-parity';
 })
 export class LiveExperiencePanelComponent implements OnInit, OnDestroy {
   readonly ctx = inject(StudioContextService);
+  private readonly api = inject(LeosApiService);
   private readonly router = inject(Router);
   private navSub?: Subscription;
   private pulseTimer?: ReturnType<typeof setTimeout>;
@@ -469,8 +510,14 @@ export class LiveExperiencePanelComponent implements OnInit, OnDestroy {
   venueName = 'Your place';
   logoUrl = '';
   brandColour = '#d7a14a';
+  menuBrandEnabled = false;
+  menuCoverUrl = '';
   location = '';
   placeLabel = '';
+  /** Guest-spoken place — never “Table Table 1”. */
+  placeSpoken = '';
+  /** Entry eyebrow: venue when named, else Welcome. */
+  arrivalEyebrow = 'Welcome';
   greeting = 'Hi there';
   design: GuestExperienceDesign = defaultDesignForType('restaurant');
   payMethods = { card: true, applePay: true, googlePay: true };
@@ -481,6 +528,7 @@ export class LiveExperiencePanelComponent implements OnInit, OnDestroy {
   transactionLabel = 'Order';
   sampleItemLabel = 'Classic Burger';
   sampleVisitTotal = '—';
+  venueCatalogue: ProjectionItem[] | null = null;
   leaveLabel = 'Leave';
   experienceTypeId = 'restaurant';
   private lastFingerprint = '';
@@ -521,11 +569,18 @@ export class LiveExperiencePanelComponent implements OnInit, OnDestroy {
     const slug = (match?.[1] ?? (onCreate ? 'experience' : 'identity')) as SetupStepSlug;
 
     // Identity + Places → arrival · Payments → pay · Go Live → public shell · else browse shell
+    // When menu half-moon is on, show the shell on Identity so owners see brand immediately.
     if (slug === 'payments') {
       this.mode = 'pay';
       this.publicLive = false;
-    } else if (slug === 'identity' || slug === 'places') {
+    } else if (
+      (slug === 'identity' || slug === 'places') &&
+      !this.ctx.activeExperience()?.menuBrandEnabled
+    ) {
       this.mode = 'arrival';
+      this.publicLive = false;
+    } else if (slug === 'identity' || slug === 'places') {
+      this.mode = 'shell';
       this.publicLive = false;
     } else {
       this.mode = 'shell';
@@ -538,6 +593,8 @@ export class LiveExperiencePanelComponent implements OnInit, OnDestroy {
     this.venueName = active?.venueName?.trim() || def?.defaults.venueName || 'Your place';
     this.logoUrl = safeGuestImageUrl(active?.logoUrl) ?? '';
     this.brandColour = active?.brandColour || '#d7a14a';
+    this.menuBrandEnabled = !!active?.menuBrandEnabled;
+    this.menuCoverUrl = safeGuestImageUrl(active?.menuCoverUrl) ?? '';
     this.location = active?.location?.trim() || '';
     this.design = active?.guestDesign
       ? { ...defaultDesignForType(typeId), ...active.guestDesign }
@@ -548,8 +605,11 @@ export class LiveExperiencePanelComponent implements OnInit, OnDestroy {
     this.placeNoun = def?.terminology.place ?? 'Table';
     this.transactionLabel = def?.terminology.transaction ?? 'Order';
     this.leaveLabel = this.leaveLabelFor(typeId, this.placeNoun);
-    this.sampleItemLabel = this.sampleItemFor(typeId);
-    this.sampleVisitTotal = this.sampleTotalFor(typeId, this.sampleItemLabel);
+    this.loadVenueCatalogue(active?.venueId?.trim() || '');
+    if (!this.venueCatalogue?.length) {
+      this.sampleItemLabel = this.sampleItemFor(typeId);
+      this.sampleVisitTotal = this.sampleTotalFor(typeId, this.sampleItemLabel);
+    }
     this.experienceTypeId = typeId;
     this.greeting = this.venueName !== 'Your place' ? `Hi — welcome to ${this.venueName}` : 'Hi there';
 
@@ -557,14 +617,17 @@ export class LiveExperiencePanelComponent implements OnInit, OnDestroy {
     const fallbackPlace =
       active?.placeCode || active?.placeCodes?.[0] || def?.defaults.placeCode || '';
     this.placeLabel = focus || fallbackPlace;
+    this.placeSpoken = guestPlaceSpoken(this.placeNoun, this.placeLabel);
+    this.arrivalEyebrow =
+      this.venueName && this.venueName !== 'Your place' ? this.venueName : 'Welcome';
 
-    const fp = `${this.venueName}|${this.logoUrl}|${this.brandColour}|${this.location}|${this.placeLabel}|${JSON.stringify(this.design)}|${JSON.stringify(this.payMethods)}|${this.mode}|${this.publicLive}|${this.sampleVisitTotal}`;
+    const fp = `${this.venueName}|${this.logoUrl}|${this.brandColour}|${this.menuBrandEnabled}|${this.menuCoverUrl}|${this.location}|${this.placeSpoken}|${JSON.stringify(this.design)}|${JSON.stringify(this.payMethods)}|${this.mode}|${this.publicLive}|${this.sampleVisitTotal}`;
     if (fromLive && this.lastFingerprint && this.lastFingerprint !== fp) {
       this.pulse = true;
       if (this.pulseTimer) clearTimeout(this.pulseTimer);
       this.pulseTimer = setTimeout(() => {
         this.pulse = false;
-      }, 220);
+      }, 360);
     }
     this.lastFingerprint = fp;
   }
@@ -584,12 +647,6 @@ export class LiveExperiencePanelComponent implements OnInit, OnDestroy {
     return 'Leave';
   }
 
-  private sampleTotalFor(typeId: string, label: string): string {
-    const items = projectionCatalogueForType(typeId).items;
-    const hit = items.find((i) => i.label === label);
-    return hit?.price ?? items[0]?.price ?? '—';
-  }
-
   private sampleItemFor(typeId: string): string {
     switch (typeId) {
       case 'cafe':
@@ -605,5 +662,37 @@ export class LiveExperiencePanelComponent implements OnInit, OnDestroy {
       default:
         return 'Classic Burger';
     }
+  }
+
+  private sampleTotalFor(typeId: string, label: string): string {
+    if (this.venueCatalogue?.length) {
+      const hit = this.venueCatalogue.find((i) => i.label === label);
+      return hit?.price ?? this.venueCatalogue[0]?.price ?? '—';
+    }
+    const items = projectionCatalogueForType(typeId).items;
+    const hit = items.find((i) => i.label === label);
+    return hit?.price ?? items[0]?.price ?? '—';
+  }
+
+  private loadVenueCatalogue(venueId: string) {
+    if (!venueId) {
+      this.venueCatalogue = null;
+      return;
+    }
+    this.api.getCatalogue(venueId).subscribe({
+      next: (rows) => {
+        const mapped = projectionItemsFromVenueCatalogue(rows);
+        if (!mapped.length) {
+          this.venueCatalogue = null;
+          return;
+        }
+        this.venueCatalogue = mapped;
+        this.sampleItemLabel = mapped[0]?.label ?? this.sampleItemLabel;
+        this.sampleVisitTotal = mapped[0]?.price ?? '—';
+      },
+      error: () => {
+        this.venueCatalogue = null;
+      },
+    });
   }
 }

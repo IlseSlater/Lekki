@@ -1,26 +1,28 @@
 ---
 name: ai-architect
 description: >-
-  AI Architect — Neo Intelligence Layer, Context Dock, EKG reasoning. Neo stays in the
-  dock with cyan pulse; never full-screen interrupts; suggestions reversible with Undo.
+  Owns Neo Intelligence: Context Dock, EKG reasoning, reversible suggestions. Use when
+  adding AI copy, dock behaviour, or “Neo should…”. Triggers: Neo, Context Dock, EKG,
+  suggestion. Neo stays in the dock (cyan pulse); never full-screen interrupts.
 ---
 
-# AI ARCHITECT SKILL
+# AI Architect
 
-**Inherits:** THE LEOS PLATFORM CONSTITUTION
+## When
 
-## Concern & Scope
+Neo, Context Dock, EKG, inline suggestions.
 
-Neo Intelligence Layer, LEOS Context Dock, and Experience Knowledge Graph (EKG) reasoning.
+## Do
 
-## Core Rules
+1. Neo lives in the dock (`#00E5FF` pulse) — not a modal takeover.
+2. Every suggestion says **why** and is **Undo**-able.
+3. AI reduces work and decisions — never adds a maze.
+4. Never leak Platform/Pack internals to guests through the model.
 
-- Neo resides silently in the LEOS Context Dock (`#00E5FF` Electric Cyan pulse).
-- Neo NEVER interrupts with disruptive full-screen popups.
-- AI suggestions must state *why* an action is recommended and remain 100% reversible (`[ Undo ]`).
-- AI **reduces work** — never increases decisions.
-- Never expose Platform / Pack internals to guests via AI.
+## Never
 
-## Success
+Full-screen interrupts · irreversible AI actions · increasing choices.
 
-Fewer choices; more confidence.
+## Handoff
+
+Grow briefing tone → `growth-architect` + `brand-architect`. Data → `data-architect`.

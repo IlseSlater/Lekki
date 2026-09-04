@@ -1,24 +1,59 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
 import type { EventEnvelope, ResolvedContext } from '@lekki/contracts';
 import { id } from '@lekki/contracts';
-import { TransactionAggregate, equalShareState } from '@lekki/domain';
+import { TransactionAggregate } from '@lekki/domain';
 import { newCorrelationId, newEventId, newId } from '@lekki/shared';
 import { ManualPaymentConnector } from '@lekki/connector-manual-payment';
 import {
   PAYFAST_PAYMENT_CONNECTOR_ID,
   PayFastPaymentConnector,
 } from '@lekki/connector-payfast';
+import type { PaymentTenantRef } from '@lekki/runtime-capability';
 import { LeosBootstrapService } from './leos-bootstrap.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { OutboxService } from '../events/outbox.service';
+import { SessionAccessService } from './session-access.service';
+import { addMinor, fromMinor, subtractMinor, toMinor } from './money';
+import {
+  applyTipToBase,
+  assertRemainingToPay,
+} from './payment-invariants';
+import {
+  canReservePayment,
+  paymentBaseMinor,
+  paymentExpiresAt,
+  sessionRemainingMinor,
+  settlementCapacityAction,
+} from './payment-session-cap';
+import { equalShareForParticipant } from './equal-share-candidates';
+import { MissingFieldError, PaymentConflictError } from './domain-errors';
+import {
+  assertClaimLinesAllowed,
+  resolveParticipantBySecret,
+} from './participant-auth';
+import { PaymentExpiryService } from './payment-expiry.service';
+
+const RESTAURANT_PROFILE_FALLBACK = {
+  profileId: 'profile-restaurant',
+  profileVersion: '1.0.0',
+};
 
 @Injectable()
 export class LeosService {
+  private readonly logger = new Logger(LeosService.name);
+
   constructor(
     private readonly leos: LeosBootstrapService,
     private readonly prisma: PrismaService,
     private readonly outbox: OutboxService,
+    private readonly sessionAccess: SessionAccessService,
+    private readonly paymentExpiry: PaymentExpiryService,
   ) {}
+
+  private paymentTenant(session: { organisationId: string; venueId: string }): PaymentTenantRef {
+    return { organisationId: session.organisationId, venueId: session.venueId };
+  }
 
   private envelope(
     eventName: string,
@@ -47,6 +82,7 @@ export class LeosService {
     displayName: string;
     identityId?: string;
     participantId?: string;
+    participantSecret?: string;
   }) {
     const entry = await this.leos.entryRuntime.resolve({
       token: input.token,
@@ -61,6 +97,7 @@ export class LeosService {
       displayName: input.displayName,
       identityId: input.identityId,
       resumeParticipantId: input.participantId,
+      participantSecret: input.participantSecret,
     });
     if (!started.ok) throw new Error(started.error);
     const session = started.value.session;
@@ -108,26 +145,140 @@ export class LeosService {
 
     const venue = await this.prisma.venue.findUnique({
       where: { id: session.venueId },
-      select: { name: true },
+      select: {
+        name: true,
+        menuBrandEnabled: true,
+        brandColour: true,
+        guestDesignJson: true,
+        currency: true,
+      },
     });
+
+    const guestDesign =
+      venue?.guestDesignJson && typeof venue.guestDesignJson === 'object'
+        ? venue.guestDesignJson
+        : null;
 
     return {
       context: context.value,
       session,
       venueName: venue?.name ?? null,
+      menuBrandEnabled: !!venue?.menuBrandEnabled,
+      brandColour: venue?.brandColour || '#d7a14a',
+      guestDesign,
+      currency: venue?.currency ?? 'ZAR',
       joinedParticipantId: started.value.participantId,
+      participantSecret: started.value.participantSecret,
+    };
+  }
+
+  /** Studio Identity → Venue brand for Guest Continuity (menu half-moon). */
+  async updateVenueBrand(input: {
+    venueId: string;
+    menuBrandEnabled?: boolean;
+    brandColour?: string;
+    venueName?: string;
+    guestDesignJson?: Record<string, unknown>;
+  }) {
+    const colour = (input.brandColour || '').trim();
+    const data: {
+      menuBrandEnabled?: boolean;
+      brandColour?: string;
+      name?: string;
+      guestDesignJson?: Prisma.InputJsonValue;
+    } = {};
+    if (typeof input.menuBrandEnabled === 'boolean') {
+      data.menuBrandEnabled = input.menuBrandEnabled;
+    }
+    if (/^#[0-9A-Fa-f]{6}$/.test(colour)) {
+      data.brandColour = colour;
+    }
+    const name = (input.venueName || '').trim();
+    if (name) data.name = name;
+    if (input.guestDesignJson) {
+      data.guestDesignJson = input.guestDesignJson as Prisma.InputJsonValue;
+    }
+    const venue = await this.prisma.venue.update({
+      where: { id: input.venueId },
+      data,
+      select: {
+        id: true,
+        name: true,
+        menuBrandEnabled: true,
+        brandColour: true,
+        guestDesignJson: true,
+      },
+    });
+    return venue;
+  }
+
+  /** Mint a unique entry token for Go Live — never reuse registry defaults. */
+  async mintEntryToken(input: {
+    organisationId: string;
+    venueId: string;
+    physicalContextId: string;
+    profileId: string;
+    profileVersion: string;
+  }) {
+    const token = `e_${newId('qr').replace(/^qr_/, '')}`;
+    await this.prisma.entryToken.create({
+      data: {
+        token,
+        organisationId: input.organisationId,
+        venueId: input.venueId,
+        physicalContextId: input.physicalContextId,
+        profileId: input.profileId,
+        profileVersion: input.profileVersion,
+        active: true,
+      },
+    });
+    return { token };
+  }
+
+  /** Resolve org venue + place for Studio Go Live mint. */
+  async resolveMintContext(organisationId: string, placeCode?: string) {
+    const venue = await this.prisma.venue.findFirst({
+      where: { organisationId },
+      orderBy: { createdAt: 'asc' },
+    });
+    if (!venue) throw new Error('Venue not found for organisation');
+
+    const ctx =
+      (placeCode
+        ? await this.prisma.physicalContext.findFirst({
+            where: { venueId: venue.id, code: placeCode.trim() },
+          })
+        : null) ??
+      (await this.prisma.physicalContext.findFirst({
+        where: { venueId: venue.id },
+        orderBy: { code: 'asc' },
+      }));
+    if (!ctx) throw new Error('No place configured for this venue');
+
+    const entry = await this.prisma.entryToken.findFirst({
+      where: { venueId: venue.id },
+      orderBy: { token: 'asc' },
+    });
+
+    return {
+      organisationId,
+      venueId: venue.id,
+      physicalContextId: ctx.id,
+      profileId: entry?.profileId ?? RESTAURANT_PROFILE_FALLBACK.profileId,
+      profileVersion: entry?.profileVersion ?? RESTAURANT_PROFILE_FALLBACK.profileVersion,
+      placeCode: ctx.code,
     };
   }
 
   async createTransaction(input: {
     sessionId: string;
     participantId?: string;
+    participantSecret: string;
     lines: Array<{
       catalogueItemId: string;
-      label: string;
       quantity: number;
-      unitPrice: number;
-      routingTags: string[];
+      notes?: string;
+      selectionsJson?: unknown;
     }>;
   }) {
     const session = await this.prisma.experienceSession.findUnique({
@@ -135,20 +286,46 @@ export class LeosService {
       include: { participants: true },
     });
     if (!session) throw new Error('Session not found');
+    if (session.status === 'completed' || session.status === 'archived') {
+      throw new Error('Session is no longer active');
+    }
 
-    const participantId =
-      input.participantId &&
-      session.participants.some((p) => p.id === input.participantId)
-        ? input.participantId
-        : session.participants[0]?.id ?? null;
+    const participantId = input.participantId?.trim();
+    if (!participantId) throw new Error('Participant required');
+    await this.sessionAccess.assertGuestParticipant(
+      input.sessionId,
+      participantId,
+      input.participantSecret,
+    );
+
+    const catalogueIds = [...new Set(input.lines.map((l) => l.catalogueItemId))];
+    const catalogue = await this.prisma.restaurantCatalogItem.findMany({
+      where: { venueId: session.venueId, id: { in: catalogueIds }, available: true },
+    });
+    const byId = new Map(catalogue.map((c) => [c.id, c]));
+
+    const pricedLines = input.lines.map((line) => {
+      if (line.quantity < 1) throw new Error('Invalid quantity');
+      const item = byId.get(line.catalogueItemId);
+      if (!item) throw new Error(`Unknown or unavailable item: ${line.catalogueItemId}`);
+      return {
+        catalogueItemId: item.id,
+        label: item.label,
+        quantity: line.quantity,
+        unitPrice: Number(item.unitPrice),
+        routingTags: item.routingTags,
+        notes: line.notes?.trim() || undefined,
+        selectionsJson: line.selectionsJson ?? undefined,
+      };
+    });
 
     const txId = newId('tx');
     const aggregate = TransactionAggregate.create({
       id: txId,
       sessionId: session.id,
       organisationId: session.organisationId,
-      currency: 'ZAR',
-      lines: input.lines.map((line) => ({
+      currency: catalogue[0]?.currency ?? 'ZAR',
+      lines: pricedLines.map((line) => ({
         id: newId('txl'),
         catalogueItemId: line.catalogueItemId,
         label: line.label,
@@ -188,7 +365,7 @@ export class LeosService {
           currency: aggregate.currency,
           total: aggregate.total,
           lines: {
-            create: aggregate.lines.map((line) => ({
+            create: aggregate.lines.map((line, idx) => ({
               id: line.id,
               catalogueItemId: line.catalogueItemId,
               label: line.label,
@@ -196,6 +373,8 @@ export class LeosService {
               unitPrice: line.unitPrice,
               routingTags: line.routingTags,
               participantId: line.participantId ?? undefined,
+              notes: pricedLines[idx]?.notes,
+              selectionsJson: pricedLines[idx]?.selectionsJson ?? undefined,
             })),
           },
         },
@@ -221,6 +400,14 @@ export class LeosService {
           },
         });
       }
+
+      await tx.experienceSession.update({
+        where: { id: session.id },
+        data: {
+          billMinor: { increment: toMinor(aggregate.total) },
+          version: { increment: 1 },
+        },
+      });
 
       await this.outbox.append(
         this.envelope(
@@ -258,7 +445,12 @@ export class LeosService {
    * Claim-from-table — re-stamp open lines to this guest (Minimum Decisions).
    * No allocation wizard · no new Payment.scope · Mine pay reuses participantId.
    */
-  async claimLines(input: { sessionId: string; participantId: string | null; lineIds: string[] }) {
+  async claimLines(input: {
+    sessionId: string;
+    participantId: string | null;
+    lineIds: string[];
+    participantSecret: string;
+  }) {
     const sessionId = input.sessionId?.trim();
     const participantId = input.participantId?.trim() || null;
     const lineIds = [...new Set((input.lineIds ?? []).map((id) => id?.trim()).filter(Boolean))];
@@ -276,6 +468,10 @@ export class LeosService {
       },
     });
     if (!session) throw new Error('Session not found');
+
+    const caller = resolveParticipantBySecret(session.participants, input.participantSecret);
+    if (!caller) throw new Error('Invalid participant credentials');
+
     if (participantId && !session.participants.some((p) => p.id === participantId)) {
       throw new Error('Participant not on this visit');
     }
@@ -290,6 +486,8 @@ export class LeosService {
       where: { id: { in: validIds } },
       select: { id: true, participantId: true },
     });
+    assertClaimLinesAllowed(caller, participantId, existing);
+
     const undo = existing.map((row) => ({
       lineId: row.id,
       previousParticipantId: row.participantId ?? null,
@@ -369,10 +567,15 @@ export class LeosService {
     sessionId: string,
     options?: {
       tipAmount?: number;
+      tipPercent?: number;
       scope?: 'visit' | 'mine' | 'equal';
       participantId?: string;
+      participantSecret?: string;
     },
   ) {
+    // Free abandoned gateway reservations before reading remaining capacity.
+    await this.paymentExpiry.expireAbandoned();
+
     const session = await this.prisma.experienceSession.findUnique({
       where: { id: sessionId },
       include: {
@@ -385,57 +588,54 @@ export class LeosService {
       },
     });
     if (!session) throw new Error('Session not found');
-    const transaction = session.transactions.find((t) => t.status === 'committed') ?? session.transactions[0];
-    if (!transaction) throw new Error('No committed transaction');
-    if (transaction.status === 'settled') throw new Error('Already settled');
 
-    const tip = Math.max(0, Number(options?.tipAmount) || 0);
-    const rawScope = options?.scope;
     const scope: 'visit' | 'mine' | 'equal' =
-      rawScope === 'mine' ? 'mine' : rawScope === 'equal' ? 'equal' : 'visit';
+      options?.scope === 'mine' ? 'mine' : options?.scope === 'equal' ? 'equal' : 'visit';
     const participantId = options?.participantId?.trim() || '';
+    if ((scope === 'mine' || scope === 'equal') && participantId) {
+      const secret = options?.participantSecret?.trim();
+      if (!secret) throw new MissingFieldError('participantSecret');
+      await this.sessionAccess.assertGuestParticipant(sessionId, participantId, secret);
+    }
 
-    const completed = (transaction.payments ?? []).filter(
+    const tenant = this.paymentTenant(session);
+    const committed = session.transactions.filter((t) => t.status === 'committed');
+    if (!committed.length) throw new Error('No committed transaction');
+    const transaction = committed[committed.length - 1];
+
+    const remainingMinor = sessionRemainingMinor(session.billMinor, session.paidMinor);
+    assertRemainingToPay(remainingMinor);
+
+    const allPayments = committed.flatMap((t) => t.payments ?? []);
+    const completed = allPayments.filter(
       (p) => p.status === 'completed' || p.status === 'settled',
     );
-    const paidTowardTx = completed.reduce(
-      (sum, p) => sum + Math.max(0, Number(p.amount) - Number(p.tipAmount ?? 0)),
-      0,
-    );
-    const remainingVisit = Math.max(
-      0,
-      Math.round((Number(transaction.total) - paidTowardTx) * 100) / 100,
-    );
-    if (remainingVisit <= 0) throw new Error('Nothing left to pay');
 
-    let base = remainingVisit;
+    let baseMinor = remainingMinor;
     if (scope === 'mine') {
-      const attributed = transaction.lines.some((l) => !!l.participantId);
+      const allLines = committed.flatMap((t) => t.lines ?? []);
+      const attributed = allLines.some((l) => !!l.participantId);
       if (attributed && participantId) {
-        const mineOrdered = transaction.lines
-          .filter((l) => l.participantId === participantId)
-          .reduce((sum, l) => sum + Number(l.quantity) * Number(l.unitPrice), 0);
-        const mineAlreadyPaid = completed
-          .filter((p) => {
-            if (p.scope !== 'mine') return false;
-            const paidBy = (p as { participantId?: string | null }).participantId;
-            // Attributed table: only this guest’s mine payments count toward their share.
-            if (paidBy) return paidBy === participantId;
-            // Legacy mine rows without participantId — ignore when lines are attributed.
-            return false;
-          })
-          .reduce(
-            (sum, p) => sum + Math.max(0, Number(p.amount) - Number(p.tipAmount ?? 0)),
-            0,
-          );
-        const mineRemaining = Math.max(
-          0,
-          Math.round((mineOrdered - mineAlreadyPaid) * 100) / 100,
+        const mineOrderedMinor = addMinor(
+          ...allLines
+            .filter((l) => l.participantId === participantId)
+            .map((l) => toMinor(Number(l.unitPrice)) * l.quantity),
         );
-        base = Math.min(remainingVisit, mineRemaining);
+        const mineAlreadyPaidMinor = addMinor(
+          ...completed
+            .filter((p) => {
+              if (p.scope !== 'mine') return false;
+              const paidBy = (p as { participantId?: string | null }).participantId;
+              return paidBy ? paidBy === participantId : false;
+            })
+            .map((p) => subtractMinor(Number(p.amount), Number(p.tipAmount ?? 0))),
+        );
+        baseMinor = Math.min(
+          remainingMinor,
+          Math.max(0, subtractMinor(mineOrderedMinor, mineAlreadyPaidMinor)),
+        );
       }
-      // else: legacy / unattributed lines → mine ≡ remaining visit (single-guest calm)
-      if (base <= 0) throw new Error('Nothing on your share to pay');
+      if (baseMinor <= 0) throw new Error('Nothing on your share to pay');
     } else if (scope === 'equal') {
       if (!participantId) throw new Error('Equal share needs a participant');
       const paidEqualIds = new Set(
@@ -446,20 +646,44 @@ export class LeosService {
           )
           .map((p) => (p as { participantId: string }).participantId),
       );
-      const share = equalShareState(session.participants ?? [], paidEqualIds, participantId);
-      if (share.distinct < 2) throw new Error('Equal share needs more than one guest');
-      if (share.minePaid) {
-        throw new Error('Your equal share is already paid');
-      }
-      const unpaidSlots = Math.max(1, share.unpaid);
-      base = Math.min(
-        remainingVisit,
-        Math.round((remainingVisit / unpaidSlots) * 100) / 100,
+      const share = equalShareForParticipant(
+        session.participants ?? [],
+        committed,
+        paidEqualIds,
+        participantId,
       );
-      if (base <= 0) throw new Error('Nothing left for an equal share');
+      if (share.distinct < 2) throw new Error('Equal share needs more than one guest');
+      if (share.minePaid) throw new Error('Your equal share is already paid');
+      const unpaidSlots = Math.max(1, share.unpaid);
+      baseMinor = Math.min(
+        remainingMinor,
+        Math.round(remainingMinor / unpaidSlots),
+      );
+      if (baseMinor <= 0) throw new Error('Nothing left for an equal share');
     }
 
-    const amount = Math.round((base + tip) * 100) / 100;
+    if (
+      !canReservePayment({
+        billMinor: session.billMinor,
+        paidMinor: session.paidMinor,
+        version: session.version,
+        versionRead: session.version,
+        baseMinor,
+      })
+    ) {
+      throw new PaymentConflictError();
+    }
+
+    const tipped = applyTipToBase(baseMinor, {
+      tipPercent: options?.tipPercent,
+      tipAmount: options?.tipAmount,
+    });
+    const tip = fromMinor(tipped.tipMinor);
+    const baseAmount = fromMinor(tipped.baseMinor);
+    const amount = fromMinor(tipped.chargeMinor);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new Error('Invalid payment amount');
+    }
 
     const paymentResult = await this.leos.capabilityRuntime.createPayment(
       { profileId: session.profileId, version: session.profileVersion },
@@ -470,19 +694,33 @@ export class LeosService {
         organisationId: session.organisationId,
         sessionId: session.id,
       },
+      tenant,
     );
     if (!paymentResult.ok) throw new Error(paymentResult.error);
 
-    const connector = await this.leos.capabilityRuntime.resolvePaymentConnector({
-      profileId: session.profileId,
-      version: session.profileVersion,
-    });
+    const connector = await this.leos.capabilityRuntime.resolvePaymentConnector(
+      {
+        profileId: session.profileId,
+        version: session.profileVersion,
+      },
+      tenant,
+    );
     if (!connector.ok) throw new Error(connector.error);
 
     const scopedParticipant =
       (scope === 'mine' || scope === 'equal') && participantId ? participantId : null;
 
     await this.prisma.$transaction(async (tx) => {
+      const reserved = await tx.$executeRaw`
+        UPDATE "ExperienceSession"
+        SET "paidMinor" = "paidMinor" + ${baseMinor},
+            version = version + 1
+        WHERE id = ${session.id}
+          AND version = ${session.version}
+          AND "paidMinor" + ${baseMinor} <= "billMinor"
+      `;
+      if (Number(reserved) === 0) throw new PaymentConflictError();
+
       await tx.payment.create({
         data: {
           id: paymentResult.value.paymentId,
@@ -497,6 +735,8 @@ export class LeosService {
           status: paymentResult.value.status,
           reference: paymentResult.value.reference,
           connectorId: connector.value.connectorId,
+          expiresAt:
+            paymentResult.value.status === 'pending' ? paymentExpiresAt() : null,
         },
       });
 
@@ -511,7 +751,7 @@ export class LeosService {
             transactionId: transaction.id,
             tipAmount: tip,
             scope,
-            baseAmount: base,
+            baseAmount,
             participantId: scopedParticipant,
           },
         ),
@@ -522,6 +762,21 @@ export class LeosService {
     return paymentResult.value;
   }
 
+  /** Release a reserved base when a pending payment fails or is refunded. */
+  private async releaseSessionPaidMinor(
+    tx: Prisma.TransactionClient,
+    sessionId: string,
+    baseMinor: number,
+  ) {
+    if (baseMinor <= 0) return;
+    await tx.$executeRaw`
+      UPDATE "ExperienceSession"
+      SET "paidMinor" = GREATEST(0, "paidMinor" - ${baseMinor}),
+          version = version + 1
+      WHERE id = ${sessionId}
+    `;
+  }
+
   async completePayment(paymentId: string, options?: { fail?: boolean }) {
     const payment = await this.prisma.payment.findUnique({
       where: { id: paymentId },
@@ -530,11 +785,23 @@ export class LeosService {
     if (!payment) throw new Error('Payment not found');
 
     if (options?.fail) {
+      const baseMinor = paymentBaseMinor(
+        toMinor(Number(payment.amount)),
+        toMinor(Number(payment.tipAmount ?? 0)),
+      );
       await this.prisma.$transaction(async (tx) => {
-        await tx.payment.update({
-          where: { id: paymentId },
+        const claimed = await tx.payment.updateMany({
+          where: { id: paymentId, status: 'pending' },
           data: { status: 'failed' },
         });
+        if (claimed.count === 1) {
+          await this.releaseSessionPaidMinor(tx, payment.sessionId, baseMinor);
+        } else {
+          await tx.payment.updateMany({
+            where: { id: paymentId, status: 'expired' },
+            data: { status: 'failed' },
+          });
+        }
         await this.outbox.append(
           this.envelope(
             'PaymentFailed',
@@ -569,6 +836,72 @@ export class LeosService {
     return this.markPaymentSettled(paymentId, payment);
   }
 
+  async refundPayment(paymentId: string, amount?: number) {
+    const payment = await this.prisma.payment.findUnique({
+      where: { id: paymentId },
+      include: { session: true, transaction: true },
+    });
+    if (!payment) throw new Error('Payment not found');
+    if (payment.status !== 'completed' && payment.status !== 'settled') {
+      throw new Error('Only completed payments can be refunded');
+    }
+
+    const refundAmount =
+      typeof amount === 'number' && amount > 0 ? amount : Number(payment.amount);
+    if (refundAmount <= 0) throw new Error('Refund amount must be positive');
+    if (refundAmount > Number(payment.amount)) {
+      throw new Error('Refund amount cannot exceed the payment');
+    }
+
+    const tenant = this.paymentTenant(payment.session);
+    const result = await this.leos.capabilityRuntime.refundPayment(
+      {
+        profileId: payment.session.profileId,
+        version: payment.session.profileVersion,
+      },
+      id.payment(paymentId),
+      refundAmount,
+      tenant,
+    );
+    if (!result.ok) throw new Error(result.error);
+    if (result.value.status !== 'completed') {
+      throw new Error('Refund was not completed by the payment connector');
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.payment.update({
+        where: { id: paymentId },
+        data: { status: 'refunded' },
+      });
+      const baseMinor = paymentBaseMinor(
+        toMinor(refundAmount),
+        toMinor(Number(payment.tipAmount ?? 0)),
+      );
+      await this.releaseSessionPaidMinor(tx, payment.sessionId, baseMinor);
+      await this.outbox.append(
+        this.envelope(
+          'PaymentFailed',
+          payment.organisationId,
+          payment.session.venueId,
+          payment.session.correlationId,
+          {
+            paymentId,
+            transactionId: payment.transactionId,
+            sessionId: payment.sessionId,
+            reason: `Refunded ${refundAmount}`,
+          },
+        ),
+        tx,
+      );
+    });
+
+    return {
+      paymentId,
+      refundedAmount: result.value.refundedAmount,
+      status: 'refunded' as const,
+    };
+  }
+
   /**
    * PayFast ITN handler — signature + validate + settle/fail.
    * Idempotent: already-completed payments are acknowledged without re-emitting.
@@ -589,14 +922,21 @@ export class LeosService {
     if (payment.connectorId !== PAYFAST_PAYMENT_CONNECTOR_ID) {
       return { ok: false, reason: 'Payment is not a PayFast payment' };
     }
-    if (payment.status === 'completed' || payment.status === 'failed') {
+    if (
+      payment.status === 'completed' ||
+      payment.status === 'failed' ||
+      payment.status === 'needs_refund'
+    ) {
       return { ok: true, status: payment.status, idempotent: true };
     }
 
-    const resolved = await this.leos.capabilityRuntime.resolvePaymentConnector({
-      profileId: payment.session.profileId,
-      version: payment.session.profileVersion,
-    });
+    const resolved = await this.leos.capabilityRuntime.resolvePaymentConnector(
+      {
+        profileId: payment.session.profileId,
+        version: payment.session.profileVersion,
+      },
+      this.paymentTenant(payment.session),
+    );
     if (!resolved.ok) {
       return { ok: false, reason: resolved.error };
     }
@@ -605,22 +945,34 @@ export class LeosService {
     }
 
     const payfast = resolved.value as PayFastPaymentConnector;
-    const itn = await payfast.handleItn(posted, payment.amount);
+    const itn = await payfast.handleItn(posted, Number(payment.amount));
     if (!itn.ok) {
       return { ok: false, reason: itn.reason };
     }
 
     if (itn.settlement === 'settled') {
-      await this.markPaymentSettled(paymentId, payment);
-      return { ok: true, status: 'completed' };
+      const settled = await this.markPaymentSettled(paymentId, payment);
+      return { ok: true, status: settled.status };
     }
 
     if (itn.settlement === 'failed') {
+      const baseMinor = paymentBaseMinor(
+        toMinor(Number(payment.amount)),
+        toMinor(Number(payment.tipAmount ?? 0)),
+      );
       await this.prisma.$transaction(async (tx) => {
-        await tx.payment.update({
-          where: { id: paymentId },
+        const claimed = await tx.payment.updateMany({
+          where: { id: paymentId, status: 'pending' },
           data: { status: 'failed' },
         });
+        if (claimed.count === 1) {
+          await this.releaseSessionPaidMinor(tx, payment.sessionId, baseMinor);
+        } else {
+          await tx.payment.updateMany({
+            where: { id: paymentId, status: 'expired' },
+            data: { status: 'failed' },
+          });
+        }
         await this.outbox.append(
           this.envelope(
             'PaymentFailed',
@@ -649,36 +1001,107 @@ export class LeosService {
       organisationId: string;
       transactionId: string;
       sessionId: string;
-      amount: number;
-      tipAmount?: number | null;
+      amount: number | { toString(): string };
+      tipAmount?: number | null | { toString(): string };
       session: { venueId: string; correlationId: string };
     },
   ) {
+    const baseMinor = paymentBaseMinor(
+      toMinor(Number(payment.amount)),
+      toMinor(Number(payment.tipAmount ?? 0)),
+    );
+    let status: 'completed' | 'needs_refund' = 'completed';
+
     await this.prisma.$transaction(async (tx) => {
+      // Serialize concurrent late ITNs against the same payment.
+      const locked = await tx.$queryRaw<Array<{ status: string }>>`
+        SELECT status FROM "Payment" WHERE id = ${paymentId} FOR UPDATE
+      `;
+      const prior = locked[0];
+      if (!prior) throw new Error('Payment not found');
+
+      const sessionCap = await tx.experienceSession.findUnique({
+        where: { id: payment.sessionId },
+        select: { billMinor: true, paidMinor: true },
+      });
+      if (!sessionCap) throw new Error('Session not found');
+
+      const action = settlementCapacityAction({
+        priorStatus: prior.status,
+        billMinor: sessionCap.billMinor,
+        paidMinor: sessionCap.paidMinor,
+        baseMinor,
+      });
+      if (action === 'idempotent') {
+        status = prior.status === 'needs_refund' ? 'needs_refund' : 'completed';
+        return;
+      }
+
+      // Expiry (or any release) already dropped the reservation — re-take it.
+      // Pending still holds capacity; do not increment again.
+      if (prior.status !== 'pending' && baseMinor > 0) {
+        const rows = await tx.$executeRaw`
+          UPDATE "ExperienceSession"
+          SET "paidMinor" = "paidMinor" + ${baseMinor},
+              version = version + 1
+          WHERE id = ${payment.sessionId}
+            AND "paidMinor" + ${baseMinor} <= "billMinor"
+        `;
+        if (Number(rows) === 0) {
+          status = 'needs_refund';
+        }
+      } else if (action === 'overpayment') {
+        status = 'needs_refund';
+      }
+
       await tx.payment.update({
         where: { id: paymentId },
-        data: { status: 'completed' },
+        data: { status },
       });
 
-      const siblings = await tx.payment.findMany({
-        where: {
-          transactionId: payment.transactionId,
-          status: { in: ['completed', 'settled'] },
-        },
+      if (status === 'needs_refund') {
+        this.logger.error(
+          `Payment ${paymentId} settled at the gateway after reservation release, but session ${payment.sessionId} has no capacity left — flagged needs_refund (row 10)`,
+        );
+        await this.outbox.append(
+          this.envelope(
+            'PaymentOverpayment',
+            payment.organisationId,
+            payment.session.venueId,
+            payment.session.correlationId,
+            {
+              paymentId,
+              transactionId: payment.transactionId,
+              sessionId: payment.sessionId,
+              baseMinor,
+              billMinor: sessionCap.billMinor,
+              paidMinor: sessionCap.paidMinor,
+              priorStatus: prior.status,
+              reason:
+                'Gateway settled after expiry release; session capacity already taken — manual refund required',
+            },
+          ),
+          tx,
+        );
+        return;
+      }
+
+      const afterCap = await tx.experienceSession.findUnique({
+        where: { id: payment.sessionId },
+        select: { billMinor: true, paidMinor: true },
       });
-      const transaction = await tx.transaction.findUnique({
-        where: { id: payment.transactionId },
+      const pendingLeft = await tx.payment.count({
+        where: { sessionId: payment.sessionId, status: 'pending' },
       });
-      const paidTowardTx = siblings.reduce(
-        (sum, p) => sum + Math.max(0, Number(p.amount) - Number(p.tipAmount ?? 0)),
-        0,
-      );
       const fullyCovered =
-        !!transaction && paidTowardTx + 0.001 >= Number(transaction.total);
+        !!afterCap &&
+        afterCap.billMinor > 0 &&
+        afterCap.paidMinor >= afterCap.billMinor &&
+        pendingLeft === 0;
 
       if (fullyCovered) {
-        await tx.transaction.update({
-          where: { id: payment.transactionId },
+        await tx.transaction.updateMany({
+          where: { sessionId: payment.sessionId, status: 'committed' },
           data: { status: 'settled' },
         });
       }
@@ -694,13 +1117,14 @@ export class LeosService {
             transactionId: payment.transactionId,
             sessionId: payment.sessionId,
             fullyCovered,
+            retaken: prior.status !== 'pending',
           },
         ),
         tx,
       );
     });
 
-    return { paymentId, status: 'completed' };
+    return { paymentId, status };
   }
 
   async requestAssistance(input: {
@@ -844,6 +1268,37 @@ export class LeosService {
     }
 
     return request;
+  }
+
+  async leaveSession(input: {
+    sessionId: string;
+    participantId: string;
+    participantSecret: string;
+  }) {
+    await this.sessionAccess.assertGuestParticipant(
+      input.sessionId,
+      input.participantId,
+      input.participantSecret,
+    );
+    const result = await this.leos.experienceRuntime.departParticipant(
+      input.sessionId,
+      input.participantId,
+    );
+    if (!result.ok) throw new Error(result.error);
+
+    if (result.value.closed) {
+      await this.outbox.append(
+        this.envelope(
+          'SessionCompleted',
+          result.value.session.organisationId,
+          result.value.session.venueId,
+          result.value.session.correlationId,
+          { sessionId: input.sessionId },
+        ),
+      );
+    }
+
+    return { closed: result.value.closed, session: result.value.session };
   }
 
   async closeSession(sessionId: string) {

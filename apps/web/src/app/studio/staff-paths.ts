@@ -32,6 +32,25 @@ export function staffMonitorPath(workPath: string): string {
   return `${workPath}${sep}monitor=1`;
 }
 
+/** Split path+query for Angular [routerLink] + [queryParams] (string URLs with ? break routerLink). */
+export function appLinkPath(url: string): string {
+  return (url.split('?')[0] || '/').trim() || '/';
+}
+
+export function appLinkQuery(url: string): Record<string, string> {
+  const raw = url.split('?')[1];
+  if (!raw) return {};
+  const out: Record<string, string> = {};
+  for (const part of raw.split('&')) {
+    if (!part) continue;
+    const eq = part.indexOf('=');
+    const key = decodeURIComponent(eq >= 0 ? part.slice(0, eq) : part);
+    const val = decodeURIComponent(eq >= 0 ? part.slice(eq + 1) : '');
+    if (key) out[key] = val;
+  }
+  return out;
+}
+
 export type StaffExperienceOption = {
   id: string;
   label: string;

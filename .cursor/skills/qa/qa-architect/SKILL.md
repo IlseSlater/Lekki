@@ -1,35 +1,43 @@
 ---
 name: qa-architect
 description: >-
-  QA Architect — HCI verification, Playwright E2E, evidence packages. Never approve
-  because it compiles — approve because confidence increased. Quality gate: build,
-  E2E, evidence, HCI.
+  Owns the LEOS quality gate: unit tests first (node:test, .test.ts), then
+  Playwright E2E, then HCI evidence. Use before calling work done, for flakes,
+  or “prove it.” Triggers: quality gate, Playwright, evidence, unit test, vitest,
+  jest, .spec.ts, E2E, verify in browser. Compiling is not a gate. Money →
+  money-invariants.
 ---
 
-# QA ARCHITECT SKILL
+# QA Architect
 
-**Inherits:** THE LEOS PLATFORM CONSTITUTION  
 **Agent twin:** `.cursor/agents/quality-evidence.md`
 
-## Concern & Scope
+A clean `tsc` / Angular build is a **precondition** for running this gate.
+It is not a step and it is not done.
 
-Playwright E2E test suites (`tests/e2e/`), Human Confidence Index (HCI) automated validation, and evidence package generation.
+## When
 
-## Quality Gate Execution
+Closing a story. Any change to arithmetic, auth, or a guest/operator journey.
 
-1. Zero TypeScript/Angular build warnings.
-2. Playwright E2E spec passes cleanly (Scan → Join → Order → Pay → Serve).
-3. Evidence package committed under `docs/ux/evidence/`.
-4. Verify HCI score was maintained or increased.
+## Do
+
+1. **Unit tier.** If the change touches money, splits, settlement, Decimal,
+   participant secrets, or a pure function: load `unit-proof`, and for money
+   load `money-invariants`. Run `pnpm --filter @lekki/runtime-app test`.
+   No merge without a failing-then-passing assertion for the invariant.
+2. **Journey tier.** Exercise Scan → Join → Order → Pay → Serve as relevant.
+   Browser **behaviour**, not a single screenshot. Shared state across routes
+   must hold. Empty, error, and auth paths count.
+3. Evidence under `docs/ux/evidence/` when the story requires it.
+4. HCI must not drop — load `hci-confidence`.
 
 ## Never
 
-Approve because it **compiles**.
+Approve because it compiles · approve money on a screenshot · skip
+empty/error/auth paths · ignore Operate while testing Guest.
 
-## Always
+## Handoff
 
-Approve because **confidence increased**.
-
-## Success
-
-Proof over hope.
+Money table → `money-invariants`. Unit runner → `unit-proof`.
+Score → `hci-confidence`. A11y → `accessibility-architect`.
+Auth loops → `security-architect`.

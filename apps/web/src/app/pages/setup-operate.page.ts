@@ -20,6 +20,8 @@ import {
   rankEscalations,
   stationGlanceLine,
 } from '../studio/operate-glance';
+import { ServicePageComponent } from './service.page';
+import { StationPageComponent } from './station.page';
 
 type StationSummary = {
   id: string;
@@ -55,188 +57,342 @@ type TablePulse = {
 
 /**
  * Studio Operate — Operations Overview (ADR-004).
- * Calm mission control · glance rows · Staff Experience does the work.
+ * Calm mission control · glance rows · Staff Experience monitors in the right rail.
  */
 @Component({
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, ServicePageComponent, StationPageComponent],
   template: `
-    <div class="studio-operate studio-motion-appear">
-      <header class="studio-operate__header">
-        <p class="studio-operate__now">{{ greeting }}</p>
-        <h1 class="studio-operate__venue">{{ venue }}</h1>
-        @if (!live) {
-          <p class="studio-operate__calm">Go live first — then oversight fills as guests arrive.</p>
-        } @else if (loading) {
-          <p class="studio-operate__calm">Checking the floor…</p>
-        } @else {
-          <p class="studio-operate__calm">{{ calmLine }}</p>
-          <p class="studio-operate__handoff">{{ handoffLine }}</p>
-          @if (ownerHint) {
-            <p class="studio-operate__next">{{ ownerHint }}</p>
+    <div
+      class="studio-operate studio-motion-appear"
+      [class.studio-operate--panel]="panelOpen"
+    >
+      <div class="studio-operate__main">
+        <header class="studio-operate__header">
+          <p class="studio-operate__now">{{ greeting }}</p>
+          <h1 class="studio-operate__venue">{{ venue }}</h1>
+          @if (!live) {
+            <p class="studio-operate__calm">Go live first — then oversight fills as guests arrive.</p>
+          } @else if (loading) {
+            <p class="studio-operate__calm">Checking the floor…</p>
+          } @else {
+            <p class="studio-operate__calm">{{ calmLine }}</p>
+            <p class="studio-operate__handoff">{{ handoffLine }}</p>
+            @if (ownerHint) {
+              <p class="studio-operate__next">{{ ownerHint }}</p>
+            }
           }
+        </header>
+
+        @if (actionMessage) {
+          <p class="studio-operate__action-msg" role="status">{{ actionMessage }}</p>
         }
-      </header>
+        @if (actionError) {
+          <p class="studio-operate__action-err" role="alert">{{ actionError }}</p>
+        }
 
-      @if (actionMessage) {
-        <p class="studio-operate__action-msg" role="status">{{ actionMessage }}</p>
-      }
-      @if (actionError) {
-        <p class="studio-operate__action-err" role="alert">{{ actionError }}</p>
-      }
-
-      @if (live && escalations.length) {
-        <section class="studio-operate__board" aria-label="Escalations">
-          <p class="studio-operate__board-label">Needs you</p>
-          @for (e of escalations; track e.id) {
-            <div
-              class="studio-operate__row studio-operate__row--escalation"
-              [attr.data-tone]="'attention'"
-              [class.studio-operate__row--pulse]="e.pulse"
-            >
-              <span class="studio-operate__place"
-                >{{ e.placeLabel }}
-                @if (e.ageLabel) {
-                  <span class="studio-operate__age">{{ e.ageLabel }}</span>
-                }
-              </span>
-              <span class="studio-operate__status">{{
-                e.status === 'acknowledged' ? 'Claimed — on the way' : 'Waiting for claim'
-              }}</span>
-              <div class="studio-operate__hint studio-operate__hint--actions">
-                @if (e.status !== 'acknowledged') {
-                  <button
-                    type="button"
-                    [class]="
-                      isPrimaryClaim(e)
-                        ? 'leos-btn leos-btn--primary studio-operate__claim'
-                        : 'studio-operate__text-act'
-                    "
-                    [disabled]="busyId === e.id"
-                    (click)="claim(e)"
-                  >
-                    Claim
-                  </button>
-                } @else {
+        @if (live && escalations.length) {
+          <section class="studio-operate__board" aria-label="Escalations">
+            <p class="studio-operate__board-label">Needs you</p>
+            @for (e of escalations; track e.id) {
+              <div
+                class="studio-operate__row studio-operate__row--escalation"
+                [attr.data-tone]="'attention'"
+                [class.studio-operate__row--pulse]="e.pulse"
+              >
+                <span class="studio-operate__place"
+                  >{{ e.placeLabel }}
+                  @if (e.ageLabel) {
+                    <span class="studio-operate__age">{{ e.ageLabel }}</span>
+                  }
+                </span>
+                <span class="studio-operate__status">{{
+                  e.status === 'acknowledged' ? 'Claimed — on the way' : 'Waiting for claim'
+                }}</span>
+                <div class="studio-operate__hint studio-operate__hint--actions">
+                  @if (e.status !== 'acknowledged') {
+                    <button
+                      type="button"
+                      [class]="
+                        isPrimaryClaim(e)
+                          ? 'leos-btn leos-btn--primary studio-operate__claim'
+                          : 'studio-operate__text-act'
+                      "
+                      [disabled]="busyId === e.id"
+                      (click)="claim(e)"
+                    >
+                      Claim
+                    </button>
+                  } @else {
+                    <button
+                      type="button"
+                      class="studio-operate__text-act"
+                      [disabled]="busyId === e.id"
+                      (click)="resolveEscalation(e)"
+                    >
+                      Resolve
+                    </button>
+                  }
                   <button
                     type="button"
                     class="studio-operate__text-act"
                     [disabled]="busyId === e.id"
-                    (click)="resolveEscalation(e)"
+                    (click)="forceClear(e)"
                   >
-                    Resolve
+                    Force clear
                   </button>
-                }
+                  <button type="button" class="studio-operate__text-act" (click)="openFloorPanel()">
+                    Floor ›
+                  </button>
+                </div>
+              </div>
+            }
+          </section>
+        }
+
+        @if (live && showFloorBoard) {
+          <section class="studio-operate__board" [attr.aria-label]="placeNoun + ' glance'">
+            <div class="studio-operate__board-head">
+              <p class="studio-operate__board-label">Floor</p>
+              <button type="button" class="studio-operate__board-link" (click)="openFloorPanel()">
+                Monitor ›
+              </button>
+            </div>
+            @if (glancePlaces.length) {
+              @for (t of glancePlaces; track t.sessionId) {
                 <button
                   type="button"
-                  class="studio-operate__text-act"
-                  [disabled]="busyId === e.id"
-                  (click)="forceClear(e)"
+                  class="studio-operate__row"
+                  [attr.data-tone]="t.tone"
+                  [class.studio-operate__row--pulse]="t.pulse"
+                  [class.studio-operate__row--active]="panelOpen && panelKind === 'floor'"
+                  (click)="openFloorPanel()"
                 >
-                  Force clear
+                  <span class="studio-operate__place"
+                    >{{ placeNoun }} {{ t.placeCode }}
+                    @if (t.ageLabel) {
+                      <span class="studio-operate__age">{{ t.ageLabel }}</span>
+                    }
+                  </span>
+                  <span class="studio-operate__status">{{ t.line }}</span>
                 </button>
-                <a class="studio-operate__text-act" [routerLink]="floorMonitor">Floor ›</a>
-              </div>
-            </div>
-          }
-        </section>
-      }
-
-      @if (live && showFloorBoard) {
-        <section class="studio-operate__board" [attr.aria-label]="placeNoun + ' glance'">
-          <div class="studio-operate__board-head">
-            <p class="studio-operate__board-label">Floor</p>
-            <a class="studio-operate__board-link" [routerLink]="floorMonitor">Monitor ›</a>
-          </div>
-          @if (glancePlaces.length) {
-            @for (t of glancePlaces; track t.sessionId) {
-              <a
+              }
+            } @else {
+              <button
+                type="button"
                 class="studio-operate__row"
-                [attr.data-tone]="t.tone"
-                [class.studio-operate__row--pulse]="t.pulse"
-                [routerLink]="floorMonitor"
+                [attr.data-tone]="'calm'"
+                (click)="openFloorPanel()"
               >
-                <span class="studio-operate__place"
-                  >{{ placeNoun }} {{ t.placeCode }}
-                  @if (t.ageLabel) {
-                    <span class="studio-operate__age">{{ t.ageLabel }}</span>
-                  }
-                </span>
-                <span class="studio-operate__status">{{ t.line }}</span>
-                <span class="studio-operate__hint">View ›</span>
-              </a>
+                <span class="studio-operate__place">{{ placeNounPlural }}</span>
+                <span class="studio-operate__status">All calm</span>
+              </button>
             }
-          } @else {
-            <a class="studio-operate__row" [attr.data-tone]="'calm'" [routerLink]="floorMonitor">
-              <span class="studio-operate__place">{{ placeNounPlural }}</span>
-              <span class="studio-operate__status">All calm</span>
-              <span class="studio-operate__hint">Monitor ›</span>
-            </a>
-          }
-        </section>
-      }
+          </section>
+        }
 
-      @if (live && summaries.length) {
-        <section class="studio-operate__board" aria-label="Stations">
-          <p class="studio-operate__board-label">Stations</p>
-          @if (glanceStations.length) {
-            @for (s of glanceStations; track s.id) {
-              <a
+        @if (live && summaries.length) {
+          <section class="studio-operate__board" aria-label="Stations">
+            <p class="studio-operate__board-label">Stations</p>
+            @for (s of summaries; track s.id) {
+              <button
+                type="button"
                 class="studio-operate__row"
                 [attr.data-tone]="s.tone"
                 [class.studio-operate__row--pulse]="s.pulse"
-                [routerLink]="s.monitorPath"
+                [class.studio-operate__row--active]="
+                  panelOpen && panelKind === 'station' && panelStationKey === s.id
+                "
+                (click)="openStationPanel(s)"
               >
                 <span class="studio-operate__place">{{ s.label }}</span>
                 <span class="studio-operate__status">{{ s.line }}</span>
-                <span class="studio-operate__hint">Open ›</span>
-              </a>
+              </button>
             }
-          } @else {
-            <a
-              class="studio-operate__row"
-              [attr.data-tone]="'calm'"
-              [routerLink]="summaries[0].monitorPath || floorMonitor"
-            >
-              <span class="studio-operate__place">Stations</span>
-              <span class="studio-operate__status">All calm</span>
-              <span class="studio-operate__hint">Open ›</span>
-            </a>
-          }
-        </section>
-      }
+          </section>
+        }
 
-      @if (!live) {
-        <div class="studio-operate__doors">
-          <a class="leos-btn leos-btn--primary" routerLink="/studio/setup/golive">Go live</a>
-        </div>
-      }
+        @if (!live) {
+          <div class="studio-operate__doors">
+            <a class="leos-btn leos-btn--primary" routerLink="/studio/setup/golive">Go live</a>
+          </div>
+        }
 
-      @if (live) {
-        <p class="studio-operate__foot">
-          @if (guestCount != null) {
-            <span>{{ guestCount }} {{ guestActivityLine }}</span>
-          }
-          @if (guestCount != null && paymentsLine) {
+        @if (live) {
+          <p class="studio-operate__foot">
+            @if (guestCount != null) {
+              <span>{{ guestCount }} {{ guestActivityLine }}</span>
+            }
+            @if (guestCount != null && paymentsLine) {
+              <span class="studio-operate__foot-sep" aria-hidden="true">·</span>
+            }
+            @if (paymentsLine) {
+              <span>Payments {{ paymentsLine.toLowerCase() }}</span>
+            }
+            @if (guestCount != null || paymentsLine) {
+              <span class="studio-operate__foot-sep" aria-hidden="true">·</span>
+            }
+            <a class="studio-operate__foot-a" routerLink="/studio/team">Team</a>
             <span class="studio-operate__foot-sep" aria-hidden="true">·</span>
-          }
-          @if (paymentsLine) {
-            <span>Payments {{ paymentsLine.toLowerCase() }}</span>
-          }
-          @if (guestCount != null || paymentsLine) {
+            <button type="button" class="studio-operate__foot-a" (click)="openFloorPanel()">
+              Staff board
+            </button>
             <span class="studio-operate__foot-sep" aria-hidden="true">·</span>
-          }
-          <a class="studio-operate__foot-a" routerLink="/studio/team">Team</a>
-          <span class="studio-operate__foot-sep" aria-hidden="true">·</span>
-          <a class="studio-operate__foot-a" routerLink="/staff">Staff Experience</a>
-          <span class="studio-operate__foot-sep" aria-hidden="true">·</span>
-          <span class="studio-operate__foot-muted">{{ handoffLine }}</span>
-        </p>
-      }
+            <span class="studio-operate__foot-muted">{{ handoffLine }}</span>
+          </p>
+        }
+      </div>
+
+      <aside
+        class="studio-operate__rail"
+        [class.studio-operate__rail--open]="panelOpen"
+        [attr.aria-hidden]="panelOpen ? null : 'true'"
+      >
+        @if (panelOpen) {
+          <div class="studio-operate__rail-inner">
+            <div class="studio-operate__rail-head">
+              <p class="studio-operate__rail-label">{{ railLabel }}</p>
+              <button
+                type="button"
+                class="studio-operate__rail-close"
+                (click)="closeFloorPanel()"
+                aria-label="Close staff board"
+              >
+                ×
+              </button>
+            </div>
+            <div class="studio-operate__rail-board">
+              @if (panelKind === 'floor') {
+                <leos-service-board [embedMonitor]="true" />
+              } @else if (panelStationKey) {
+                <leos-station-board
+                  [embedMonitor]="true"
+                  [embedStationKey]="panelStationKey"
+                />
+              }
+            </div>
+          </div>
+        }
+      </aside>
     </div>
   `,
   styles: [
     `
+      :host {
+        display: block;
+        width: 100%;
+      }
+      .studio-operate {
+        display: grid;
+        grid-template-columns: minmax(0, 60%) minmax(0, 40%);
+        align-items: start;
+        gap: 0;
+        max-width: none;
+        padding: 0.25rem 0 2rem;
+        transition: grid-template-columns var(--studio-duration-settle, 360ms)
+          var(--studio-ease, cubic-bezier(0.22, 1, 0.36, 1));
+      }
+      .studio-operate--panel {
+        padding: 0;
+      }
+      .studio-operate__main {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: var(--studio-pad-section, 2rem);
+        padding-right: 1.25rem;
+      }
+      .studio-operate__rail {
+        min-width: 0;
+        width: 100%;
+        opacity: 0;
+        transform: translateX(1rem);
+        pointer-events: none;
+        transition:
+          opacity var(--studio-duration, 220ms) var(--studio-ease-soft, cubic-bezier(0.33, 1, 0.68, 1)),
+          transform var(--studio-duration-settle, 360ms) var(--studio-ease, cubic-bezier(0.22, 1, 0.36, 1));
+      }
+      .studio-operate__rail--open {
+        position: sticky;
+        top: var(--studio-pad-outer, 48px);
+        height: calc(100dvh - (var(--studio-pad-outer, 48px) * 2));
+        max-height: calc(100dvh - (var(--studio-pad-outer, 48px) * 2));
+        opacity: 1;
+        transform: translateX(0);
+        pointer-events: auto;
+      }
+      .studio-operate__rail-inner {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        height: 100%;
+        max-height: 100%;
+        padding: 1.1rem 1.25rem 1.25rem;
+        border-radius: 1.5rem;
+        background: #fff;
+        border: 1px solid var(--studio-line, #eae6e1);
+        box-shadow: 0 1px 2px rgba(27, 34, 48, 0.04);
+        box-sizing: border-box;
+        overflow: hidden;
+        animation: operate-rail-rise var(--studio-duration-enter, 280ms)
+          var(--studio-ease, cubic-bezier(0.22, 1, 0.36, 1));
+      }
+      @keyframes operate-rail-rise {
+        from {
+          opacity: 0;
+          transform: translateY(0.4rem);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .studio-operate__rail-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+      }
+      .studio-operate__rail-label {
+        margin: 0;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--studio-ink-tertiary, #94a3b8);
+      }
+      .studio-operate__rail-close {
+        display: grid;
+        place-items: center;
+        width: 2rem;
+        height: 2rem;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        border-radius: 0.5rem;
+        background: transparent;
+        color: var(--studio-ink-secondary, #64748b);
+        font: inherit;
+        font-size: 1.35rem;
+        line-height: 1;
+        cursor: pointer;
+      }
+      .studio-operate__rail-close:hover {
+        color: var(--studio-ink, #0f172a);
+        background: rgba(15, 23, 42, 0.06);
+      }
+      .studio-operate__rail-board {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .studio-operate__rail-board > :is(leos-service-board, leos-station-board) {
+        flex: 1;
+        min-height: 0;
+        height: 100%;
+      }
       .studio-operate__handoff,
       .studio-operate__next {
         margin: 0.35rem 0 0;
@@ -258,6 +414,25 @@ type TablePulse = {
         font-size: 0.875rem;
         font-weight: 600;
         color: #b45309;
+      }
+      .studio-operate__row {
+        width: 100%;
+        text-align: left;
+        font: inherit;
+        cursor: pointer;
+        background: transparent;
+        border: 0;
+        border-bottom: 1px solid var(--studio-line, #eae6e1);
+      }
+      .studio-operate__row--active {
+        background: color-mix(in srgb, var(--leos-gold, #d7a14a) 10%, transparent);
+      }
+      .studio-operate__board-link {
+        border: 0;
+        background: transparent;
+        padding: 0;
+        font: inherit;
+        cursor: pointer;
       }
       .studio-operate__row--escalation {
         grid-template-columns: 1fr;
@@ -295,9 +470,48 @@ type TablePulse = {
         opacity: 0.45;
         cursor: not-allowed;
       }
+      .studio-operate__foot-a {
+        border: 0;
+        background: transparent;
+        padding: 0;
+        font: inherit;
+        cursor: pointer;
+      }
+      @media (max-width: 900px) {
+        .studio-operate,
+        .studio-operate--panel {
+          grid-template-columns: minmax(0, 100%);
+        }
+        .studio-operate__main {
+          padding-right: 0;
+        }
+        .studio-operate__rail {
+          position: fixed;
+          inset: 0.75rem;
+          z-index: 40;
+          width: auto;
+          transform: translateX(110%);
+        }
+        .studio-operate__rail--open {
+          transform: translateX(0);
+        }
+        .studio-operate__rail-inner {
+          max-height: none;
+          height: 100%;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .studio-operate,
+        .studio-operate__rail,
+        .studio-operate__rail-inner {
+          transition: none;
+          animation: none;
+        }
+      }
     `,
   ],
 })
+
 export class SetupOperatePageComponent implements OnInit, OnDestroy {
   private readonly ctx = inject(StudioContextService);
   private readonly auth = inject(StudioAuthService);
@@ -317,6 +531,10 @@ export class SetupOperatePageComponent implements OnInit, OnDestroy {
   paymentsOk = true;
   helpCount = 0;
   floorMonitor = '';
+  panelOpen = false;
+  panelKind: 'floor' | 'station' = 'floor';
+  panelStationKey = '';
+  panelStationLabel = '';
   busyId: string | null = null;
   actionMessage = '';
   actionError = '';
@@ -335,6 +553,31 @@ export class SetupOperatePageComponent implements OnInit, OnDestroy {
 
   get showFloorBoard(): boolean {
     return (this.guestCount ?? 0) > 0;
+  }
+
+  openFloorPanel() {
+    this.panelKind = 'floor';
+    this.panelStationKey = '';
+    this.panelStationLabel = '';
+    this.panelOpen = true;
+  }
+
+  openStationPanel(s: StationSummary) {
+    this.panelKind = 'station';
+    this.panelStationKey = s.id;
+    this.panelStationLabel = s.label;
+    this.panelOpen = true;
+  }
+
+  closeFloorPanel() {
+    this.panelOpen = false;
+  }
+
+  get railLabel(): string {
+    if (this.panelKind === 'station' && this.panelStationLabel) {
+      return `${this.panelStationLabel} · monitoring`;
+    }
+    return 'Floor · monitoring';
   }
 
   /** Stations with work — calm stations collapse into one All calm row. */
@@ -473,15 +716,22 @@ export class SetupOperatePageComponent implements OnInit, OnDestroy {
     if (!createdAt) return '';
     const mins = Math.max(0, Math.floor((Date.now() - new Date(createdAt).getTime()) / 60000));
     if (mins < 1) return 'Just now';
-    if (mins === 1) return '1 min';
-    return `${mins} min`;
+    return this.formatDuration(mins);
   }
 
   private idleAgeLabel(idleMinutes?: number): string {
     const mins = idleMinutes ?? 0;
     if (mins < 1) return '';
-    if (mins === 1) return '1 min';
-    return `${mins} min`;
+    return this.formatDuration(mins);
+  }
+
+  /** Under 60m → "12 min"; 60m+ → "1h 5 min". */
+  private formatDuration(mins: number): string {
+    if (mins < 60) return mins === 1 ? '1 min' : `${mins} min`;
+    const hours = Math.floor(mins / 60);
+    const rem = mins % 60;
+    if (rem === 0) return hours === 1 ? '1h' : `${hours}h`;
+    return `${hours}h ${rem} min`;
   }
 
   private refresh() {

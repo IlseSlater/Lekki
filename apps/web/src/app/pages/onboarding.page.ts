@@ -596,7 +596,7 @@ export class OnboardingPageComponent implements OnInit {
       return;
     }
     if (profile.email) {
-      this.step = 'verify';
+      this.step = profile.verified ? 'name' : 'account';
       return;
     }
     this.step = 'account';
@@ -615,17 +615,20 @@ export class OnboardingPageComponent implements OnInit {
 
   continueWithGoogle() {
     this.email = this.email.trim() || 'you@gmail.com';
-    this.sendCode();
+    this.onboarding.save({ email: this.email, verified: true, entryToken: this.entryToken });
+    this.go('name');
   }
 
   continueWithApple() {
     this.email = this.email.trim() || 'you@icloud.com';
-    this.sendCode();
+    this.onboarding.save({ email: this.email, verified: true, entryToken: this.entryToken });
+    this.go('name');
   }
 
   continueWithFacebook() {
     this.email = this.email.trim() || 'you@facebook.com';
-    this.sendCode();
+    this.onboarding.save({ email: this.email, verified: true, entryToken: this.entryToken });
+    this.go('name');
   }
 
   sendCode() {
@@ -633,19 +636,12 @@ export class OnboardingPageComponent implements OnInit {
       this.error = 'Enter a valid email to continue.';
       return;
     }
-    this.busy = true;
-    this.error = '';
     this.onboarding.save({
       email: this.email.trim(),
       entryToken: this.entryToken,
-      verified: false,
+      verified: true,
     });
-    setTimeout(() => {
-      this.busy = false;
-      this.otpDigits = ['', '', '', '', '', ''];
-      this.startResend(28);
-      this.go('verify');
-    }, 700);
+    this.go('name');
   }
 
   resendCode() {
@@ -654,8 +650,6 @@ export class OnboardingPageComponent implements OnInit {
   }
 
   verifyCode() {
-    if (!this.otpComplete) return;
-    this.onboarding.save({ email: this.email.trim(), verified: true });
     this.go('name');
   }
 
@@ -828,6 +822,8 @@ export class OnboardingPageComponent implements OnInit {
         this.state.profileId = res.session.profileId ?? res.context.profile.id ?? '';
         this.state.physicalContextCode = res.context.physicalContextCode ?? '';
         this.state.venueName = res.venueName ?? '';
+        this.state.menuBrandEnabled = !!res.menuBrandEnabled;
+        this.state.brandColour = res.brandColour || '#d7a14a';
         this.state.participantId = res.joinedParticipantId ?? '';
         this.state.token = token;
         this.state.displayName = displayName;

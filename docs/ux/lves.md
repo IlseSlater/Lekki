@@ -82,30 +82,33 @@ Large whitespace. The page should feel slower than the user’s brain. Never rus
 **Gold is the only brand color.** Everything else stays neutral.  
 90% warm neutrals. Gold only for logo, primary actions, progress, confirmations.
 
-Personality: warm · calm · human · premium · confident · effortless.  
-Not luxury · not corporate · not fintech. Golden hour light.
+Personality: calm · human · premium · confident · effortless.  
+Surgical white lobby · rose-gold cue — not cream wallpaper · not cold blue SaaS.
 
 | Role | Value |
 |------|--------|
-| Brand Gold | `#D7A14A` |
-| Gold hover | `#C98F33` |
+| Brand Gold (rose-gold) | `#D7A14A` |
+| Gold hover | `#C48F38` |
 | Gold light | `#E8C178` |
 | Gold dark | `#A96F20` |
-| Warm white (app bg) | `#FAF7F2` |
+| App canvas | `#FFFFFF` |
 | Surface / cards | `#FFFFFF` |
-| Secondary surface | `#F4EFE8` |
-| Primary text | `#1B2230` |
-| Secondary text | `#6B7280` |
-| Muted text | `#8F96A3` |
-| Border | `#E7E2DB` |
-| Card border | `#EEE7DE` |
+| Secondary surface | `#F9F8F6` |
+| Primary text | `#0F172A` |
+| Body text | `#475569` |
+| Secondary text | `#64748B` |
+| Muted text | `#94A3B8` |
+| Border (hairline) | `#EAE6E1` |
 | Success | `#4F8A6B` |
 | Warning | `#D9A441` |
 | Error | `#C65B52` |
-| Info | `#4F7DAF` |
-| Warm shadow | `0 10px 30px rgba(45,30,15,.08)` |
+| CTA shadow | `0 2px 8px rgba(215,161,74,.25)` |
+| Card shadow | `0 1px 3px rgba(15,23,42,.05)` |
 
-Hero gradient: `#FAF7F2` → `#F2E4CF`. Gold accent: `#E8C178` → `#D7A14A`.
+**Edition:** Surgical White & Rose-Gold (Warm Sand `#FAF7F2` unlocked — retired as default canvas).  
+Gold is rationed to primary CTA · focus · selected chips — never large washes.
+
+Hero gradient: `#FFFFFF` → `#F9F8F6`. Gold accent: `#E8C178` → `#D7A14A`.
 
 Studio uses the **same palette** (never dark). Operate only increases density.
 

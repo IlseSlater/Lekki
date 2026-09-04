@@ -334,9 +334,18 @@ export class EntryPageComponent {
           this.state.profileId = res.session.profileId ?? res.context.profile.id ?? '';
           this.state.physicalContextCode = res.context.physicalContextCode ?? '';
           this.state.venueName = res.venueName ?? '';
+          this.state.menuBrandEnabled = !!res.menuBrandEnabled;
+          this.state.brandColour = res.brandColour || '#d7a14a';
           this.state.token = token.trim();
           this.state.displayName = displayName;
           this.state.participantId = res.joinedParticipantId ?? '';
+          if (res.participantSecret) this.state.participantSecret = res.participantSecret;
+        if (res.guestDesign && typeof res.guestDesign === 'object') {
+          this.state.guestDesign = res.guestDesign;
+        } else {
+          this.state.guestDesign = null;
+        }
+          if (res.currency) this.state.currency = res.currency;
           this.state.persist();
           this.api.connectSocket(this.state.organisationId, this.state.sessionId);
           this.resolving = false;

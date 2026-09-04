@@ -18,7 +18,11 @@ import {
 
   Query,
 
+  Req,
+
   UnauthorizedException,
+
+  UseGuards,
 
 } from '@nestjs/common';
 
@@ -29,6 +33,10 @@ import { newId } from '@lekki/shared';
 import * as bcrypt from 'bcryptjs';
 
 import { StaffTokenService } from '../staff-auth/staff-token.service';
+
+import { RequireStaffPermission, StaffAuthGuard } from '../staff-auth/staff-auth.guard';
+
+import type { StaffTokenClaims } from '../staff-auth/staff-token.service';
 
 
 
@@ -94,7 +102,11 @@ export class IdentityController {
 
   @Get('staff')
 
-  async listStaff(@Query('organisationId') organisationId?: string) {
+  @UseGuards(StaffAuthGuard)
+
+  async listStaff(@Req() req: { staff?: StaffTokenClaims }) {
+
+    const organisationId = req.staff?.org;
 
     const rows = await this.prisma.staffMember.findMany({
 
@@ -226,7 +238,13 @@ export class IdentityController {
 
   @Get('staff/devices')
 
-  async listDevices(@Query('organisationId') organisationId?: string) {
+  @UseGuards(StaffAuthGuard)
+
+  @RequireStaffPermission('organisation.manage')
+
+  async listDevices(@Req() req: { staff?: StaffTokenClaims }) {
+
+    const organisationId = req.staff?.org;
 
     const where = organisationId ? { organisationId } : undefined;
 
@@ -284,7 +302,13 @@ export class IdentityController {
 
   @Post('staff/devices')
 
+  @UseGuards(StaffAuthGuard)
+
+  @RequireStaffPermission('organisation.manage')
+
   async createDevice(
+
+    @Req() req: { staff?: StaffTokenClaims },
 
     @Body() body: { organisationId?: string; label: string },
 
@@ -294,7 +318,7 @@ export class IdentityController {
 
     if (!label) throw new BadRequestException('Device label required');
 
-    let organisationId = (body.organisationId || '').trim();
+    let organisationId = (body.organisationId || req.staff?.org || '').trim();
 
     if (!organisationId) {
 
@@ -328,13 +352,19 @@ export class IdentityController {
 
   @Get('staff/sessions')
 
+  @UseGuards(StaffAuthGuard)
+
+  @RequireStaffPermission('organisation.manage')
+
   async listSessions(
 
-    @Query('organisationId') organisationId?: string,
+    @Req() req: { staff?: StaffTokenClaims },
 
     @Query('active') active?: string,
 
   ) {
+
+    const organisationId = req.staff?.org;
 
     const onlyActive = active === '1' || active === 'true';
 
@@ -392,6 +422,10 @@ export class IdentityController {
 
   @Post('staff/sessions/:id/revoke')
 
+  @UseGuards(StaffAuthGuard)
+
+  @RequireStaffPermission('organisation.manage')
+
   async revokeSession(@Param('id') id: string) {
 
     await this.staffTokens.revoke(id);
@@ -406,7 +440,13 @@ export class IdentityController {
 
   @Post('staff')
 
+  @UseGuards(StaffAuthGuard)
+
+  @RequireStaffPermission('organisation.manage')
+
   async createStaff(
+
+    @Req() req: { staff?: StaffTokenClaims },
 
     @Body()
 
@@ -440,7 +480,7 @@ export class IdentityController {
 
     const pin = (body.pin || '').trim();
 
-    let organisationId = (body.organisationId || '').trim();
+    let organisationId = (body.organisationId || req.staff?.org || '').trim();
 
     if (!organisationId) {
 
@@ -503,6 +543,10 @@ export class IdentityController {
   /** Studio Team — update Experience + permissions (+ optional PIN). */
 
   @Patch('staff/:id')
+
+  @UseGuards(StaffAuthGuard)
+
+  @RequireStaffPermission('organisation.manage')
 
   async updateStaff(
 

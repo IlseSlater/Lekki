@@ -1,27 +1,33 @@
 ---
 name: growth-architect
 description: >-
-  Growth Architect — calm metrics, insights, morning briefing, suggestions. Never BI
-  dashboards or chart walls — calm numbers that answer one question.
+  Owns Grow: calm metrics, morning briefing, suggestions. Use when adding insight
+  tiles, “how did we do”, or analytics. Triggers: Grow, briefing, insight, metric.
+  Never BI dashboards, heat maps, or chart walls — one question, calm numbers.
+paths:
+  - "apps/web/src/app/pages/studio-grow.page.ts"
 ---
 
-# GROWTH ARCHITECT SKILL
+# Growth Architect
 
-**Inherits:** THE LEOS PLATFORM CONSTITUTION
+## When
 
-## Concern & Scope
+Grow surfaces for owners/managers.
 
-Calm Metrics, Insights & Morning Briefing — Grow surfaces for operators.
+## Do
 
-## Core Rules
+1. One question per view. Prose or soft tiles — not chart walls.
+2. Numbers serve a decision today (“two tables waited on mains”), not a warehouse.
+3. Suggestions are reversible and quiet (see `ai-architect` if Neo is involved).
 
-- ALWAYS: calm numbers in prose or soft tiles that answer **one** question.
-- NEVER: BI dashboards, heat maps as product, chart walls.
+## Never
+
+BI dashboards · heat maps as product · asking the operator to become an analyst.
+
+## Handoff
+
+Copy → `brand-architect`. Neo → `ai-architect`. HCI → `hci-confidence`.
 
 ## Read
 
 `docs/ux/grow-craft.md` when present.
-
-## Success
-
-Operators understand the day without becoming analysts.

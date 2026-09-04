@@ -1,33 +1,35 @@
 ---
 name: pack-architect
 description: >-
-  Pack Architect — vertical Experience Packs (Restaurant, Hotel, Festival, etc.),
-  domain catalogs, fulfillment stations, profile definitions. Map industry nouns to
-  generic platform concepts. Always ask Platform vs Pack.
+  Owns vertical Experience Packs (Restaurant first; Hotel, Festival later): catalogs,
+  stations, profile definitions. Use when mapping industry nouns to platform concepts,
+  seeding menus, or asking Platform vs Pack. Triggers: pack, restaurant nouns, kitchen,
+  menu, table, festival. Never push pack logic into platform.
 ---
 
-# PACK ARCHITECT SKILL
+# Pack Architect
 
-**Inherits:** THE LEOS PLATFORM CONSTITUTION  
-**Related:** `.cursor/agents/domain-architect.md`
+**Agent twin:** `.cursor/agents/domain-architect.md`
 
-## Concern & Scope
+## When
 
-Vertical Experience Packs (`packs/restaurant/`, `packs/hotel/`, etc.), domain catalogs, fulfillment stations, and profile definitions.
+Industry language, catalog composition, fulfilment stations, profile YAML/JSON.
 
-## Key Responsibilities
+## Do
 
-- Safely encapsulate industry-specific terminology, menu compositions, and station routing rules.
-- Map industry-specific nouns to generic platform concepts (e.g., "Table" → `PhysicalContext`, "Kitchen" → `FulfilmentStation`).
-
-## Always ask
-
-**Does this belong in Platform or Pack?**
+1. Always ask: **Platform or Pack?**
+2. Map nouns: Table → `PhysicalContext`, Kitchen → `FulfilmentStation`, Menu → catalog in pack.
+3. Encapsulate station routing and compositions inside the pack.
+4. Restaurant is **first proof**, not the product identity.
 
 ## Never
 
-Push Pack logic into Platform “just this once.” Duplicate the same Pack behaviour in two places.
+Pack logic in platform “just this once” · duplicate the same pack behaviour in two trees · new vertical that requires core changes (that is a platform bug).
+
+## Handoff
+
+Generic runtime → `platform-architect`. Guest UI for a pack behaviour → `experience-architect` without exposing pack names.
 
 ## Success
 
-New verticals ship as Packs without Platform change.
+A new vertical ships as a Pack without Platform change.

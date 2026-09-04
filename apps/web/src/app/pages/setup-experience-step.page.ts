@@ -10,6 +10,7 @@ import {
   countEnabled,
   defaultDesignForType,
   guestCanSummary,
+  specialsConfidenceDetail,
   type GuestDesignKey,
   type GuestExperienceDesign,
 } from '../studio/guest-experience-design';
@@ -57,7 +58,7 @@ import { StudioContextService } from '../services/studio-context.service';
         confidence
         eyebrow="Guests can"
         [fact]="confidenceFact"
-        [detail]="mode === 'summary' ? lastUpdatedLabel + ' · last updated' : ''"
+        [detail]="confidenceDetail"
         [ready]="canContinue"
         okLabel="Looks good"
         [waiting]="mode === 'edit' ? 'Turn on something guests can browse or request' : ''"
@@ -179,6 +180,16 @@ export class SetupExperienceStepPageComponent implements OnInit, OnDestroy {
 
   get confidenceFact() {
     return guestCanSummary(this.design);
+  }
+
+  get confidenceDetail() {
+    if (this.mode === 'summary') {
+      const specials = specialsConfidenceDetail(this.design);
+      return specials
+        ? `${specials} · ${this.lastUpdatedLabel}`
+        : `${this.lastUpdatedLabel} · last updated`;
+    }
+    return specialsConfidenceDetail(this.design);
   }
 
   get lastUpdatedLabel() {

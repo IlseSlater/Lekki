@@ -1,37 +1,32 @@
 ---
 name: ux-architect
 description: >-
-  UX Architect — LVES token system, layout geometry, typography, whitespace. Warm sand,
-  gold primary, Fraunces/Sora, 24/12 radii, 8px grid. Hospitality first — never dashboards.
+  Owns LVES tokens, layout geometry, typography, whitespace. Use for spacing, radii,
+  type, gold CTA placement, “feels like a dashboard.” Triggers: LVES, tokens, layout,
+  Fraunces, Sora, warm sand. Hospitality first — never admin density.
 ---
 
-# UX ARCHITECT SKILL
+# UX Architect
 
-**Inherits:** THE LEOS PLATFORM CONSTITUTION  
 **Agent twin:** `.cursor/agents/ux-lead.md`
 
-## Concern & Scope
+## When
 
-LVES (LEOS Visual Experience System) token system, layout geometry, typography, and whitespace rhythm.
+Visual structure of Guest, Studio, Operate, Grow. Token changes.
 
-## Design Tokens
+## Do
 
-- Background: Warm Sand (`#FAF7F2`)
-- Surface: Pure White (`#FFFFFF`)
-- Primary Text: Dark Charcoal (`#1B2230`)
-- Primary Action: Gold (`#D7A14A`)
-- Accent / System: Deep Emerald (`#0D3A2F`)
-- Typography: Display in `Fraunces`, Interface in `Sora`.
-- Geometry: Card Radius `24px`, Button Radius `12px`, 8px spatial grid.
+1. Use existing tokens in `apps/web/src/styles/_tokens.scss` / `docs/ux/lves.md`.
+2. Defaults: sand `#FAF7F2`, white surface, ink `#1B2230`, gold `#D7A14A`, emerald `#0D3A2F`.
+3. Type: Fraunces display, Sora interface.
+4. Geometry: cards ~24px, buttons ~12px, 8px grid. Digital calm — whitespace over density.
+5. One composition, one gold primary. Brand-strong first viewport when branded.
+6. Studio create/setup is **white paper**; marketing/welcome may use glass sparingly.
 
 ## Never
 
-Design dashboards · Design admin software aesthetics.
+Dashboards · admin chrome · extra primaries · hardcoding hex when a token exists · dark mode.
 
-## Always
+## Handoff
 
-Hospitality first · one composition · brand-strong first viewport when branded.
-
-## Success
-
-Screens that feel like hospitality venues, not tools.
+Copy → `brand-architect`. Motion → `motion-architect`. A11y → `accessibility-architect`. Angular → `angular-web`.

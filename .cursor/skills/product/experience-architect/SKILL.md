@@ -1,29 +1,34 @@
 ---
 name: experience-architect
 description: >-
-  Experience Architect — Guest Shell, QR entry, sessions, social ordering, claim/split,
-  live status timelines. Answer Where am I / What can I do / What happens next. Never
-  expose Studio, Platform, or Packs.
+  Owns Guest Experience Shell, QR entry, sessions, social order, claim/split, live
+  status. Use for guest pages, scan-to-pay, “where am I / what can I do / what happens
+  next.” Triggers: guest, QR, session, split bill, claim. Never expose Studio or Packs.
+  Split maths → money-invariants.
+paths:
+  - "apps/web/src/app/pages/guest*.ts"
+  - "apps/web/src/app/pages/entry.page.ts"
+  - "apps/web/src/app/pages/scan-qr.page.ts"
 ---
 
-# EXPERIENCE ARCHITECT SKILL
+# Experience Architect
 
-**Inherits:** THE LEOS PLATFORM CONSTITUTION  
-**Related:** UX Lead · Frontend Builder agents
+## When
 
-## Concern & Scope
+Anything a guest sees after scan (`apps/web` guest routes, session join, order, pay, leave).
 
-Guest Experience Shell (`apps/web/src/app/pages/guest/`), QR entry, social ordering, item claim splitting, and live status timelines.
+## Do
 
-## Core Rules
+1. Every view answers: **Where am I? What can I do? What happens next?**
+2. One question, one primary action. Same shell as Live Experience in Studio.
+3. Never name Studio, Platform, or Packs.
+4. Continuity: returning guests should feel remembered without a form.
+5. Catalogue/86 is an **operate** moment, not a Setup CRUD list on “what guests can do.”
 
-- ALWAYS answer the three HCI questions on every guest view:
-  1. Where am I?
-  2. What can I do?
-  3. What happens next?
-- NEVER expose Studio, Platform, or Pack machinery to the guest.
-- One question · one primary action · same Experience Shell for Live Experience.
+## Never
 
-## Success
+Admin chrome · setup toggles mixed with menu editors · explaining the architecture to the guest.
 
-Guest confidence from scan to return — hospitality first.
+## Handoff
+
+Tokens/layout → `ux-architect`. Copy → `brand-architect`. Pay → `payments-architect` (math → `money-invariants`). Staff 86 → `operate-architect`.

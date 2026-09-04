@@ -1,27 +1,38 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { RequireStaffPermission, StaffAuthGuard } from '../staff-auth/staff-auth.guard';
+import type { StaffTokenClaims } from '../staff-auth/staff-token.service';
+import { MissingFieldError } from '../leos/domain-errors';
 
 /** Grow overview — calm Org Memory numbers (not BI). */
 @Controller('grow')
+@UseGuards(StaffAuthGuard)
 export class GrowController {
   constructor(private readonly prisma: PrismaService) {}
 
   @Get('overview')
-  async overview(@Query('token') token?: string) {
-    const entry = token
-      ? await this.prisma.entryToken.findUnique({ where: { token } })
-      : null;
+  @RequireStaffPermission('organisation.manage')
+  async overview(
+    @Req() req: { staff?: StaffTokenClaims },
+    @Query('venueId') venueId?: string,
+  ) {
+    const orgId = req.staff?.org;
+    if (!orgId) throw new MissingFieldError('organisationId');
 
-    const venueId = entry?.venueId;
     const venue = venueId
-      ? await this.prisma.venue.findUnique({ where: { id: venueId } })
-      : null;
+      ? await this.prisma.venue.findFirst({ where: { id: venueId, organisationId: orgId } })
+      : await this.prisma.venue.findFirst({ where: { organisationId: orgId }, orderBy: { createdAt: 'asc' } });
+
+    const resolvedVenueId = venue?.id;
+    if (!resolvedVenueId) {
+      return { guestsToday: 0, guestsYesterday: 0, takingsToday: 0, takingsYesterday: 0 };
+    }
 
     const { start: yesterdayStart, end: yesterdayEnd } = dayBounds(-1);
     const { start: todayStart, end: todayEnd } = dayBounds(0);
 
-    const venueFilter = venueId ? { venueId } : {};
-    const sessionVenue = venueId ? { session: { venueId } } : {};
+    const venueFilter = { venueId: resolvedVenueId };
+    const sessionVenue = { session: { venueId: resolvedVenueId } };
 
     const [
       guestsYesterday,
@@ -87,7 +98,7 @@ export class GrowController {
         where: {
           transaction: {
             createdAt: { gte: todayStart, lt: todayEnd },
-            ...(venueId ? { session: { venueId } } : {}),
+            ...(resolvedVenueId ? { session: { venueId: resolvedVenueId } } : {}),
           },
         },
         _sum: { quantity: true },
@@ -99,7 +110,7 @@ export class GrowController {
         where: {
           transaction: {
             createdAt: { gte: yesterdayStart, lt: yesterdayEnd },
-            ...(venueId ? { session: { venueId } } : {}),
+            ...(resolvedVenueId ? { session: { venueId: resolvedVenueId } } : {}),
           },
         },
         _sum: { quantity: true },
@@ -130,7 +141,7 @@ export class GrowController {
 
     return {
       venueName: venue?.name ?? null,
-      venueId: venueId ?? null,
+      venueId: resolvedVenueId ?? null,
       window: {
         yesterdayStart: yesterdayStart.toISOString(),
         yesterdayEnd: yesterdayEnd.toISOString(),
@@ -152,10 +163,10 @@ export class GrowController {
 }
 
 function sumPayments(
-  rows: Array<{ amount: number; currency: string }>,
+  rows: Array<{ amount: number | { toNumber?: () => number } | unknown; currency: string }>,
 ): { amount: number; currency: string } {
   if (!rows.length) return { amount: 0, currency: 'ZAR' };
-  const amount = rows.reduce((s, p) => s + (p.amount || 0), 0);
+  const amount = rows.reduce((s, p) => s + Number(p.amount ?? 0), 0);
   return { amount, currency: rows[0]?.currency || 'ZAR' };
 }
 

@@ -3,6 +3,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { io, Socket } from 'socket.io-client';
 import { resolveApiBaseUrl } from './public-origin';
 import { OperateStaffSessionService } from './operate-staff-session.service';
+import type { GuestExperienceDesign } from '../studio/guest-experience-design';
 
 @Injectable({ providedIn: 'root' })
 export class LeosApiService {
@@ -10,6 +11,7 @@ export class LeosApiService {
   private socketOrgId = '';
   private socketSessionId = '';
   private socketOperateRole = '';
+  private socketParticipantSecret = '';
   /** Same host as the page when opened from a phone on LAN (Restaurant App pattern). */
   private readonly api = resolveApiBaseUrl();
   private readonly staffSession = inject(OperateStaffSessionService);
@@ -22,11 +24,21 @@ export class LeosApiService {
     return new HttpHeaders(h);
   }
 
+  /** Guest participant secret or staff token — staff wins when both exist (Operate). */
+  private sessionAuthHeaders(participantSecret?: string): HttpHeaders | undefined {
+    const staff = this.staffAuthHeaders();
+    if (staff) return staff;
+    const secret = participantSecret?.trim();
+    if (secret) return new HttpHeaders({ 'x-participant-secret': secret });
+    return undefined;
+  }
+
   resolveEntry(body: {
     token: string;
     displayName: string;
     identityId?: string;
     participantId?: string;
+    participantSecret?: string;
   }) {
     return this.http.post<{
       context: {
@@ -44,8 +56,53 @@ export class LeosApiService {
         physicalContextId?: string;
       };
       venueName?: string | null;
+      menuBrandEnabled?: boolean;
+      brandColour?: string | null;
+      guestDesign?: Record<string, unknown> | null;
+      currency?: string;
       joinedParticipantId?: string | null;
+      participantSecret?: string;
     }>(`${this.api}/entry/resolve`, body);
+  }
+
+  /** Studio Identity → Venue menu brand (Guest Continuity). */
+  saveVenueBrand(body: {
+    venueId: string;
+    menuBrandEnabled: boolean;
+    brandColour?: string;
+    venueName?: string;
+    guestDesignJson?: Record<string, unknown>;
+  }) {
+    return this.http.put<{
+      id: string;
+      name: string;
+      menuBrandEnabled: boolean;
+      brandColour: string;
+    }>(`${this.api}/setup/brand`, body, { headers: this.staffAuthHeaders() });
+  }
+
+  mintEntryToken(body: {
+    organisationId: string;
+    venueId: string;
+    physicalContextId: string;
+    profileId: string;
+    profileVersion: string;
+  }) {
+    return this.http.post<{ token: string }>(`${this.api}/setup/entry/mint`, body, {
+      headers: this.staffAuthHeaders(),
+    });
+  }
+
+  resolveSetupEntryContext(placeCode?: string) {
+    const params = placeCode ? `?placeCode=${encodeURIComponent(placeCode)}` : '';
+    return this.http.get<{
+      organisationId: string;
+      venueId: string;
+      physicalContextId: string;
+      profileId: string;
+      profileVersion: string;
+      placeCode: string;
+    }>(`${this.api}/setup/entry/context${params}`, { headers: this.staffAuthHeaders() });
   }
 
   getCatalogue(venueId: string) {
@@ -58,6 +115,7 @@ export class LeosApiService {
         unitPrice: number;
         routingTags: string[];
         category: string;
+        available?: boolean;
         choiceGroups?: Array<{
           id: string;
           label: string;
@@ -78,12 +136,12 @@ export class LeosApiService {
   createTransaction(body: {
     sessionId: string;
     participantId?: string;
+    participantSecret: string;
     lines: Array<{
       catalogueItemId: string;
-      label: string;
       quantity: number;
-      unitPrice: number;
-      routingTags: string[];
+      notes?: string;
+      selectionsJson?: unknown;
     }>;
   }) {
     return this.http.post<{
@@ -94,7 +152,13 @@ export class LeosApiService {
 
   requestPayment(
     sessionId: string,
-    body?: { tipAmount?: number; scope?: 'visit' | 'mine' | 'equal'; participantId?: string },
+    body?: {
+      tipAmount?: number;
+      tipPercent?: number;
+      scope?: 'visit' | 'mine' | 'equal';
+      participantId?: string;
+      participantSecret?: string;
+    },
   ) {
     return this.http.post<{
       paymentId: string;
@@ -108,8 +172,50 @@ export class LeosApiService {
     }>(`${this.api}/payments/request/${sessionId}`, body ?? {});
   }
 
+  /** Staff-only manual settlement — guests must never call this. */
   completePayment(paymentId: string) {
-    return this.http.post(`${this.api}/payments/${paymentId}/complete`, {});
+    return this.http.post(
+      `${this.api}/payments/${paymentId}/complete`,
+      {},
+      { headers: this.staffAuthHeaders() },
+    );
+  }
+
+  leaveSession(sessionId: string, participantId: string, participantSecret: string) {
+    return this.http.post<{ closed: boolean }>(`${this.api}/sessions/${sessionId}/leave`, {
+      participantId,
+      participantSecret,
+    });
+  }
+
+  createCatalogueItem(
+    venueId: string,
+    body: {
+      label: string;
+      unitPrice: number;
+      category: string;
+      description?: string;
+      available?: boolean;
+      routingTags?: string[];
+    },
+  ) {
+    return this.http.post(`${this.api}/catalogue/venue/${venueId}`, body, {
+      headers: this.staffAuthHeaders(),
+    });
+  }
+
+  updateCatalogueItem(
+    id: string,
+    body: {
+      label?: string;
+      unitPrice?: number;
+      category?: string;
+      available?: boolean;
+    },
+  ) {
+    return this.http.put(`${this.api}/catalogue/item/${id}`, body, {
+      headers: this.staffAuthHeaders(),
+    });
   }
 
   closeSession(sessionId: string, opts?: { asOwner?: boolean }) {
@@ -119,7 +225,10 @@ export class LeosApiService {
   }
 
   /** Claim-from-table — re-stamp open lines to this guest. */
-  claimLines(sessionId: string, body: { participantId: string | null; lineIds: string[] }) {
+  claimLines(
+    sessionId: string,
+    body: { participantId: string | null; lineIds: string[]; participantSecret: string },
+  ) {
     return this.http.post<{
       ok: boolean;
       claimed: number;
@@ -128,12 +237,16 @@ export class LeosApiService {
     }>(`${this.api}/sessions/${sessionId}/claim-lines`, body);
   }
 
-  getSession(sessionId: string) {
+  getSession(sessionId: string, participantSecret?: string) {
     return this.http.get<{
       id: string;
       status: string;
       correlationId: string;
       placeCode?: string | null;
+      venueName?: string | null;
+      menuBrandEnabled?: boolean;
+      brandColour?: string | null;
+      guestDesign?: Record<string, unknown> | null;
       participants?: Array<{
         id: string;
         displayName?: string;
@@ -166,7 +279,9 @@ export class LeosApiService {
         scope?: string;
         participantId?: string | null;
       }>;
-    }>(`${this.api}/sessions/${sessionId}`);
+    }>(`${this.api}/sessions/${sessionId}`, {
+      headers: this.sessionAuthHeaders(participantSecret),
+    });
   }
 
   listFulfilments(stationId: string) {
@@ -176,6 +291,7 @@ export class LeosApiService {
         status: string;
         stationId: string;
         sessionId?: string;
+        placeCode?: string | null;
         createdAt?: string;
         transaction: { id: string };
         lines: Array<{ label?: string; quantity: number }>;
@@ -297,6 +413,24 @@ export class LeosApiService {
     }>(`${this.api}/identity/staff/login`, body);
   }
 
+  googleOauthConfig() {
+    return this.http.get<{ enabled: boolean; clientId: string | null }>(`${this.api}/identity/oauth/google`);
+  }
+
+  googleStaffLogin(body: { accessToken?: string; credential?: string; deviceLabel?: string }) {
+    return this.http.post<{
+      id: string;
+      organisationId: string;
+      displayName: string;
+      email: string;
+      role: string;
+      permissions: string[];
+      homePath: string;
+      token: string;
+      sessionId: string;
+    }>(`${this.api}/identity/staff/oauth/google`, body);
+  }
+
   staffLogout(body: { sessionId?: string; token?: string }) {
     return this.http.post<{ ok: boolean }>(`${this.api}/identity/staff/logout`, body);
   }
@@ -375,9 +509,9 @@ export class LeosApiService {
         }>;
       }>;
     }>(`${this.api}/operate/floor`, {
+      headers: this.staffAuthHeaders(),
       params: {
         ...(params?.venueId ? { venueId: params.venueId } : {}),
-        ...(params?.organisationId ? { organisationId: params.organisationId } : {}),
       },
     });
   }
@@ -418,7 +552,7 @@ export class LeosApiService {
       settlement: Record<string, unknown> | null;
       routingStrategy: string | null;
       step: string | null;
-    } | null>(`${this.api}/setup/payments/install`);
+    } | null>(`${this.api}/setup/payments/install`, { headers: this.staffAuthHeaders() });
   }
 
   testPaymentConnection(body: {
@@ -436,11 +570,13 @@ export class LeosApiService {
       country: string;
       currency: string;
       environment: string;
-    }>(`${this.api}/setup/payments/test-connection`, body);
+    }>(`${this.api}/setup/payments/test-connection`, body, { headers: this.staffAuthHeaders() });
   }
 
   savePaymentDraft(body: Record<string, unknown>) {
-    return this.http.put(`${this.api}/setup/payments/draft`, body);
+    return this.http.put(`${this.api}/setup/payments/draft`, body, {
+      headers: this.staffAuthHeaders(),
+    });
   }
 
   activatePaymentConnector() {
@@ -448,7 +584,7 @@ export class LeosApiService {
       ok: boolean;
       connectorId: string;
       activeConnectorId: string;
-    }>(`${this.api}/setup/payments/activate`, {});
+    }>(`${this.api}/setup/payments/activate`, {}, { headers: this.staffAuthHeaders() });
   }
 
   /** Grow Org Memory — yesterday / wait / calm trading breath. */
@@ -494,10 +630,11 @@ export class LeosApiService {
   }
 
   /** Ensure session room is joined (Entry may already have connected). */
-  ensureSocket(organisationId: string, sessionId: string) {
+  ensureSocket(organisationId: string, sessionId: string, participantSecret?: string) {
     if (!organisationId || !sessionId) return undefined;
     this.socketOrgId = organisationId;
     this.socketSessionId = sessionId;
+    if (participantSecret?.trim()) this.socketParticipantSecret = participantSecret.trim();
     this.ensureIoConnected();
     this.rejoinRooms();
     return this.socket;
@@ -531,6 +668,9 @@ export class LeosApiService {
       this.socket.emit('join', {
         organisationId: this.socketOrgId,
         sessionId: this.socketSessionId,
+        ...(this.socketParticipantSecret
+          ? { participantSecret: this.socketParticipantSecret }
+          : {}),
       });
     }
     if (this.socketOperateRole) {
@@ -582,11 +722,24 @@ export class SessionStateService {
   physicalContextCode = '';
   /** Venue name for guest chrome (Arrival confidence). */
   venueName = '';
+  /** Menu half-moon from Venue / Entry (Guest Continuity). */
+  menuBrandEnabled = false;
+  brandColour = '#d7a14a';
   /** Continuity — this guest’s SessionParticipant id (mine vs visit). */
   participantId = '';
+  /** Server-issued secret — resume this phone only, never by display name. */
+  participantSecret = '';
+  /** Venue guest experience design from entry resolve (not Studio localStorage). */
+  guestDesign: Record<string, unknown> | null = null;
+  currency = 'ZAR';
 
   persist() {
     localStorage.setItem('leos.session', JSON.stringify(this));
+    if (this.guestDesign && typeof this.guestDesign === 'object') {
+      localStorage.setItem('leos.guestDesign', JSON.stringify(this.guestDesign));
+    } else {
+      localStorage.removeItem('leos.guestDesign');
+    }
   }
 
   /** Re-scan / splash — resume this device’s participant instead of minting a ghost. */
@@ -595,6 +748,7 @@ export class SessionStateService {
       token,
       displayName,
       participantId: this.participantId || undefined,
+      participantSecret: this.participantSecret || undefined,
     };
   }
 
@@ -605,6 +759,15 @@ export class SessionStateService {
       Object.assign(this, JSON.parse(raw));
     } catch {
       this.clear();
+      return;
+    }
+    const designRaw = localStorage.getItem('leos.guestDesign');
+    if (designRaw) {
+      try {
+        this.guestDesign = JSON.parse(designRaw);
+      } catch {
+        this.guestDesign = null;
+      }
     }
   }
 
@@ -620,7 +783,13 @@ export class SessionStateService {
     this.profileId = '';
     this.physicalContextCode = '';
     this.venueName = '';
+    this.menuBrandEnabled = false;
+    this.brandColour = '#d7a14a';
     this.participantId = '';
+    this.participantSecret = '';
+    this.guestDesign = null;
+    this.currency = 'ZAR';
+    localStorage.removeItem('leos.guestDesign');
     localStorage.removeItem('leos.session');
   }
 }

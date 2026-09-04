@@ -335,6 +335,7 @@ async function main() {
 
   const pin = async (code: string) => bcrypt.hash(code, 10);
   const staffPerms = [
+    'organisation.manage',
     'session.read',
     'session.close',
     'fulfilment.read',

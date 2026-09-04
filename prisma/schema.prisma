@@ -20,6 +20,16 @@ model Venue {
   id             String   @id
   organisationId String
   name           String
+  /** Guest menu half-moon brand band */
+  menuBrandEnabled Boolean @default(false)
+  /** Brand accent for menu moon / Live Experience */
+  brandColour    String   @default("#d7a14a")
+  /** IANA timezone for trading-day bounds */
+  timezone       String   @default("Africa/Johannesburg")
+  /** ISO 4217 default currency */
+  currency       String   @default("ZAR")
+  /** Guest-facing toggles synced from Studio (pay, tips, help, specials) */
+  guestDesignJson Json?
   createdAt      DateTime @default(now())
   organisation   Organisation @relation(fields: [organisationId], references: [id])
   physicalContexts PhysicalContext[]
@@ -80,6 +90,7 @@ model StaffMember {
   /** Operate role: kitchen | bar | waiter | staff */
   role           String   @default("staff")
   permissions    String[]
+  active         Boolean  @default(true)
   createdAt      DateTime @default(now())
   organisation   Organisation @relation(fields: [organisationId], references: [id])
   sessions       StaffSession[]
@@ -124,6 +135,12 @@ model ExperienceSession {
   profileVersion    String
   status            String
   correlationId     String
+  /// Session-wide bill cap in minor units (sum of committed tx totals). Row 3 / row 5.
+  billMinor         Int      @default(0)
+  /// Reserved + completed base (ex-tip) toward the bill. Never sum Payment rows for remaining.
+  paidMinor         Int      @default(0)
+  /// Optimistic concurrency for conditional payment reserve.
+  version           Int      @default(0)
   startedAt         DateTime @default(now())
   completedAt       DateTime?
   physicalContext   PhysicalContext @relation(fields: [physicalContextId], references: [id])
@@ -135,14 +152,18 @@ model ExperienceSession {
 }
 
 model SessionParticipant {
-  id          String   @id
-  sessionId   String
-  identityId  String?
-  displayName String
-  role        String
-  joinedAt    DateTime @default(now())
-  session     ExperienceSession @relation(fields: [sessionId], references: [id])
-  identity    Identity? @relation(fields: [identityId], references: [id])
+  id                String    @id
+  sessionId         String
+  identityId        String?
+  displayName       String
+  role              String
+  /** Server-issued secret for resume — never match by display name */
+  participantSecret String?   @unique
+  departedAt        DateTime?
+  equalSplitOptIn   Boolean   @default(false)
+  joinedAt          DateTime  @default(now())
+  session           ExperienceSession @relation(fields: [sessionId], references: [id])
+  identity          Identity? @relation(fields: [identityId], references: [id])
 }
 
 model Transaction {
@@ -151,7 +172,7 @@ model Transaction {
   organisationId String
   status         String
   currency       String
-  total          Float
+  total          Decimal  @db.Decimal(12, 2)
   createdAt      DateTime @default(now())
   session        ExperienceSession @relation(fields: [sessionId], references: [id])
   lines          TransactionLine[]
@@ -165,8 +186,11 @@ model TransactionLine {
   catalogueItemId String
   label           String
   quantity        Int
-  unitPrice       Float
+  unitPrice       Decimal @db.Decimal(12, 2)
   routingTags     String[]
+  /// Guest special requests and choice selections (JSON array of {groupId, optionId, label})
+  selectionsJson  Json?
+  notes           String?
   /// Guest who ordered — Continuity mine vs visit (optional for legacy lines).
   participantId   String?
   transaction     Transaction @relation(fields: [transactionId], references: [id])
@@ -200,9 +224,9 @@ model Payment {
   transactionId  String
   sessionId      String
   organisationId String
-  amount         Float
+  amount         Decimal  @db.Decimal(12, 2)
   /// Tip portion of amount — excluded when measuring settlement toward transaction total.
-  tipAmount      Float    @default(0)
+  tipAmount      Decimal  @default(0) @db.Decimal(12, 2)
   /// visit | mine | equal — Continuity scope that produced this payment.
   scope          String   @default("visit")
   /// Continuity — guest who paid a mine/equal-scoped share (null for visit / legacy).
@@ -211,9 +235,13 @@ model Payment {
   status         String
   reference      String
   connectorId    String
+  /// Pending gateway window — past this, reservation must release paidMinor.
+  expiresAt      DateTime?
   createdAt      DateTime @default(now())
   session        ExperienceSession @relation(fields: [sessionId], references: [id])
   transaction    Transaction @relation(fields: [transactionId], references: [id])
+
+  @@index([status, expiresAt])
 }
 
 model OutboxMessage {
@@ -261,16 +289,17 @@ model SecretsVaultAudit {
 }
 
 model RestaurantCatalogItem {
-  id           String @id
+  id           String  @id
   venueId      String
   label        String
   description  String?
   /** Optional thumbnail URL for guest-facing menus. */
   imageUrl     String?
-  unitPrice    Float
+  unitPrice    Decimal @db.Decimal(12, 2)
   currency     String
   routingTags  String[]
   category     String
+  available    Boolean @default(true)
   /// Pack choice groups (G-04). Guest never sees “modifier” — Choose 1 / Extras.
   choiceGroups Json?
 }

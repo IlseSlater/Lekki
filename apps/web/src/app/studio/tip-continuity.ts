@@ -22,7 +22,11 @@ export type TipContinuityExperience = {
 export function resolveAllowTip(
   token: string | null | undefined,
   experiences: TipContinuityExperience[] = [],
+  sessionDesign?: Partial<GuestExperienceDesign> | null,
 ): boolean {
+  if (sessionDesign && typeof sessionDesign.tipStaff === 'boolean') {
+    return sessionDesign.tipStaff;
+  }
   const t = (token ?? '').trim();
   if (!t) {
     return !!defaultDesignForType('restaurant').tipStaff;

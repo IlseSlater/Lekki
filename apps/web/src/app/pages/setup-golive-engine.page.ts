@@ -4,16 +4,19 @@ import { ConfidenceIndicatorComponent } from '../leos/confidence-indicator.compo
 import { ExperienceScreenComponent } from '../leos/experience-screen.component';
 import { EntryQrComponent } from '../leos/entry-qr.component';
 import { entryUrlForToken, resolvePublicWebOrigin } from '../services/public-origin';
+import { LeosApiService } from '../services/leos-api.service';
+import { OperateStaffSessionService } from '../services/operate-staff-session.service';
 import { SETUP_STEPS, getExperience, experienceLabel } from '../studio/experience-registry';
 import { StudioContextService } from '../services/studio-context.service';
 import { guestCanSummary } from '../studio/guest-experience-design';
 import { enabledPlaces } from '../studio/place-sections';
+import { profileRuntimeForType } from '../studio/profile-runtime';
 
 type CheckRow = { label: string; value: string; ok: boolean };
 
 /**
  * Setup — Go Live.
- * Inevitable: same Live Experience, now public. Design System v1 anatomy.
+ * Mint a unique entry token on load; operator confirms before marking live.
  */
 @Component({
   standalone: true,
@@ -21,7 +24,13 @@ type CheckRow = { label: string; value: string; ok: boolean };
   template: `
     <leos-experience-screen [purpose]="purpose" [lead]="lead" help="" [showFooter]="true">
       <div config class="go-config">
-        <p class="go-promise">Nothing changes for your guests — the experience you’ve been shaping is now live.</p>
+        <p class="go-promise">
+          @if (isLive) {
+            Nothing changes for your guests — the experience you’ve been shaping is now live.
+          } @else {
+            Review your checklist, then confirm when you’re ready to go live.
+          }
+        </p>
 
         <ul class="go-check" aria-label="Ready">
           @for (row of checklist; track row.label) {
@@ -33,7 +42,11 @@ type CheckRow = { label: string; value: string; ok: boolean };
           }
         </ul>
 
-        @if (entryUrl) {
+        @if (mintError) {
+          <p class="go-error" role="alert">{{ mintError }}</p>
+        }
+
+        @if (entryUrl && isLive) {
           <leos-entry-qr #qr [value]="entryUrl" [label]="venueName" [size]="200" />
         }
         <p class="go-place">
@@ -42,17 +55,19 @@ type CheckRow = { label: string; value: string; ok: boolean };
             · {{ placeCode }}
           }
         </p>
-        <div class="go-actions">
-          <button type="button" class="leos-btn leos-btn--secondary" (click)="downloadQr()">
-            Download QR
-          </button>
-          <a class="leos-btn leos-btn--secondary" [href]="entryUrl" target="_blank" rel="noopener">
-            Open Experience
-          </a>
-          <button type="button" class="leos-btn leos-btn--secondary" (click)="copyLink()" [disabled]="!entryUrl">
-            Copy link
-          </button>
-        </div>
+        @if (isLive) {
+          <div class="go-actions">
+            <button type="button" class="leos-btn leos-btn--secondary" (click)="downloadQr()">
+              Download QR
+            </button>
+            <a class="leos-btn leos-btn--secondary" [href]="entryUrl" target="_blank" rel="noopener">
+              Open Experience
+            </a>
+            <button type="button" class="leos-btn leos-btn--secondary" (click)="copyLink()" [disabled]="!entryUrl">
+              Copy link
+            </button>
+          </div>
+        }
         @if (downloaded) {
           <p class="go-flash" role="status">QR saved — place it where guests naturally look first.</p>
         }
@@ -63,15 +78,27 @@ type CheckRow = { label: string; value: string; ok: boolean };
 
       <leos-confidence-indicator
         confidence
-        eyebrow="You’re live"
+        [eyebrow]="isLive ? 'You’re live' : 'Almost there'"
         [fact]="venueName"
-        [detail]="placeCode ? 'First guest joins · ' + placeCode : 'Ready for your first guest'"
-        [ready]="true"
+        [detail]="isLive ? (placeCode ? 'First guest joins · ' + placeCode : 'Ready for your first guest') : 'Confirm when your QR is ready'"
+        [ready]="isLive"
         okLabel="Looks good"
       />
 
       <a escape class="leos-btn leos-btn--secondary" routerLink="/studio/setup/payments">Back</a>
-      <a primary class="leos-btn leos-btn--primary" routerLink="/studio/operate">Continue</a>
+      @if (isLive) {
+        <a primary class="leos-btn leos-btn--primary" routerLink="/studio/operate">Continue</a>
+      } @else {
+        <button
+          primary
+          type="button"
+          class="leos-btn leos-btn--primary"
+          [disabled]="minting || !entryToken"
+          (click)="confirmGoLive()"
+        >
+          {{ minting ? 'Preparing…' : 'Go live' }}
+        </button>
+      }
     </leos-experience-screen>
   `,
   styles: [
@@ -88,6 +115,11 @@ type CheckRow = { label: string; value: string; ok: boolean };
         color: var(--studio-ink-secondary, #6b7280);
         line-height: 1.45;
         max-width: 28rem;
+      }
+      .go-error {
+        margin: 0;
+        color: #b42318;
+        font-size: 0.875rem;
       }
       .go-check {
         list-style: none;
@@ -138,29 +170,25 @@ type CheckRow = { label: string; value: string; ok: boolean };
       .go-place {
         margin: 0;
         font-size: 0.9375rem;
-        animation: studio-fade var(--studio-duration-enter, 280ms) var(--studio-ease, cubic-bezier(0.22, 1, 0.36, 1))
-          40ms both;
       }
       .go-actions {
         display: flex;
         flex-wrap: wrap;
         gap: 0.75rem;
-        animation: studio-fade var(--studio-duration-enter, 280ms) var(--studio-ease, cubic-bezier(0.22, 1, 0.36, 1))
-          80ms both;
       }
       .go-flash {
         margin: 0;
         font-size: 0.8125rem;
         font-weight: 600;
         color: var(--studio-success, #4f8a6b);
-        animation: studio-autosave var(--studio-duration-settle, 360ms) var(--studio-ease, cubic-bezier(0.22, 1, 0.36, 1))
-          both;
       }
     `,
   ],
 })
 export class SetupGoliveEnginePageComponent implements OnInit {
   private readonly ctx = inject(StudioContextService);
+  private readonly api = inject(LeosApiService);
+  private readonly staff = inject(OperateStaffSessionService);
 
   @ViewChild('qr') qr?: EntryQrComponent;
 
@@ -169,6 +197,10 @@ export class SetupGoliveEnginePageComponent implements OnInit {
   venueName = 'Your venue';
   placeCode = '';
   entryUrl = '';
+  entryToken = '';
+  isLive = false;
+  minting = false;
+  mintError = '';
   downloaded = false;
   copied = false;
   checklist: CheckRow[] = [];
@@ -178,7 +210,8 @@ export class SetupGoliveEnginePageComponent implements OnInit {
     const def = getExperience(active?.typeId);
     this.venueName = active?.venueName || def?.defaults.venueName || this.venueName;
     this.placeCode = active?.placeCode || def?.defaults.placeCode || '';
-    const token = active?.token || def?.defaults.token || 'qr-demo-restaurant';
+    this.isLive = !!active?.live;
+    this.entryToken = active?.token || '';
 
     const placeCount = active?.placeSections
       ? enabledPlaces(active.placeSections).length
@@ -213,10 +246,109 @@ export class SetupGoliveEnginePageComponent implements OnInit {
       },
     ];
 
-    this.ctx.upsertActive({ token, live: true });
-    this.ctx.markStep('golive');
+    if (this.isLive && this.entryToken) {
+      this.setEntryUrl(this.entryToken);
+      return;
+    }
 
-    // Immediate confidence — never leave Open Experience / QR empty while LAN resolve runs.
+    void this.mintEntryToken();
+  }
+
+  confirmGoLive() {
+    if (!this.entryToken) return;
+    this.ctx.upsertActive({ token: this.entryToken, live: true });
+    this.ctx.markStep('golive');
+    this.isLive = true;
+    this.setEntryUrl(this.entryToken);
+  }
+
+  private async mintEntryToken() {
+    const active = this.ctx.activeExperience();
+    const staff = this.staff.read();
+    if (!staff?.organisationId) {
+      this.mintError = 'Sign in to Studio staff before going live.';
+      return;
+    }
+
+    this.minting = true;
+    this.mintError = '';
+
+    try {
+      let venueId = active?.venueId?.trim() || '';
+      let physicalContextId = active?.physicalContextId?.trim() || '';
+      let profileId = profileRuntimeForType(active?.typeId || 'restaurant').profileId;
+      let profileVersion = profileRuntimeForType(active?.typeId || 'restaurant').profileVersion;
+
+      try {
+        const ctx = await new Promise<{
+          venueId: string;
+          physicalContextId: string;
+          profileId: string;
+          profileVersion: string;
+          placeCode: string;
+        }>((resolve, reject) => {
+          this.api
+            .resolveSetupEntryContext(active?.placeCode || this.placeCode || undefined)
+            .subscribe({ next: resolve, error: reject });
+        });
+        venueId = ctx.venueId;
+        physicalContextId = ctx.physicalContextId;
+        profileId = ctx.profileId;
+        profileVersion = ctx.profileVersion;
+        if (ctx.placeCode) this.placeCode = ctx.placeCode;
+      } catch {
+        const overview = await new Promise<{ venueId?: string | null }>((resolve, reject) => {
+          this.api.getGrowOverview().subscribe({ next: resolve, error: reject });
+        });
+        if (overview.venueId) venueId = overview.venueId;
+
+        if (!physicalContextId && active?.token) {
+          const bootstrap = await new Promise<{
+            session: { physicalContextId?: string; venueId: string };
+          }>((resolve, reject) => {
+            this.api
+              .resolveEntry({ token: active!.token, displayName: 'Studio setup' })
+              .subscribe({ next: resolve, error: reject });
+          });
+          physicalContextId = bootstrap.session.physicalContextId || '';
+          if (!venueId) venueId = bootstrap.session.venueId;
+        }
+      }
+
+      if (!venueId || !physicalContextId) {
+        this.mintError = 'Venue places aren’t ready yet — finish Places setup first.';
+        this.minting = false;
+        return;
+      }
+
+      const minted = await new Promise<{ token: string }>((resolve, reject) => {
+        this.api
+          .mintEntryToken({
+            organisationId: staff.organisationId,
+            venueId,
+            physicalContextId,
+            profileId,
+            profileVersion,
+          })
+          .subscribe({ next: resolve, error: reject });
+      });
+
+      this.entryToken = minted.token;
+      this.ctx.upsertActive({
+        token: minted.token,
+        venueId,
+        organisationId: staff.organisationId,
+        physicalContextId,
+        live: false,
+      });
+    } catch {
+      this.mintError = 'Couldn’t mint your entry QR — check staff sign-in and try again.';
+    } finally {
+      this.minting = false;
+    }
+  }
+
+  private setEntryUrl(token: string) {
     const pageOrigin =
       typeof window !== 'undefined' ? window.location.origin : 'http://localhost:4200';
     this.entryUrl = entryUrlForToken(pageOrigin, token);

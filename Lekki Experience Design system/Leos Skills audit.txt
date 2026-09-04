@@ -1,0 +1,202 @@
+The system is well built. It could not see the tests you already had.
+A read of all 26 skills, 12 agents and 3 rules under .cursor/. Descriptions, bodies, wiring and coverage — checked against what the codebase actually needs this week, not against a generic authoring rubric.
+
+26 skills
+12 agents
+3 rules
+6 categories
+2 reference files
+The verdict
+This is better than most skill systems I read. The descriptions follow a real formula — own a domain, say when to use it, list the words a human would actually type, name what it is not for, point at the sibling skill. The bodies are a genuine procedure (When / Do / Never / Handoff / Read), they stay at 30–50 lines, and they carry Lekki-specific law rather than generic advice. Every path they reference resolves.
+
+The gap is not that testing was absent — it is that the skills were blind to it. This repo has 17 test files using node:test with a .test.ts convention, and apps/runtime/package.json wires money.test.ts and settlement.test.ts into its test script. Yet not one of the 26 skills contains unit test, node:test or .test.ts, and qa-architect defines done as browser E2E plus an HCI score. An agent following the skills would open a browser rather than add a case to a file that already exists.
+
+So the skill system could neither direct anyone to the existing practice nor tell them which invariants remained unproven. The fix is small and specific: two new skills and one honest edit to qa-architect. Everything else below is polish on something that already works.
+
+Correction, 3 September. An earlier version of this page and of the teardown claimed this repo had zero tests. That was wrong — it came from searching only for .spec.ts when the convention here is .test.ts. The skills-coverage finding below stands on its own grep and is unaffected; the "untested money rewrite" framing did not, and has been removed.
+
+3
+Structural
+5
+Coverage
+4
+Mechanical
+One correction to my own method: two of my extraction passes reported these files as having no frontmatter. They all do — my probe was tripping on CRLF endings. I have left that in as finding 11, because if it broke my tooling it will break yours.
+
+Start here
+
+The three that are structural
+These are not gaps in polish. Each one means the skill system cannot catch a class of failure that is live in your codebase right now.
+
+1
+No skill anywhere mentions a unit test
+
+A grep across all 26 skills for unit test, vitest, jest, node:test or .test.ts returns nothing. qa-architect — the file that owns the quality gate — defines done as: build clean, exercise the journey in a browser, capture evidence, hold the HCI score. Every one of those is integration-level. Meanwhile money.test.ts and settlement.test.ts already exist and already run. The skills cannot point at them, cannot tell an agent to extend them, and cannot say which invariants they leave uncovered — so the practice survives on whoever remembers it rather than on the system.
+
+Fix
+Add money-invariants (drafted below) and give qa-architect a unit-test tier above its browser tier.
+2
+Nothing owns the proof, only the law
+
+payments-architect is a good skill. It states the law — allocations, splits, tips, refunds, connectors behind a capability, basis-points integer math. What it does not do, and what no sibling does, is say what must be true and how you would know. There is a difference between "use integer math" and "a R100 bill split three ways must settle to exactly zero, and here is the test that proves it." The first is a design rule. The second is an invariant. You have the first everywhere and the second nowhere.
+
+Fix
+Invariants belong in references/ as a table of cases, loaded on demand. Draft below.
+3
+qa-architect contradicts itself in nine lines
+
+Do step 1 reads "Build clean (no new TS/Angular warnings you introduced)." Never reads "Approve because it compiles." Those are the same claim with opposite signs, sitting eleven lines apart in the file that decides whether work ships. An agent resolving that conflict will pick whichever is cheaper, which is the compiler. Compiling is table stakes, not a gate — it does not belong in the Do list at all.
+
+Fix
+Delete Do #1. A clean build is a precondition for running the gate, not a step in it.
+Domain by domain
+
+Where each area stands
+Graded on whether the skills would actually change an agent's behaviour on the work in front of you this month.
+
+Architecture
+Strong
+chief · platform · pack · api · data · security · engineering
+
+Working
+The Platform / Pack boundary is enforced in three separate skills with consistent language, and pack-architect names the actual nouns (kitchen, table, menu) that must not leak.
+platform-architect's "state mutations that must be reliable use Outbox" is exactly the kind of law that survives contact with a deadline.
+Missing
+No migration procedure. data-architect owns schema truth, but you now have a migrations/ directory and live-row changes ahead. Nothing describes how to do one safely.
+No observability skill. Nothing owns correlation IDs, structured logs or "the API is slow" — and the teardown found the correlationId never reaches an HTTP log.
+Product
+Strong
+product · experience · studio · operate · growth · payments · hci
+
+Working
+hci-confidence is an unusual and good idea — a scoring skill that other skills hand off to, rather than every skill carrying its own quality opinion.
+growth-architect's "never BI dashboards, heat maps or chart walls" is a real constraint with teeth, not a preference.
+Missing
+The skills describe the product as designed, never as it currently is. An agent loading payments-architect learns the law but not that tip base, concurrency and refunds are unasserted, or that no menu editor exists. Skills that carry a current risk register are worth more than skills that carry only the ideal. Split-to-zero and multi-tx sums *are* asserted — in money.test.ts / settlement.test.ts — which the skills could not see.
+Design & brand
+Strongest
+ux · brand · motion · a11y + two imported kits
+
+Working
+voice.md is the best single file in the system. Register per surface with a real example line for each, plus prefer/avoid pairs that name the actual banned words. That is a brand reference, not a mood board.
+motion-architect carries the literal durations and states that motion explains state rather than decorating — the rule that survives a designer wanting a flourish.
+Weak
+web-design-engineer is 503 lines against 30–50 for everything you wrote. It teaches React, Babel, Tailwind and dashboard patterns into an Angular repo. The description gates it well, but once it fires it dumps a large contradictory payload next to angular-web.
+No SEO or marketing-site skill. build-awwwards-quality-sites owns craft; nothing owns SSR, metadata, structured data or AI crawlers — which is live work, and half-done.
+Engineering
+Good, thin
+angular-web · nestjs-runtime · ai · docs · skill-authoring
+
+Working
+angular-web items 7 and 8 — the Studio guard redirect rule, and "horizon canvas is static on app pages" — are encoded bug knowledge. Somebody paid for those once and the skill means nobody pays again. That is what skills are for, and it is the strongest signal in the whole system that these are being written from real work.
+Both implementation skills use paths:, so they scope to the tree they own.
+Missing
+Only 2 of 26 skills use paths:. studio-architect could scope to apps/web/src/app/pages/setup-*, operate-architect to the staff tree, data-architect to prisma/**. Cheapest precision available.
+No incident or debugging skill. Nothing to load when production is broken.
+QA
+The weak point
+qa-architect — one skill, carrying the entire quality gate
+
+The problem in full
+One skill owns "is this good enough to ship" and never mentions the 17 test files this repo already has. It asks for browser evidence and an HCI score, both real, neither touching a pure function — and it cannot route anyone to money.test.ts.
+It contradicts itself on whether compiling counts (finding 3).
+It has no references/, so there is nowhere for the actual test matrix to live — which is precisely the catalog the authoring bar in your own README says belongs there.
+Consequence: the Decimal migration and minor-unit maths were tested, by someone following a convention the skills never mention. Server-side re-pricing, participant secrets, tip base and concurrency were not — and the gate could not tell the difference between the two halves.
+Concrete
+
+The skill I would write first
+Not a template — the actual file. Its value is the invariant table, which is the thing that currently exists nowhere in your repository.
+
+.cursor/skills/qa/money-invariants/SKILL.md
+---
+name: money-invariants
+description: >-
+  Proves Lekki money arithmetic: splits, tips, settlement, rounding, minor units.
+  Use before merging anything touching payments, transactions, Decimal columns,
+  toMinor, split or settle. Triggers: split bill, equal share, tip, settle,
+  rounding, cents, Decimal, does the maths work. Write the test, then the fix.
+paths:
+  - "apps/runtime/src/leos/**"
+  - "prisma/schema.prisma"
+---
+
+# Money invariants
+
+## When
+
+Any change to money storage, arithmetic, allocation, settlement or refunds.
+
+## Do
+
+1. Write the failing test first. Money changes land test-first, no exceptions.
+2. Assert against the table in `references/invariants.md`.
+3. Money is `Decimal(12,2)` at rest, integer minor units in arithmetic.
+   Never float, never an epsilon comparison.
+4. Every allocation must sum back to the total. Prove it, do not reason it.
+5. Concurrency counts: two payers racing is a test, not an edge case.
+
+## Never
+
+Approve money on a browser screenshot · compare with a tolerance ·
+round mid-calculation · trust a client-supplied amount.
+
+## Handoff
+
+Design law → `payments-architect`. Schema → `data-architect`.
+Journey evidence → `qa-architect`.
+references/invariants.md — the part that matters
+| # | Invariant                          | Case                    | Must hold        |
+|---|------------------------------------|-------------------------|------------------|
+ 1   Equal split settles to zero        R100 ÷ 3                  sum == 100.00
+ 2   Last payer inherits no remainder   R100 ÷ 3, pay in order    3rd owes 33.34
+ 3   Multi-transaction visit            starters 200 + mains 150  quoted == charged
+ 4   Tip computed on server base        15% on a 2-tx visit       tip == 15% of 350
+ 5   Concurrent full payment            two payers, same instant  total charged 350
+ 6   Divisor excludes non-orderers      4th guest scans, no order share stays 1/3
+ 7   Stale participant secret           yesterday's secret        rejected, 400
+ 8   Settled bill rejects new payment   pay twice                 second refused
+ 9   Decimal boundary                   33.333 → storage          never widens
+10   Refund path exists                 request a refund          not a silent stub
+Rows 1 and 3 are already covered by money.test.ts and settlement.test.ts. Rows 2 and 9 are partial — the arithmetic is asserted, the allocation logic that produces it is not. Rows 4–8 and 10 (tip base, concurrency, non-orderers, stale secrets, double-pay, refunds) have never been executed against an assertion. The table's job is to make that distinction visible, which nothing in the repo currently does.
+
+Cheap
+
+Mechanical fixes
+None of these change what a skill says. All of them change whether it fires, or whether your tooling can read it.
+
+Normalise line endings
+
+Your 24 authored skills are CRLF; the 2 imported kits are LF. Harmless to Cursor, fatal to any script that matches ^---$ — it broke my extraction twice before I noticed. One line in .gitattributes: *.md text eol=lf.
+
+Minutes
+Add paths: to the file-scoped skills
+
+studio, experience, operate, growth to their page trees; data-architect to prisma/**; security-architect to the auth tree. Precision costs one frontmatter key.
+
+Under an hour
+Trim web-design-engineer to Lekki shape
+
+503 lines to about 50, with the React and Tailwind material pushed to references/ or dropped. It is the only skill that can contradict angular-web once loaded.
+
+An hour
+Make the agent twin reference consistent
+
+platform-architect and qa-architect name their agent twin; the others with twins do not. Either all of them do or none — a half-applied convention reads as an oversight and stops being trusted.
+
+Minutes
+Decide what "Inherits: THE LEOS PLATFORM CONSTITUTION" is
+
+It appears in every body. If the constitution is alwaysApply, the line is decorative and costs a row in 26 files. Either make it a real path pointer or drop it — ritual lines teach agents that lines can be ignored.
+
+Minutes
+Credit
+
+What is genuinely excellent
+Keep these exactly as they are
+The description formula. Own a domain · use-when · literal trigger words · what it is not for · which sibling instead. Every one of the 24 you wrote follows it. That is the single hardest part of skill authoring and it is done.
+When / Do / Never / Handoff / Read. A numbered Do, a middot-separated Never, and typed handoffs that name the next skill. It fits on one screen and it is the same shape every time, so an agent knows where to look.
+voice.md. Register per surface with a real line for each, and prefer/avoid pairs naming the banned words. Most brand guidelines are adjectives; this one is usable.
+The README taxonomy. Rules / skills / agents / craft kits, each with when it loads. Very few teams write down the difference between an agent and a skill, and the ones that do not end up with both doing neither.
+Encoded bug knowledge. angular-web items 7 and 8 are lessons from real incidents, written as law. That is the highest-value content a skill can hold and it is the clearest evidence these were written from work rather than from a template.
+Gating the imported kits by description. Naming Guest / Studio / Operate / Grow as out of scope for the Awwwards kit is the right instinct — the kit would otherwise happily put GSAP in the guest shell.
+The summary you were given claimed the architect skills were rewritten with trigger-rich descriptions and Do/Never/Handoff procedures. I checked that claim against the files rather than taking it: it is accurate. The one claim I could not confirm is that industry "agentic mesh" material was reviewed and rejected — that leaves no trace in the files, so treat it as unverified rather than done.

@@ -1,7 +1,10 @@
-import { Body, Controller, Get, Post, Put } from '@nestjs/common';
+import { Body, Controller, Get, Post, Put, Req, UseGuards } from '@nestjs/common';
 import { SetupPaymentsService, type DraftPayload } from '../leos/setup-payments.service';
+import { RequireStaffPermission, StaffAuthGuard } from '../staff-auth/staff-auth.guard';
+import type { StaffTokenClaims } from '../staff-auth/staff-token.service';
 
 @Controller('setup/payments')
+@UseGuards(StaffAuthGuard)
 export class SetupPaymentsController {
   constructor(private readonly setup: SetupPaymentsService) {}
 
@@ -11,12 +14,15 @@ export class SetupPaymentsController {
   }
 
   @Get('install')
-  install() {
-    return this.setup.getInstall();
+  @RequireStaffPermission('organisation.manage')
+  install(@Req() req: { staff?: StaffTokenClaims }) {
+    return this.setup.getInstall(req.staff?.org);
   }
 
   @Post('test-connection')
+  @RequireStaffPermission('organisation.manage')
   testConnection(
+    @Req() req: { staff?: StaffTokenClaims },
     @Body()
     body: {
       organisationId?: string;
@@ -28,16 +34,21 @@ export class SetupPaymentsController {
       passphrase?: string;
     },
   ) {
-    return this.setup.testConnection(body);
+    return this.setup.testConnection({
+      ...body,
+      organisationId: body.organisationId ?? req.staff?.org,
+    });
   }
 
   @Put('draft')
-  saveDraft(@Body() body: DraftPayload) {
-    return this.setup.saveDraft(body);
+  @RequireStaffPermission('organisation.manage')
+  saveDraft(@Req() req: { staff?: StaffTokenClaims }, @Body() body: DraftPayload) {
+    return this.setup.saveDraft({ ...body, organisationId: body.organisationId ?? req.staff?.org });
   }
 
   @Post('activate')
-  activate() {
-    return this.setup.activate();
+  @RequireStaffPermission('organisation.manage')
+  activate(@Req() req: { staff?: StaffTokenClaims }) {
+    return this.setup.activate(req.staff?.org);
   }
 }

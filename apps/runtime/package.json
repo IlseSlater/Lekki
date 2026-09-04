@@ -3,10 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "node -e \"try{require('fs').unlinkSync('tsconfig.tsbuildinfo')}catch(e){}\" && tsc -p tsconfig.json",
     "dev": "tsc-watch -p tsconfig.json --onSuccess \"node dist/main.js\"",
     "start": "node dist/main.js",
     "seed": "tsx ../../scripts/seed-demo.ts",
+    "test": "node --import tsx --test src/leos/*.test.ts",
+    "test:depart": "node --import tsx src/leos/depart.self-check.ts",
+    "test:claim-lines": "node --import tsx src/leos/claim-lines.self-check.ts",
+    "test:refund": "node --import tsx src/leos/refund.self-check.ts",
     "test:vault": "node --import tsx src/leos/payment-vault.self-check.ts",
     "test:equal-share": "node --import tsx src/leos/equal-share.self-check.ts"
   },

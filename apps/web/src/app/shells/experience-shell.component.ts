@@ -31,9 +31,7 @@ import { StudioContextService } from '../services/studio-context.service';
         min-height: 100dvh;
         display: flex;
         flex-direction: column;
-        background:
-          radial-gradient(120% 80% at 50% -10%, rgba(215, 161, 74, 0.14), transparent 55%),
-          var(--leos-warm-sand, #faf7f2);
+        background: transparent;
       }
       .leos-experience-shell__header {
         padding: 0.75rem 1.25rem;
@@ -42,6 +40,9 @@ import { StudioContextService } from '../services/studio-context.service';
         align-items: center;
         justify-content: space-between;
         gap: 0.75rem;
+        background: color-mix(in srgb, var(--leos-warm-sand, #ffffff) 88%, transparent);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
       }
       .leos-experience-shell__brand {
         margin: 0;
@@ -66,10 +67,15 @@ import { StudioContextService } from '../services/studio-context.service';
       }
       .leos-experience-shell__main {
         flex: 1;
-        padding: 0 1rem 0;
+        padding: 1rem 1.25rem 1.5rem;
         max-width: 32rem;
-        margin: 0 auto;
+        margin: 1rem auto 1.5rem;
         width: 100%;
+        background: color-mix(in srgb, var(--leos-warm-sand, #ffffff) 90%, transparent);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-radius: 1.5rem;
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.22);
       }
     `,
   ],

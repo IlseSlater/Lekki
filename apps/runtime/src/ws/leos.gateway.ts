@@ -10,14 +10,14 @@ import { Injectable, Inject, OnModuleInit } from '@nestjs/common';
 import type { EventEnvelope } from '@lekki/contracts';
 import { EventBusService } from '../events/event-bus.service';
 import { StaffTokenService } from '../staff-auth/staff-token.service';
+import { SessionAccessService } from '../leos/session-access.service';
 
 type OperateRole = 'kitchen' | 'bar' | 'waiter' | 'counter' | 'staff';
 
 /**
  * Live rooms:
- * - Guest: org:{org}:session:{sessionId}
- * - Operate: org:{org}:operate:{kitchen|bar|waiter|counter|staff}
- * Operate join requires staff token (ADR-004).
+ * - Guest: org:{org}:session:{sessionId} — participant secret or staff token required
+ * - Operate: org:{org}:operate:{kitchen|bar|waiter|counter|staff} — staff token; org from claims
  */
 @WebSocketGateway({
   cors: { origin: true },
@@ -30,6 +30,7 @@ export class LeosGateway implements OnGatewayInit, OnGatewayConnection, OnModule
   constructor(
     @Inject(EventBusService) private readonly bus: EventBusService,
     private readonly staffTokens: StaffTokenService,
+    private readonly sessionAccess: SessionAccessService,
   ) {}
 
   onModuleInit() {
@@ -38,19 +39,11 @@ export class LeosGateway implements OnGatewayInit, OnGatewayConnection, OnModule
 
   afterInit() {}
 
-  handleConnection(client: Socket) {
-    const { organisationId, sessionId, operateRole, staffToken } = client.handshake.query;
-    if (organisationId && sessionId) {
-      client.join(this.sessionRoom(String(organisationId), String(sessionId)));
-    }
-    if (organisationId && operateRole) {
-      const ok = this.authorizeOperate(String(staffToken || ''), String(operateRole));
-      if (ok) this.joinOperate(client, String(organisationId), String(operateRole));
-    }
-  }
+  /** Room joins require an authenticated `join` message — never trust connect query alone. */
+  handleConnection(_client: Socket) {}
 
   @SubscribeMessage('join')
-  handleJoin(
+  async handleJoin(
     client: Socket,
     payload: {
       organisationId: string;
@@ -58,45 +51,81 @@ export class LeosGateway implements OnGatewayInit, OnGatewayConnection, OnModule
       operateRole?: string;
       operateRoles?: string[];
       staffToken?: string;
+      participantSecret?: string;
     },
   ) {
     const joined: string[] = [];
-    if (payload.organisationId && payload.sessionId) {
-      const room = this.sessionRoom(payload.organisationId, payload.sessionId);
-      client.join(room);
-      joined.push(room);
-    }
-    const roles = [
-      ...(payload.operateRole ? [payload.operateRole] : []),
-      ...(payload.operateRoles ?? []),
-    ];
     const token =
       payload.staffToken ||
       (client.handshake.query['staffToken'] as string | undefined) ||
       '';
+
+    if (payload.sessionId) {
+      const room = await this.tryJoinSession(
+        client,
+        payload.organisationId,
+        payload.sessionId,
+        payload.participantSecret ||
+          (client.handshake.query['participantSecret'] as string | undefined),
+        token,
+      );
+      if (room) joined.push(room);
+    }
+
+    const roles = [
+      ...(payload.operateRole ? [payload.operateRole] : []),
+      ...(payload.operateRoles ?? []),
+    ];
     for (const role of roles) {
-      if (!this.authorizeOperate(token, role)) continue;
-      const room = this.joinOperate(client, payload.organisationId, role);
+      const room = await this.tryJoinOperate(client, token, role);
       if (room) joined.push(room);
     }
     return { joined };
   }
 
-  private authorizeOperate(token: string, roleRaw: string): boolean {
+  private async tryJoinSession(
+    client: Socket,
+    organisationId: string,
+    sessionId: string,
+    participantSecret: string | undefined,
+    staffToken: string,
+  ): Promise<string | null> {
+    try {
+      const session = await this.sessionAccess.assertReadAccess(sessionId, {
+        'x-participant-secret': participantSecret,
+        'x-staff-token': staffToken || undefined,
+      });
+      if (session.organisationId !== organisationId) return null;
+      const room = this.sessionRoom(session.organisationId, sessionId);
+      client.join(room);
+      return room;
+    } catch {
+      return null;
+    }
+  }
+
+  private async tryJoinOperate(
+    client: Socket,
+    token: string,
+    roleRaw: string,
+  ): Promise<string | null> {
     const role = this.normRole(roleRaw);
-    if (!role) return false;
-    // Monitor / Studio overview may pass monitor=1 without staff — allow waiter/staff read rooms only if token missing? Plan: require token for operate.
-    // Allow operate join without token for monitor reads via HTTP only; WS without token = no operate room (poll fallback).
-    if (!token) return false;
+    if (!role || !token) return null;
     try {
       const claims = this.staffTokens.verify(token);
-      if (claims.role === 'staff') return true;
-      if (claims.role === role) return true;
-      if (claims.role === 'waiter' && role === 'waiter') return true;
-      return false;
+      await this.staffTokens.assertActive(claims);
+      if (!this.roleAllowed(claims.role, role)) return null;
+      return this.joinOperate(client, claims.org, role);
     } catch {
-      return false;
+      return null;
     }
+  }
+
+  private roleAllowed(staffRole: string, requested: OperateRole): boolean {
+    if (staffRole === 'staff') return true;
+    if (staffRole === requested) return true;
+    if (staffRole === 'waiter' && requested === 'waiter') return true;
+    return false;
   }
 
   private joinOperate(client: Socket, organisationId: string, roleRaw: string): string | null {
@@ -173,7 +202,9 @@ export class LeosGateway implements OnGatewayInit, OnGatewayConnection, OnModule
       const room = this.sessionRoom(envelope.organisationId, sessionId);
       this.server.to(room).emit('platform.event', envelope);
     } else {
-      this.server.emit('platform.event', envelope);
+      this.server
+        .to(this.operateRoom(envelope.organisationId, 'staff'))
+        .emit('platform.event', envelope);
     }
 
     for (const role of this.operateRolesFor(envelope)) {

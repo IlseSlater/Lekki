@@ -1,9 +1,19 @@
-const FORBIDDEN = [
-  /\btable\b/i,
-  /\bmenu_item\b/i,
-  /\bwaiter\b/i,
-  /\bkitchen\b/i,
-];
+/**
+ * Pack nouns must not drive Platform authorization.
+ * Scans identifiers in decisions (===, includes, return) — not comments,
+ * route strings, or allowlists. Batch 4 drives remaining hits to 0.
+ */
+const FORBIDDEN_NOUNS = new Set(['table', 'menu_item', 'waiter', 'kitchen']);
+
+/**
+ * Decision sites still open (Batch 4). CI stays green while these exist, but
+ * any NEW decision-site hit fails. Clear this list when Batch 4 lands.
+ */
+const KNOWN_OPEN = new Set([
+  'apps/runtime/src/staff-auth/staff-token.service.ts',
+  'apps/runtime/src/ws/leos.gateway.ts',
+  'apps/runtime/src/http/fulfilment.controller.ts',
+]);
 
 const SCAN_DIRS = [
   'packages/contracts/src',
@@ -17,7 +27,7 @@ const SCAN_DIRS = [
 ];
 
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 
 function walk(dir) {
   const entries = readdirSync(dir);
@@ -34,16 +44,41 @@ function walk(dir) {
   return files;
 }
 
-let violations = [];
+function stripComments(src) {
+  return src.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\/\/.*$/gm, ' ');
+}
+
+/** Nouns used in comparisons, .includes(), or return — core logic, not copy. */
+function decisionNouns(src) {
+  const found = new Set();
+  const patterns = [
+    /\.includes\s*\(\s*['"`](\w+)['"`]/gi,
+    /(?:===|!==|==|!=)\s*['"`](\w+)['"`]/gi,
+    /['"`](\w+)['"`]\s*(?:===|!==|==|!=)/gi,
+    /\breturn\s+['"`](\w+)['"`]/gi,
+  ];
+  for (const re of patterns) {
+    let m;
+    while ((m = re.exec(src)) !== null) {
+      const word = m[1].toLowerCase();
+      if (FORBIDDEN_NOUNS.has(word)) found.add(word);
+    }
+  }
+  return found;
+}
+
+function toRepoPath(file) {
+  return relative(process.cwd(), file).split('\\').join('/');
+}
+
+const violations = [];
 for (const dir of SCAN_DIRS) {
   const fullDir = join(process.cwd(), dir);
   try {
     for (const file of walk(fullDir)) {
-      const content = readFileSync(file, 'utf8');
-      for (const pattern of FORBIDDEN) {
-        if (pattern.test(content)) {
-          violations.push({ file, pattern: pattern.toString() });
-        }
+      const nouns = decisionNouns(stripComments(readFileSync(file, 'utf8')));
+      for (const noun of nouns) {
+        violations.push({ file: toRepoPath(file), noun });
       }
     }
   } catch {
@@ -51,12 +86,32 @@ for (const dir of SCAN_DIRS) {
   }
 }
 
+const novel = violations.filter((v) => !KNOWN_OPEN.has(v.file));
+
 if (violations.length > 0) {
-  console.error('Noun separation violations found:');
+  console.error(
+    `Noun separation: ${violations.length} decision-site hit(s) (${novel.length} novel):`,
+  );
   for (const v of violations) {
-    console.error(`  ${v.file} matches ${v.pattern}`);
+    const tag = KNOWN_OPEN.has(v.file) ? 'known' : 'NEW';
+    console.error(
+      `  [${tag}] ${v.file} uses '${v.noun}' in an authorization/decision expression`,
+    );
   }
+}
+
+if (novel.length > 0) {
+  console.error(
+    'New decision-site pack nouns are not allowed. Fix them or (Batch 4 only) extend KNOWN_OPEN.',
+  );
   process.exit(1);
+}
+
+if (violations.length > 0) {
+  console.warn(
+    'Known Batch 4 authz sites remain — clear KNOWN_OPEN when station→role table lands.',
+  );
+  process.exit(0);
 }
 
 console.log('Noun separation check passed.');

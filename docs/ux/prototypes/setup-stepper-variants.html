@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Setup stepper variants — LEKKI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;650&family=Sora:wght@400;500;600;650&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --ink: #0f172a;
+        --ink-2: #64748b;
+        --ink-3: #94a3b8;
+        --line: #eae6e1;
+        --surface: #ffffff;
+        --depth: #f9f8f6;
+        --gold: #d7a14a;
+        --gold-soft: rgba(215, 161, 74, 0.14);
+        --success: #4f8a6b;
+        --success-soft: rgba(79, 138, 107, 0.12);
+        --radius: 12px;
+        --sans: 'Sora', system-ui, sans-serif;
+        --display: 'Fraunces', Georgia, serif;
+        --ease: cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: var(--sans);
+        color: var(--ink);
+        background: var(--depth);
+        padding: 2.5rem clamp(1rem, 4vw, 3rem) 4rem;
+      }
+      h1 {
+        font-family: var(--display);
+        font-weight: 650;
+        font-size: clamp(1.6rem, 3vw, 2.1rem);
+        letter-spacing: -0.03em;
+        margin: 0 0 0.4rem;
+      }
+      .lede {
+        margin: 0 0 2rem;
+        color: var(--ink-2);
+        max-width: 40rem;
+        line-height: 1.5;
+        font-size: 0.95rem;
+      }
+      .grid {
+        display: grid;
+        gap: 1.25rem;
+        grid-template-columns: repeat(auto-fit, minmax(17.5rem, 1fr));
+        align-items: start;
+      }
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        padding: 1.25rem 1.15rem 1.4rem;
+        box-shadow: 0 12px 36px rgba(15, 23, 42, 0.04);
+      }
+      .card h2 {
+        margin: 0 0 0.25rem;
+        font-size: 0.95rem;
+        font-weight: 650;
+      }
+      .card .why {
+        margin: 0 0 1.1rem;
+        font-size: 0.78rem;
+        color: var(--ink-2);
+        line-height: 1.45;
+      }
+      .pick {
+        display: inline-flex;
+        margin-top: 1rem;
+        padding: 0.55rem 0.9rem;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: var(--depth);
+        font: inherit;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--ink);
+        cursor: pointer;
+      }
+      .pick:hover { border-color: var(--gold); background: var(--gold-soft); }
+      .pick.is-chosen {
+        background: linear-gradient(90deg, #c39658, #f5e6c8 48%, #bf8f4a);
+        border-color: transparent;
+        color: #1b2230;
+        box-shadow: 0 8px 20px rgba(184, 131, 57, 0.28);
+      }
+
+      /* —— A: Segment path —— */
+      .seg-eyebrow {
+        margin: 0 0 0.75rem;
+        font-size: 0.68rem;
+        font-weight: 650;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--ink-3);
+      }
+      .seg-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 0.5rem;
+        margin-bottom: 0.55rem;
+      }
+      .seg-meta strong { font-size: 0.82rem; font-weight: 650; }
+      .seg-meta span { font-size: 0.72rem; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+      .seg-track {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 0.3rem;
+        margin-bottom: 1rem;
+      }
+      .seg-track i {
+        display: block;
+        height: 4px;
+        border-radius: 999px;
+        background: var(--line);
+      }
+      .seg-track i.done { background: var(--success); }
+      .seg-track i.now {
+        background: var(--gold);
+        box-shadow: 0 0 0 3px var(--gold-soft);
+      }
+      .seg-list { list-style: none; margin: 0; padding: 0; }
+      .seg-list li {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        padding: 0.55rem 0.4rem;
+        border-radius: 10px;
+        font-size: 0.84rem;
+        color: var(--ink-3);
+      }
+      .seg-list li.done { color: var(--success); }
+      .seg-list li.now {
+        background: var(--gold-soft);
+        color: var(--ink);
+        font-weight: 650;
+      }
+      .seg-list li.next { color: var(--ink-2); }
+      .seg-num {
+        width: 1.35rem;
+        height: 1.35rem;
+        border-radius: 999px;
+        display: grid;
+        place-items: center;
+        font-size: 0.68rem;
+        font-weight: 650;
+        border: 1.5px solid currentColor;
+        flex: 0 0 auto;
+      }
+      .seg-list li.done .seg-num {
+        background: var(--success-soft);
+        border-color: transparent;
+        color: var(--success);
+      }
+      .seg-list li.now .seg-num {
+        background: var(--gold);
+        border-color: transparent;
+        color: #1b2230;
+      }
+
+      /* —— B: Vertical rail —— */
+      .rail { list-style: none; margin: 0; padding: 0; }
+      .rail li {
+        display: grid;
+        grid-template-columns: 1.5rem 1fr;
+        column-gap: 0.75rem;
+        position: relative;
+        min-height: 3rem;
+      }
+      .rail li:not(:last-child)::before {
+        content: '';
+        position: absolute;
+        left: 0.68rem;
+        top: 1.55rem;
+        bottom: -0.15rem;
+        width: 1.5px;
+        background: var(--line);
+      }
+      .rail li.done:not(:last-child)::before { background: color-mix(in srgb, var(--success) 45%, var(--line)); }
+      .rail li.now:not(:last-child)::before { background: linear-gradient(var(--gold), var(--line)); }
+      .rail-node {
+        width: 1.35rem;
+        height: 1.35rem;
+        border-radius: 999px;
+        margin-top: 0.15rem;
+        display: grid;
+        place-items: center;
+        border: 1.5px solid var(--line);
+        background: var(--surface);
+        z-index: 1;
+        font-size: 0.65rem;
+        color: var(--ink-3);
+      }
+      .rail li.done .rail-node {
+        background: var(--success);
+        border-color: var(--success);
+        color: #fff;
+      }
+      .rail li.now .rail-node {
+        background: var(--gold);
+        border-color: var(--gold);
+        color: #1b2230;
+        box-shadow: 0 0 0 4px var(--gold-soft);
+        font-weight: 700;
+      }
+      .rail-copy { padding-bottom: 1rem; }
+      .rail-copy strong {
+        display: block;
+        font-size: 0.86rem;
+        font-weight: 500;
+        color: var(--ink-3);
+      }
+      .rail li.done .rail-copy strong { color: var(--success); font-weight: 550; }
+      .rail li.now .rail-copy strong { color: var(--ink); font-weight: 650; }
+      .rail li.next .rail-copy strong { color: var(--ink-2); }
+      .rail-copy em {
+        display: none;
+        font-style: normal;
+        font-size: 0.72rem;
+        color: var(--ink-2);
+        margin-top: 0.15rem;
+      }
+      .rail li.now .rail-copy em { display: block; }
+
+      /* —— C: Compact chip strip —— */
+      .chips-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 0.75rem;
+      }
+      .chips-head strong { font-size: 0.82rem; }
+      .chips-head span { font-size: 0.72rem; color: var(--ink-3); }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+      }
+      .chip {
+        padding: 0.4rem 0.65rem;
+        border-radius: 999px;
+        font-size: 0.72rem;
+        font-weight: 550;
+        border: 1px solid var(--line);
+        color: var(--ink-3);
+        background: transparent;
+      }
+      .chip.done {
+        color: var(--success);
+        background: var(--success-soft);
+        border-color: transparent;
+      }
+      .chip.now {
+        color: #1b2230;
+        background: linear-gradient(90deg, #c39658, #f5e6c8 48%, #bf8f4a);
+        border-color: transparent;
+        font-weight: 650;
+        box-shadow: 0 6px 14px rgba(184, 131, 57, 0.22);
+      }
+      .chip.next { color: var(--ink-2); }
+      .now-card {
+        margin-top: 0.9rem;
+        padding: 0.85rem 0.9rem;
+        border-radius: var(--radius);
+        background: var(--depth);
+        border: 1px solid var(--line);
+      }
+      .now-card p { margin: 0; font-size: 0.78rem; color: var(--ink-2); line-height: 1.45; }
+      .now-card strong {
+        display: block;
+        font-family: var(--display);
+        font-size: 1.05rem;
+        font-weight: 650;
+        color: var(--ink);
+        margin-bottom: 0.2rem;
+        letter-spacing: -0.02em;
+      }
+
+      .note {
+        margin-top: 2rem;
+        font-size: 0.8rem;
+        color: var(--ink-3);
+        max-width: 40rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>How should Setup show “you are here”?</h1>
+    <p class="lede">
+      Three LVES-faithful steppers for the Setup progress rail. Same steps, clearer place in the journey.
+      Pick one — then we port it into <code>setup-engine-host</code>.
+    </p>
+
+    <div class="grid">
+      <!-- A -->
+      <article class="card" data-variant="A">
+        <h2>A · Segment path</h2>
+        <p class="why">Progress bar of 5 segments + numbered list. Current step sits on a soft gold pill — no guessing.</p>
+        <p class="seg-eyebrow">Setup</p>
+        <div class="seg-meta">
+          <strong>Go Live</strong>
+          <span>Step 5 of 5</span>
+        </div>
+        <div class="seg-track" aria-hidden="true">
+          <i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="now"></i>
+        </div>
+        <ul class="seg-list">
+          <li class="done"><span class="seg-num">✓</span> Who you are</li>
+          <li class="done"><span class="seg-num">✓</span> What guests experience</li>
+          <li class="done"><span class="seg-num">✓</span> Where guests join</li>
+          <li class="done"><span class="seg-num">✓</span> How guests pay</li>
+          <li class="now"><span class="seg-num">5</span> Go Live</li>
+        </ul>
+        <button type="button" class="pick" data-pick="A">Choose A</button>
+      </article>
+
+      <!-- B -->
+      <article class="card" data-variant="B">
+        <h2>B · Vertical journey rail</h2>
+        <p class="why">Connected timeline. Gold node + why-sentence only on the current step. Closest to Apple Continuity / Mercor calm.</p>
+        <p class="seg-eyebrow">Setup · 5 of 5</p>
+        <ul class="rail">
+          <li class="done">
+            <span class="rail-node">✓</span>
+            <div class="rail-copy"><strong>Who you are</strong></div>
+          </li>
+          <li class="done">
+            <span class="rail-node">✓</span>
+            <div class="rail-copy"><strong>What guests experience</strong></div>
+          </li>
+          <li class="done">
+            <span class="rail-node">✓</span>
+            <div class="rail-copy"><strong>Where guests join</strong></div>
+          </li>
+          <li class="done">
+            <span class="rail-node">✓</span>
+            <div class="rail-copy"><strong>How guests pay</strong></div>
+          </li>
+          <li class="now">
+            <span class="rail-node">5</span>
+            <div class="rail-copy">
+              <strong>Go Live</strong>
+              <em>You’re ready to welcome your first guest.</em>
+            </div>
+          </li>
+        </ul>
+        <button type="button" class="pick" data-pick="B">Choose B</button>
+      </article>
+
+      <!-- C -->
+      <article class="card" data-variant="C">
+        <h2>C · Chip strip + now card</h2>
+        <p class="why">Compact chips up top; current step expanded below with Fraunces title. Best if the left rail feels cramped.</p>
+        <div class="chips-head">
+          <strong>Setup</strong>
+          <span>5 / 5</span>
+        </div>
+        <div class="chips">
+          <span class="chip done">Who you are</span>
+          <span class="chip done">Experience</span>
+          <span class="chip done">Places</span>
+          <span class="chip done">Pay</span>
+          <span class="chip now">Go Live</span>
+        </div>
+        <div class="now-card">
+          <strong>Go Live</strong>
+          <p>You’re ready to welcome your first guest.</p>
+        </div>
+        <button type="button" class="pick" data-pick="C">Choose C</button>
+      </article>
+    </div>
+
+    <p class="note">
+      Design Decisions: LVES Surgical White &amp; Rose-Gold · Sora / Fraunces · gold only on current ·
+      success green for done · fade/settle motion only · maps to <code>leos-setup-engine-host</code> story panel.
+    </p>
+
+    <script>
+      const picks = document.querySelectorAll('.pick');
+      picks.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          picks.forEach((b) => {
+            b.classList.remove('is-chosen');
+            b.textContent = 'Choose ' + b.dataset.pick;
+          });
+          btn.classList.add('is-chosen');
+          btn.textContent = 'Selected · tell the agent “ship ' + btn.dataset.pick + '”';
+        });
+      });
+    </script>
+  </body>
+</html>

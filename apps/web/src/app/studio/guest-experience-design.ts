@@ -53,7 +53,7 @@ export const DESIGN_GROUPS: DesignGroup[] = [
     title: 'What they see',
     items: [
       { key: 'drinks', label: 'Drinks' },
-      { key: 'specials', label: 'Specials' },
+      { key: 'specials', label: 'Specials page' },
       { key: 'allergies', label: 'Allergies' },
     ],
   },
@@ -72,7 +72,8 @@ export const DEFAULT_GUEST_DESIGN: GuestExperienceDesign = {
   browseMenu: true,
   orderFood: true,
   drinks: true,
-  specials: false,
+  /** Restaurant demo: Specials page on so Guest shows Today + Most ordered out of the box. */
+  specials: true,
   callStaff: true,
   specialRequests: true,
   book: false,
@@ -306,11 +307,41 @@ export function guestCanSummary(d: GuestExperienceDesign): string {
   const parts: string[] = [];
   if (d.browseMenu) parts.push('Browse');
   if (d.orderFood) parts.push('Order');
+  if (d.specials) parts.push('Specials');
   if (d.callStaff) parts.push('Call Staff');
   if (d.payAtTable) parts.push('Pay');
   if (d.book) parts.push('Book');
   if (d.specialRequests) parts.push('Request');
   return parts.join(' · ') || 'Nothing on yet';
+}
+
+/** One-line fact when Specials page is on — Studio confidence. */
+export function specialsConfidenceDetail(d: GuestExperienceDesign): string {
+  return d.specials ? 'Guests get a Specials tab for today’s picks.' : '';
+}
+
+/** Map runtime catalogue rows to Live Experience projection items. */
+export function projectionItemsFromVenueCatalogue(
+  rows: Array<{
+    id: string;
+    label: string;
+    unitPrice: number;
+    category: string;
+    description?: string | null;
+    imageUrl?: string | null;
+    available?: boolean;
+  }>,
+): ProjectionItem[] {
+  return rows
+    .filter((r) => r.available !== false)
+    .map((r) => ({
+      id: r.id,
+      label: r.label,
+      category: r.category || 'Food',
+      price: `R${Number(r.unitPrice).toFixed(2).replace(/\.00$/, '')}`,
+      description: r.description ?? undefined,
+      imageUrl: r.imageUrl ?? undefined,
+    }));
 }
 
 export function visibleProjectionItems(

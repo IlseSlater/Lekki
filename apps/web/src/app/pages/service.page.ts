@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { Component, Input, OnDestroy, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
@@ -18,9 +18,10 @@ import {
   guestManagerAssistCopy,
   guestStatusLabel,
 } from '../studio/operate-status';
-import { isTableIdlePulsing } from '../studio/operate-pressure';
+import { ageLabel as formatAgeLabel, isTableIdlePulsing } from '../studio/operate-pressure';
+import { staffPlaceLabel } from '../studio/place-continuity';
 
-type FloorTab = 'tables' | 'ready' | 'help';
+type FloorTab = 'tables' | 'ready' | 'help' | 'history';
 type DetailItemsTab = 'active' | 'history';
 type StickyTint = 'help' | 'ready' | 'clear';
 
@@ -49,6 +50,14 @@ type ReadyGroup = {
   lines: ReadyLine[];
   idleMinutes?: number;
   flash: boolean;
+};
+
+type HistoryRow = {
+  id: string;
+  place: string;
+  label: string;
+  stationId: string;
+  status: string;
 };
 
 type TableRow = {
@@ -92,12 +101,15 @@ type HelpReq = {
  */
 @Component({
   standalone: true,
+  selector: 'leos-service-board',
   imports: [RouterLink],
-  host: { class: 'leos-layout-operator leos-layout-waiter-board' },
+  host: {
+    class: 'leos-layout-operator leos-layout-waiter-board',
+    '[class.leos-service-board--embed]': 'embedMonitor',
+  },
   template: `
     <div
       class="waiter"
-      [class.waiter--detail]="!!detail"
       [attr.data-live]="socketLive ? 'true' : null"
     >
       <header class="waiter__header">
@@ -116,8 +128,7 @@ type HelpReq = {
         <p class="waiter__calm">{{ calmLine }}</p>
       </header>
 
-      @if (!detail) {
-        <div class="waiter-seg" role="tablist" [attr.aria-label]="roleLabel">
+      <div class="waiter-seg" role="tablist" [attr.aria-label]="roleLabel">
           <button
             type="button"
             role="tab"
@@ -148,8 +159,17 @@ type HelpReq = {
             Help
             <span class="waiter-seg__n">{{ assistance.length }}</span>
           </button>
+          <button
+            type="button"
+            role="tab"
+            class="waiter-seg__btn waiter-seg__btn--history"
+            [class.waiter-seg__btn--on]="tab === 'history'"
+            (click)="setTab('history')"
+          >
+            History
+            <span class="waiter-seg__n">{{ historyRows.length }}</span>
+          </button>
         </div>
-      }
 
       @if (error) {
         <p class="waiter__alert" role="alert">{{ error }}</p>
@@ -158,108 +178,16 @@ type HelpReq = {
         <p class="waiter__flash" role="status">{{ message }}</p>
       }
 
-      @if (detail) {
-        <section class="waiter-sheet studio-motion-appear" [attr.aria-label]="placeNoun + ' detail'">
-          <header class="waiter-sheet__head">
-            <div>
-              <p class="waiter-sheet__eyebrow">{{ placeNoun }}</p>
-              <h2 class="waiter-sheet__title">{{ detail.placeCode }}</h2>
-              <p class="waiter-sheet__meta">Idle {{ detail.idleMinutes }}m</p>
-            </div>
-            <button type="button" class="waiter-btn waiter-btn--ghost" (click)="closeDetail()">
-              Close
-            </button>
-          </header>
-
-          <div class="waiter-seg waiter-seg--compact" role="tablist" [attr.aria-label]="placeNoun + ' items'">
-            <button
-              type="button"
-              role="tab"
-              class="waiter-seg__btn waiter-seg__btn--tables"
-              [class.waiter-seg__btn--on]="detailItemsTab === 'active'"
-              (click)="detailItemsTab = 'active'"
-            >
-              Active
-              <span class="waiter-seg__n">{{ detailActiveItems.length }}</span>
-            </button>
-            <button
-              type="button"
-              role="tab"
-              class="waiter-seg__btn waiter-seg__btn--tables"
-              [class.waiter-seg__btn--on]="detailItemsTab === 'history'"
-              (click)="detailItemsTab = 'history'"
-            >
-              History
-            </button>
-          </div>
-
-          <div class="waiter-sheet__list" [attr.aria-label]="placeNoun + ' items'">
-            @if (detailLoading && !detailItems.length) {
-              <p class="waiter__calm">Loading orders…</p>
-            }
-            @for (
-              item of detailItemsTab === 'active' ? detailActiveItems : detailHistoryItems;
-              track item.fulfilmentId + item.label
-            ) {
-              <div class="waiter-line" [attr.data-tone]="itemTone(item.status)">
-                <span class="waiter-line__label">{{ item.label }}</span>
-                <span class="waiter-pill" [attr.data-tone]="itemTone(item.status)">
-                  {{ statusLabel(item.status) }}
-                </span>
-                @if (item.status === 'ready' && detailItemsTab === 'active' && !monitorMode && canServeStation(item.stationId)) {
-                  <button
-                    type="button"
-                    class="waiter-btn waiter-btn--mint waiter-btn--compact"
-                    [disabled]="busy"
-                    (click)="serveItem(item)"
-                  >
-                    {{ serveHint }}
-                  </button>
-                } @else {
-                  <span class="waiter-line__meta">{{ stationShort(item.stationId) }}</span>
-                }
-              </div>
-            } @empty {
-              @if (!detailLoading) {
-                <p class="waiter__calm">
-                  @if (detailItemsTab === 'active') {
-                    No active items on this {{ placeNoun.toLowerCase() }}.
-                  } @else {
-                    Nothing served yet.
-                  }
-                </p>
-              }
-            }
-          </div>
-
-          @if (!monitorMode) {
-            <div class="waiter-sheet__actions">
-              <button
-                type="button"
-                class="waiter-btn waiter-btn--mint"
-                [disabled]="busy || !detailReadyCount"
-                (click)="serveAllReadyOnDetail()"
-              >
-                {{ detailReadyCount ? serveNextLabel + ' (' + detailReadyCount + ')' : 'All clear' }}
-              </button>
-              <button type="button" class="waiter-btn waiter-btn--ghost" [disabled]="busy" (click)="clearDetailTable()">
-                Clear {{ placeNoun.toLowerCase() }}
-              </button>
-            </div>
-          }
-        </section>
-      } @else if (tab === 'tables') {
+      @if (tab === 'tables') {
         <section class="waiter-stack" [attr.aria-label]="'Active ' + placeNounPlural.toLowerCase()">
           @for (t of tables; track t.sessionId) {
-            <button
-              type="button"
+            <article
               class="waiter-card waiter-card--tables"
               [class.waiter-card--pulse-idle]="isIdlePulse(t)"
-              (click)="openTable(t)"
             >
               <div class="waiter-card__top">
                 <span class="waiter-card__table">{{ placeNoun }} {{ t.placeCode }}</span>
-                <span class="waiter-card__age">Idle {{ t.idleMinutes }}m</span>
+                <span class="waiter-card__age">Idle {{ ageLabel(t.idleMinutes) }}</span>
               </div>
               <div class="waiter-card__pills">
                 @if (t.readyCount) {
@@ -288,17 +216,40 @@ type HelpReq = {
                         {{ item.status === 'ready' ? '✓' : '○' }}
                       </span>
                       <span>{{ item.quantity }}× {{ item.label }}</span>
-                      <span class="waiter-check__meta">{{ stationShort(item.stationId) }}</span>
+                      <span class="waiter-check__meta">
+                        {{ stationShort(item.stationId) }} · {{ statusLabel(item.status) }}
+                      </span>
                     </li>
                   }
                 </ul>
               } @else {
                 <p class="waiter-card__empty">No orders yet — waiting for guests.</p>
               }
-              @if (isIdlePulse(t)) {
-                <p class="waiter-card__nudge">Needs a look</p>
+              @if (!monitorMode) {
+                <div class="waiter-card__actions waiter-card__actions--split">
+                  <button
+                    type="button"
+                    class="waiter-btn waiter-btn--mint"
+                    [disabled]="busy || !(t.readyCount ?? 0)"
+                    (click)="serveTableReady(t)"
+                  >
+                    {{
+                      t.readyCount
+                        ? serveNextLabel + ' (' + t.readyCount + ')'
+                        : 'All clear'
+                    }}
+                  </button>
+                  <button
+                    type="button"
+                    class="waiter-btn waiter-btn--ghost"
+                    [disabled]="busy"
+                    (click)="clearTable(t)"
+                  >
+                    Clear {{ placeNoun.toLowerCase() }}
+                  </button>
+                </div>
               }
-            </button>
+            </article>
           } @empty {
             <p class="waiter__calm">No active {{ placeNounPlural.toLowerCase() }} — guests who join a QR appear here.</p>
           }
@@ -315,7 +266,7 @@ type HelpReq = {
                 <span class="waiter-card__age">
                   {{ g.readyCount }} ready
                   @if (g.idleMinutes != null) {
-                    · Idle {{ g.idleMinutes }}m
+                    · Idle {{ ageLabel(g.idleMinutes) }}
                   }
                 </span>
               </div>
@@ -391,6 +342,26 @@ type HelpReq = {
             <p class="waiter__calm">No open help requests.</p>
           }
         </section>
+      } @else if (tab === 'history') {
+        <section class="waiter-stack" aria-label="History">
+          @for (h of historyRows; track h.id) {
+            <article class="waiter-card waiter-card--history">
+              <div class="waiter-card__top">
+                <span class="waiter-card__table">{{ h.place }}</span>
+                <span class="waiter-card__age">{{ statusLabel(h.status) }}</span>
+              </div>
+              <ul class="waiter-check">
+                <li class="waiter-check__row" data-tone="muted">
+                  <span class="waiter-check__mark" aria-hidden="true">✓</span>
+                  <span>{{ h.label }}</span>
+                  <span class="waiter-check__meta">{{ stationShort(h.stationId) }}</span>
+                </li>
+              </ul>
+            </article>
+          } @empty {
+            <p class="waiter__calm">Nothing served yet — finished items land here.</p>
+          }
+        </section>
       }
 
       @if (!monitorMode) {
@@ -401,7 +372,7 @@ type HelpReq = {
             <a class="waiter__foot-a" [routerLink]="s.path">{{ s.label }}</a>
           }
         </p>
-      } @else {
+      } @else if (!embedMonitor) {
         <p class="waiter__foot">
           <a class="waiter__foot-a" routerLink="/studio/operate">Overview</a>
         </p>
@@ -437,6 +408,22 @@ type HelpReq = {
         --w-coral-ink: #8f3a26;
         --w-ink: #1b2230;
         --w-muted: #6b7280;
+      }
+      :host.leos-service-board--embed {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        min-height: 0;
+      }
+      :host.leos-service-board--embed .waiter {
+        max-width: none;
+        margin: 0;
+        padding: 0.15rem 0.35rem 1rem;
+        height: 100%;
+        min-height: 0;
+        box-sizing: border-box;
+        overflow: auto;
+        scrollbar-width: thin;
       }
       .waiter {
         display: flex;
@@ -514,8 +501,8 @@ type HelpReq = {
 
       .waiter-seg {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 0.4rem;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.35rem;
         padding: 0.35rem;
         border-radius: 1rem;
         background: #eef0f3;
@@ -567,6 +554,10 @@ type HelpReq = {
         background: var(--w-coral);
         color: var(--w-coral-ink);
       }
+      .waiter-seg__btn--on.waiter-seg__btn--history {
+        background: #e8e6e3;
+        color: var(--w-ink);
+      }
       .waiter-seg__btn--on .waiter-seg__n {
         background: #fff;
         color: var(--w-ink);
@@ -581,7 +572,7 @@ type HelpReq = {
         gap: 0.65rem;
         width: 100%;
         text-align: left;
-        padding: 1rem 1.05rem;
+        padding: 1.15rem 1.4rem;
         border-radius: 1.1rem;
         border: 0;
         background: #fff;
@@ -589,6 +580,7 @@ type HelpReq = {
         font: inherit;
         color: var(--w-ink);
         cursor: default;
+        box-sizing: border-box;
         transition:
           background 220ms ease-out,
           box-shadow 220ms ease-out,
@@ -610,6 +602,9 @@ type HelpReq = {
       .waiter-card--help {
         background: color-mix(in srgb, var(--w-coral) 60%, #fff);
       }
+      .waiter-card--history {
+        background: color-mix(in srgb, #f0eeeb 70%, #fff);
+      }
       .waiter-card--manager {
         background: color-mix(in srgb, var(--w-sand, #f7f1e8) 70%, #fff);
         border: 1px solid color-mix(in srgb, var(--w-ink, #2a2118) 12%, transparent);
@@ -627,7 +622,7 @@ type HelpReq = {
         animation: waiter-breathe 2s ease-in-out infinite;
       }
       .waiter-card--pulse-idle {
-        box-shadow: 0 0 0 2px color-mix(in srgb, var(--w-coral-accent) 35%, transparent);
+        box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--w-coral-accent) 35%, transparent);
       }
       @keyframes waiter-ready-flash {
         from {
@@ -682,12 +677,6 @@ type HelpReq = {
         margin: 0;
         font-size: 0.85rem;
         color: var(--w-muted);
-      }
-      .waiter-card__nudge {
-        margin: 0;
-        font-size: 0.78rem;
-        font-weight: 750;
-        color: var(--w-coral-ink);
       }
       .waiter-card__actions {
         display: flex;
@@ -943,6 +932,7 @@ export class ServicePageComponent implements OnInit, OnDestroy {
   assistance: HelpReq[] = [];
   readyRows: ReadyRow[] = [];
   readyGroups: ReadyGroup[] = [];
+  historyRows: HistoryRow[] = [];
   tables: TableRow[] = [];
   stations: OperateDoor[] = [];
   emptyLine = 'You’re clear.';
@@ -950,12 +940,13 @@ export class ServicePageComponent implements OnInit, OnDestroy {
   roleLabel = 'Waiter';
   staffName = '';
   monitorMode = false;
+  /** Studio Operate right rail — real Staff board, read-only. */
+  @Input() embedMonitor = false;
   socketLive = false;
   detail: TableRow | null = null;
   detailItems: TableItem[] = [];
   detailItemsTab: DetailItemsTab = 'active';
   detailLoading = false;
-  private placeCodes: string[] = [];
   placeNoun = 'Table';
   placeNounPlural = 'Tables';
   private experienceTypeId: ExperienceTypeId = 'restaurant';
@@ -976,11 +967,6 @@ export class ServicePageComponent implements OnInit, OnDestroy {
   get calmLine() {
     const place = this.placeNoun.toLowerCase();
     const places = this.placeNounPlural.toLowerCase();
-    if (this.detail) {
-      return this.detailReadyCount
-        ? `${this.detailReadyCount} ready to serve at ${this.placeNoun} ${this.detail.placeCode}`
-        : `${this.placeNoun} ${this.detail.placeCode}`;
-    }
     if (this.tab === 'tables') {
       return this.tables.length
         ? `${this.tables.length} active ${this.tables.length === 1 ? place : places}`
@@ -990,6 +976,11 @@ export class ServicePageComponent implements OnInit, OnDestroy {
       return this.readyItemCount
         ? `${this.readyItemCount} ready across ${this.readyGroups.length} ${this.readyGroups.length === 1 ? place : places}`
         : 'Nothing ready to serve — you’re clear.';
+    }
+    if (this.tab === 'history') {
+      return this.historyRows.length
+        ? `${this.historyRows.length} finished today`
+        : 'Nothing served yet.';
     }
     return this.serviceHelpCount ? `${this.serviceHelpCount} need you` : this.emptyLine;
   }
@@ -1021,20 +1012,12 @@ export class ServicePageComponent implements OnInit, OnDestroy {
   }
 
   get stickyTint(): StickyTint {
-    if (this.detail) {
-      return this.detailReadyCount ? 'ready' : 'clear';
-    }
     if (this.serviceHelpCount) return 'help';
     if (this.readyGroups.some((g) => g.readyCount > 0)) return 'ready';
     return 'clear';
   }
 
   get stickyLabel(): string {
-    if (this.detail) {
-      return this.detailReadyCount
-        ? `Serve Next — ${this.placeNoun} ${this.detail.placeCode} (${this.detailReadyCount} item${this.detailReadyCount === 1 ? '' : 's'})`
-        : 'All Caught Up';
-    }
     const help = this.nextHelp();
     if (help) {
       const place = this.placeFor(help);
@@ -1050,7 +1033,7 @@ export class ServicePageComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    this.monitorMode = this.router.url.includes('monitor=1');
+    this.monitorMode = this.embedMonitor || this.router.url.includes('monitor=1');
     if (!this.requireStaff()) return;
     this.venue = this.ctx.displayVenue();
     const cfg = this.ctx.readConfig();
@@ -1064,9 +1047,6 @@ export class ServicePageComponent implements OnInit, OnDestroy {
     this.organisationId = who?.organisationId || '';
     this.emptyLine = `${this.roleLabel} is calm — Assist will appear here.`;
 
-    const active = this.ctx.activeExperience();
-    this.placeCodes =
-      active?.placeCodes?.length ? active.placeCodes : active?.placeCode ? [active.placeCode] : [];
     this.experienceTypeId = typeId;
     const def = getExperience(typeId);
     this.placeNoun = def?.terminology.place ?? 'Table';
@@ -1074,7 +1054,7 @@ export class ServicePageComponent implements OnInit, OnDestroy {
 
     this.state.restore();
     const tab = this.route.snapshot.queryParamMap.get('tab');
-    if (tab === 'ready' || tab === 'help' || tab === 'tables') this.tab = tab;
+    if (tab === 'ready' || tab === 'help' || tab === 'tables' || tab === 'history') this.tab = tab;
 
     this.bindOperateSocket();
     this.refresh();
@@ -1092,7 +1072,6 @@ export class ServicePageComponent implements OnInit, OnDestroy {
 
   setTab(tab: FloorTab) {
     this.tab = tab;
-    this.detail = null;
   }
 
   private bindOperateSocket() {
@@ -1117,12 +1096,10 @@ export class ServicePageComponent implements OnInit, OnDestroy {
     if (!refreshOn.has(name)) return;
     this.socketLive = true;
     this.refresh(true);
-    if (this.detail) this.loadDetail(this.detail.sessionId, true);
   }
 
   private requireStaff(): boolean {
-    const monitor = this.router.url.includes('monitor=1');
-    if (monitor) return true;
+    if (this.embedMonitor || this.router.url.includes('monitor=1')) return true;
     if (!this.staffSession.isSignedIn()) {
       void this.router.navigate(['/staff'], {
         queryParams: { next: '/staff/service' },
@@ -1178,13 +1155,7 @@ export class ServicePageComponent implements OnInit, OnDestroy {
 
   placeFor(req: HelpReq): string {
     const fromTable = this.tables.find((t) => t.sessionId === req.sessionId);
-    if (fromTable) return `${this.placeNoun} ${fromTable.placeCode}`;
-    if (this.placeCodes.length) {
-      let hash = 0;
-      const key = req.sessionId || req.id;
-      for (let i = 0; i < key.length; i++) hash = (hash + key.charCodeAt(i)) % this.placeCodes.length;
-      return `${this.placeNoun} ${this.placeCodes[hash] ?? this.placeCodes[0]}`;
-    }
+    if (fromTable) return staffPlaceLabel(this.placeNoun, fromTable.placeCode);
     const msg = (req.message || '').trim();
     if (msg && msg.length <= 24) return msg;
     return this.placeNoun;
@@ -1240,33 +1211,64 @@ export class ServicePageComponent implements OnInit, OnDestroy {
         const placeBySession = new Map(this.tables.map((t) => [t.sessionId, t.placeCode]));
 
         const ready: ReadyRow[] = [];
+        const history: HistoryRow[] = [];
         for (const station of this.stations) {
           const items = (bundle as Record<string, unknown>)[station.id] as Array<{
             id: string;
             status: string;
             sessionId?: string;
+            placeCode?: string | null;
             lines: Array<{ label?: string; quantity: number }>;
           }>;
           if (!Array.isArray(items)) continue;
-          for (const f of items.filter((x) => x.status === 'ready')) {
-            if (!this.canServeStation(station.apiId || station.id)) continue;
+          for (const f of items) {
+            const st = (f.status || '').toLowerCase();
+            const placeCode =
+              f.placeCode ||
+              (f.sessionId && placeBySession.get(f.sessionId)) ||
+              null;
+            const place = staffPlaceLabel(this.placeNoun, placeCode);
             const label =
               f.lines?.length
                 ? f.lines.map((l) => `${l.quantity}× ${l.label ?? 'item'}`).join(', ')
                 : station.label;
-            const placeCode =
-              (f.sessionId && placeBySession.get(f.sessionId)) || this.placeHash(f.id);
-            ready.push({
-              id: `${station.id}-${f.id}`,
-              place: placeCode,
-              label,
-              stationPath: station.path,
-              fulfilmentId: f.id,
-              sessionId: f.sessionId,
+            if (st === 'ready') {
+              if (!this.canServeStation(station.apiId || station.id)) continue;
+              ready.push({
+                id: `${station.id}-${f.id}`,
+                place,
+                label,
+                stationPath: station.path,
+                fulfilmentId: f.id,
+                sessionId: f.sessionId,
+              });
+            } else if (st === 'delivered' || st === 'completed' || st === 'cancelled') {
+              history.push({
+                id: `${station.id}-${f.id}`,
+                place,
+                label,
+                stationId: station.apiId || station.id,
+                status: st,
+              });
+            }
+          }
+        }
+        for (const t of this.tables) {
+          for (const i of t.items ?? []) {
+            const st = (i.status || '').toLowerCase();
+            if (!['delivered', 'completed', 'cancelled'].includes(st)) continue;
+            if (history.some((h) => h.id.endsWith(`-${i.fulfilmentId}`))) continue;
+            history.push({
+              id: `floor-${t.sessionId}-${i.fulfilmentId}`,
+              place: staffPlaceLabel(this.placeNoun, t.placeCode),
+              label: `${i.quantity}× ${i.label}`,
+              stationId: i.stationId,
+              status: st,
             });
           }
         }
         this.readyRows = ready;
+        this.historyRows = history.slice(0, 40);
         this.rebuildReadyGroups();
       },
       error: () => {
@@ -1359,15 +1361,6 @@ export class ServicePageComponent implements OnInit, OnDestroy {
     }
   }
 
-  private placeHash(id: string): string {
-    if (this.placeCodes.length) {
-      let hash = 0;
-      for (let i = 0; i < id.length; i++) hash = (hash + id.charCodeAt(i)) % this.placeCodes.length;
-      return this.placeCodes[hash] ?? this.placeCodes[0];
-    }
-    return id.slice(-4).toUpperCase();
-  }
-
   statusLabel(status: string): string {
     return guestStatusLabel(status);
   }
@@ -1394,6 +1387,10 @@ export class ServicePageComponent implements OnInit, OnDestroy {
 
   isIdlePulse(t: TableRow): boolean {
     return isTableIdlePulsing(t.idleMinutes);
+  }
+
+  ageLabel(minutes: number): string {
+    return formatAgeLabel(minutes);
   }
 
   closeDetail() {
@@ -1477,10 +1474,6 @@ export class ServicePageComponent implements OnInit, OnDestroy {
 
   stickyAction() {
     if (this.monitorMode || this.busy) return;
-    if (this.detail) {
-      this.serveAllReadyOnDetail();
-      return;
-    }
     const help = this.nextHelp();
     if (help) {
       this.tab = 'help';
@@ -1493,6 +1486,19 @@ export class ServicePageComponent implements OnInit, OnDestroy {
       this.tab = 'ready';
       this.serveGroup(group);
     }
+  }
+
+  serveTableReady(t: TableRow) {
+    if (this.monitorMode || this.busy) return;
+    const ids = [
+      ...new Set(
+        (t.items ?? [])
+          .filter((i) => (i.status || '').toLowerCase() === 'ready' && this.canServeStation(i.stationId))
+          .map((i) => i.fulfilmentId),
+      ),
+    ];
+    if (!ids.length) return;
+    this.serveFulfilmentIds(ids);
   }
 
   serveItem(item: TableItem) {

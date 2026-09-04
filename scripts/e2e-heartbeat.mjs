@@ -19,9 +19,10 @@ async function json(res) {
 }
 
 async function request(path, options = {}) {
+  const { headers: extraHeaders, ...rest } = options;
   const res = await fetch(`${API}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...(options.headers ?? {}) },
-    ...options,
+    ...rest,
+    headers: { 'Content-Type': 'application/json', ...(extraHeaders ?? {}) },
   });
   if (!res.ok) {
     const body = await res.text();
@@ -29,6 +30,21 @@ async function request(path, options = {}) {
   }
   if (res.status === 204) return null;
   return json(res);
+}
+
+function guestHeaders(entry) {
+  const secret = entry?.participantSecret?.trim();
+  if (!secret) throw new Error('Entry missing participantSecret — re-seed and retry');
+  return { 'x-participant-secret': secret };
+}
+
+function txBody(entry, sessionId, lines) {
+  return {
+    sessionId,
+    participantId: entry.joinedParticipantId,
+    participantSecret: entry.participantSecret,
+    lines,
+  };
 }
 
 async function waitForRuntime(timeoutMs = 60_000) {
@@ -48,6 +64,12 @@ async function waitForRuntime(timeoutMs = 60_000) {
 async function main() {
   console.log('Waiting for LEOS runtime…');
   await waitForRuntime();
+
+  const staff = await request('/identity/staff/login', {
+    method: 'POST',
+    body: JSON.stringify({ email: 'staff@rustyoak.demo', password: '4444' }),
+  });
+  const staffHeaders = { 'X-Staff-Token': staff.token };
 
   const entry = await request('/entry/resolve', {
     method: 'POST',
@@ -69,25 +91,12 @@ async function main() {
 
   const tx = await request('/transactions', {
     method: 'POST',
-    body: JSON.stringify({
-      sessionId,
-      lines: [
-        {
-          catalogueItemId: food.id,
-          label: food.label,
-          quantity: 1,
-          unitPrice: food.unitPrice,
-          routingTags: food.routingTags,
-        },
-        {
-          catalogueItemId: drink.id,
-          label: drink.label,
-          quantity: 1,
-          unitPrice: drink.unitPrice,
-          routingTags: drink.routingTags,
-        },
-      ],
-    }),
+    body: JSON.stringify(
+      txBody(entry, sessionId, [
+        { catalogueItemId: food.id, quantity: 1 },
+        { catalogueItemId: drink.id, quantity: 1 },
+      ]),
+    ),
   });
   console.log('✓ Transaction', tx.transactionId, 'fulfilments', tx.fulfilments?.length);
 
@@ -95,28 +104,31 @@ async function main() {
   if (!kitchen.length) throw new Error('Expected kitchen fulfilment');
 
   const fid = kitchen[0].id;
-  const sessionBefore = await request(`/sessions/${sessionId}`);
+  const sessionBefore = await request(`/sessions/${sessionId}`, { headers: guestHeaders(entry) });
   if (!sessionBefore.fulfilments?.length) throw new Error('Session missing fulfilments for Live Order');
 
   await request(`/fulfilments/${fid}/status`, {
     method: 'PATCH',
+    headers: staffHeaders,
     body: JSON.stringify({ status: 'preparing' }),
   });
   console.log('✓ Fulfilment status → preparing (In Progress)');
 
   await request(`/fulfilments/${fid}/status`, {
     method: 'PATCH',
+    headers: staffHeaders,
     body: JSON.stringify({ status: 'ready' }),
   });
   console.log('✓ Fulfilment status → ready (G-06 Ready)');
 
   await request(`/fulfilments/${fid}/status`, {
     method: 'PATCH',
+    headers: staffHeaders,
     body: JSON.stringify({ status: 'delivered' }),
   });
   console.log('✓ Fulfilment status → delivered (Completed)');
 
-  const sessionLive = await request(`/sessions/${sessionId}`);
+  const sessionLive = await request(`/sessions/${sessionId}`, { headers: guestHeaders(entry) });
   const updated = sessionLive.fulfilments?.find((f) => f.id === fid);
   if (!updated || updated.status !== 'delivered') {
     throw new Error(
@@ -139,11 +151,14 @@ async function main() {
   if (payment.checkout?.method === 'form_post') {
     console.log('✓ Payment requested (gateway checkout) — settle via ITN in production');
   } else {
-    await request(`/payments/${payment.paymentId}/complete`, { method: 'POST' });
+    await request(`/payments/${payment.paymentId}/complete`, {
+      method: 'POST',
+      headers: staffHeaders,
+    });
     console.log('✓ Payment completed');
   }
 
-  await request(`/sessions/${sessionId}/close`, { method: 'POST' });
+  await request(`/sessions/${sessionId}/close`, { method: 'POST', headers: staffHeaders });
   console.log('✓ Session closed — PhysicalContext free');
 
   // Café proof — deepened Pack UX (own venue, board catalogue, counter station)
@@ -171,18 +186,9 @@ async function main() {
     cafeCatalogue[0];
   const cafeTx = await request('/transactions', {
     method: 'POST',
-    body: JSON.stringify({
-      sessionId: cafeSession,
-      lines: [
-        {
-          catalogueItemId: cafeItem.id,
-          label: cafeItem.label,
-          quantity: 1,
-          unitPrice: cafeItem.unitPrice,
-          routingTags: cafeItem.routingTags,
-        },
-      ],
-    }),
+    body: JSON.stringify(
+      txBody(cafe, cafeSession, [{ catalogueItemId: cafeItem.id, quantity: 1 }]),
+    ),
   });
   if (!cafeTx.fulfilments?.length) throw new Error('Café fulfilment missing');
   console.log('✓ Café transaction + fulfilment (zero Platform change)');
@@ -199,11 +205,12 @@ async function main() {
 
   await request(`/fulfilments/${cafeFid}/status`, {
     method: 'PATCH',
+    headers: staffHeaders,
     body: JSON.stringify({ status: 'ready' }),
   });
   console.log('✓ Café fulfilment → ready via same Capability API');
 
-  await request(`/sessions/${cafeSession}/close`, { method: 'POST' });
+  await request(`/sessions/${cafeSession}/close`, { method: 'POST', headers: staffHeaders });
   console.log('✓ Café session closed — Platform Proof: Café Proven (deepened UX)');
 
   // Hotel proof — third Pack, same Platform
@@ -228,18 +235,9 @@ async function main() {
     hotelCatalogue[0];
   const hotelTx = await request('/transactions', {
     method: 'POST',
-    body: JSON.stringify({
-      sessionId: hotelSession,
-      lines: [
-        {
-          catalogueItemId: hotelFood.id,
-          label: hotelFood.label,
-          quantity: 1,
-          unitPrice: hotelFood.unitPrice,
-          routingTags: hotelFood.routingTags,
-        },
-      ],
-    }),
+    body: JSON.stringify(
+      txBody(hotel, hotelSession, [{ catalogueItemId: hotelFood.id, quantity: 1 }]),
+    ),
   });
   if (!hotelTx.fulfilments?.length) throw new Error('Hotel fulfilment missing');
   console.log('✓ Hotel transaction + fulfilment (zero Platform change)');
@@ -256,11 +254,12 @@ async function main() {
 
   await request(`/fulfilments/${hotelFid}/status`, {
     method: 'PATCH',
+    headers: staffHeaders,
     body: JSON.stringify({ status: 'ready' }),
   });
   console.log('✓ Hotel fulfilment → ready via same Capability API');
 
-  await request(`/sessions/${hotelSession}/close`, { method: 'POST' });
+  await request(`/sessions/${hotelSession}/close`, { method: 'POST', headers: staffHeaders });
   console.log('✓ Hotel session closed — Platform Proof: Hotel Pack without core changes');
 
   // Festival proof — fourth Pack, same Platform
@@ -284,18 +283,9 @@ async function main() {
     festCatalogue.find((i) => i.routingTags?.includes('food')) ?? festCatalogue[0];
   const festTx = await request('/transactions', {
     method: 'POST',
-    body: JSON.stringify({
-      sessionId: festSession,
-      lines: [
-        {
-          catalogueItemId: festFood.id,
-          label: festFood.label,
-          quantity: 1,
-          unitPrice: festFood.unitPrice,
-          routingTags: festFood.routingTags,
-        },
-      ],
-    }),
+    body: JSON.stringify(
+      txBody(fest, festSession, [{ catalogueItemId: festFood.id, quantity: 1 }]),
+    ),
   });
   if (!festTx.fulfilments?.length) throw new Error('Festival fulfilment missing');
   console.log('✓ Festival transaction + fulfilment (zero Platform change)');
@@ -312,11 +302,12 @@ async function main() {
 
   await request(`/fulfilments/${festFid}/status`, {
     method: 'PATCH',
+    headers: staffHeaders,
     body: JSON.stringify({ status: 'ready' }),
   });
   console.log('✓ Festival fulfilment → ready via same Capability API');
 
-  await request(`/sessions/${festSession}/close`, { method: 'POST' });
+  await request(`/sessions/${festSession}/close`, { method: 'POST', headers: staffHeaders });
   console.log('✓ Festival session closed — Platform Proof: Festival Pack without core changes');
 
   // Airport proof — fifth Pack, same Platform
@@ -340,18 +331,9 @@ async function main() {
     airCatalogue.find((i) => i.routingTags?.includes('food')) ?? airCatalogue[0];
   const airTx = await request('/transactions', {
     method: 'POST',
-    body: JSON.stringify({
-      sessionId: airSession,
-      lines: [
-        {
-          catalogueItemId: airFood.id,
-          label: airFood.label,
-          quantity: 1,
-          unitPrice: airFood.unitPrice,
-          routingTags: airFood.routingTags,
-        },
-      ],
-    }),
+    body: JSON.stringify(
+      txBody(air, airSession, [{ catalogueItemId: airFood.id, quantity: 1 }]),
+    ),
   });
   if (!airTx.fulfilments?.length) throw new Error('Airport fulfilment missing');
   console.log('✓ Airport transaction + fulfilment (zero Platform change)');
@@ -368,11 +350,12 @@ async function main() {
 
   await request(`/fulfilments/${airFid}/status`, {
     method: 'PATCH',
+    headers: staffHeaders,
     body: JSON.stringify({ status: 'ready' }),
   });
   console.log('✓ Airport fulfilment → ready via same Capability API');
 
-  await request(`/sessions/${airSession}/close`, { method: 'POST' });
+  await request(`/sessions/${airSession}/close`, { method: 'POST', headers: staffHeaders });
   console.log('✓ Airport session closed — Platform Proof: Airport Pack without core changes');
 
   // Healthcare proof — sixth Pack, same Platform (waiting-bay amenities, not clinical care)
@@ -397,18 +380,9 @@ async function main() {
     hcCatalogue[0];
   const hcTx = await request('/transactions', {
     method: 'POST',
-    body: JSON.stringify({
-      sessionId: hcSession,
-      lines: [
-        {
-          catalogueItemId: hcFood.id,
-          label: hcFood.label,
-          quantity: 1,
-          unitPrice: hcFood.unitPrice,
-          routingTags: hcFood.routingTags,
-        },
-      ],
-    }),
+    body: JSON.stringify(
+      txBody(hc, hcSession, [{ catalogueItemId: hcFood.id, quantity: 1 }]),
+    ),
   });
   if (!hcTx.fulfilments?.length) throw new Error('Healthcare fulfilment missing');
   console.log('✓ Healthcare transaction + fulfilment (zero Platform change)');
@@ -425,11 +399,12 @@ async function main() {
 
   await request(`/fulfilments/${hcFid}/status`, {
     method: 'PATCH',
+    headers: staffHeaders,
     body: JSON.stringify({ status: 'ready' }),
   });
   console.log('✓ Healthcare fulfilment → ready via same Capability API');
 
-  await request(`/sessions/${hcSession}/close`, { method: 'POST' });
+  await request(`/sessions/${hcSession}/close`, { method: 'POST', headers: staffHeaders });
   console.log('✓ Healthcare session closed — Platform Proof: Healthcare Pack without core changes');
 
   console.log('\nPostgres E2E heartbeat smoke test passed.');

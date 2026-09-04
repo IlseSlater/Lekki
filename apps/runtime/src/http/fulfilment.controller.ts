@@ -43,6 +43,7 @@ export class FulfilmentController {
       include: {
         lines: true,
         transaction: { include: { lines: true } },
+        session: { include: { physicalContext: true } },
       },
       orderBy: { createdAt: 'asc' },
     });
@@ -55,6 +56,8 @@ export class FulfilmentController {
         status: f.status,
         stationId: f.stationId,
         sessionId: f.sessionId,
+        /** Same place code Guest sees — never invent from Studio place list. */
+        placeCode: f.session.physicalContext?.code ?? null,
         createdAt: f.createdAt.toISOString(),
         transaction: { id: f.transactionId },
         lines: f.lines.map((line) => ({

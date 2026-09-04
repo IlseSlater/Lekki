@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+Disallow: /studio
+Disallow: /staff
+Disallow: /experience
+Disallow: /guest
+Disallow: /entry
+Disallow: /e/
+Disallow: /signin
+Disallow: /splash
+Disallow: /scan
+Disallow: /onboarding
+
+Sitemap: https://lekki.io/sitemap.xml

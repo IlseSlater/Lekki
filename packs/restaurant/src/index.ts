@@ -274,6 +274,24 @@ export const seedCatalogue: RestaurantCatalogItem[] = [
     routingTags: ['beverage', 'drinks'],
     category: 'Drinks',
   },
+  {
+    id: 'item-chefs-bowl',
+    label: 'Chef’s Bowl',
+    description: 'Today’s greens, grain, and house dressing',
+    unitPrice: 140,
+    currency: 'ZAR',
+    routingTags: ['food', 'mains', 'special'],
+    category: 'Specials',
+  },
+  {
+    id: 'item-weekend-roast',
+    label: 'Weekend Roast',
+    description: 'Slow-roasted, seasonal sides',
+    unitPrice: 165,
+    currency: 'ZAR',
+    routingTags: ['food', 'mains', 'specials'],
+    category: 'Specials',
+  },
 ];
 
 export function registerRestaurantPack(store: {

@@ -43,9 +43,7 @@ import { STAFF_LOGIN } from '../studio/staff-paths';
         min-height: 100dvh;
         display: flex;
         flex-direction: column;
-        background:
-          radial-gradient(100% 70% at 50% -20%, rgba(215, 161, 74, 0.12), transparent 50%),
-          #f6f3ee;
+        background: transparent;
         color: #1b2230;
       }
       .leos-staff-shell__bar {
@@ -55,6 +53,9 @@ import { STAFF_LOGIN } from '../studio/staff-paths';
         gap: 1rem;
         padding: 0.75rem 1.25rem;
         border-bottom: 1px solid rgba(27, 34, 48, 0.08);
+        background: color-mix(in srgb, #ffffff 88%, transparent);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
       }
       .leos-staff-shell__brand {
         margin: 0;
@@ -96,8 +97,13 @@ import { STAFF_LOGIN } from '../studio/staff-paths';
         flex: 1;
         width: 100%;
         max-width: 40rem;
-        margin: 0 auto;
-        padding: 0 1rem 2rem;
+        margin: 1rem auto 1.5rem;
+        padding: 1.25rem 1.25rem 2rem;
+        background: color-mix(in srgb, #ffffff 90%, transparent);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-radius: 1.5rem;
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.22);
       }
       .leos-staff-shell[data-monitor='true'] .leos-staff-shell__main,
       .leos-staff-shell[data-board='true'] .leos-staff-shell__main {

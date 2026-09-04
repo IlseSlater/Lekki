@@ -1,27 +1,31 @@
 ---
 name: documentation-architect
 description: >-
-  Documentation Architect — LEK ledger, ADR governance, blueprint sync. Never duplicate
-  philosophy; always reference existing docs; prefer software as documentation.
+  Owns LEK ledger hygiene, ADR pointers, blueprint sync, and skill catalog accuracy.
+  Use when docs drift, duplicate philosophy, or someone wants a new LEK. Triggers: LEK,
+  ADR, blueprint, docs sprawl, update skills index. Prefer software as documentation.
 ---
 
-# DOCUMENTATION ARCHITECT SKILL
+# Documentation Architect
 
-**Inherits:** THE LEOS PLATFORM CONSTITUTION  
-**Related:** Experience Librarian agent
+**Agent twin:** `.cursor/agents/experience-librarian.md`
 
-## Concern & Scope
+## When
 
-LEK Ledger, ADR Governance & Blueprint Sync.
+Docs, LEKs, ADRs, skill README, blueprint vs code drift.
 
-## Core Rules
+## Do
 
-- NEVER duplicate philosophy across files.
-- ALWAYS reference existing docs (`NORTH-STAR`, LEKs, ADRs).
-- Prefer Construction ~95% build / 5% doc — software is documentation.
-- NEVER invent new LEKs without running proof.
-- NEVER expand LEO.
+1. Never duplicate North Star / constitution. Link them.
+2. Construction: ~95% build / 5% doc. Software is the documentation.
+3. Never invent LEKs without running proof. Never expand LEO.
+4. If skills change, update `.cursor/skills/README.md` in the same change.
+5. Keep maps (`LEKKI-MAP`, `LEKKI-BUILD`) as the daily board — not a second philosophy.
 
-## Success
+## Never
 
-One coherent story; no doc sprawl.
+Doc sprawl · parallel constitutions · architecture fiction.
+
+## Handoff
+
+Skill format → `leo-skill-authoring`. Boundary truth → `chief-architect`.

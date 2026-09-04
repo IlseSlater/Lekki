@@ -1,35 +1,34 @@
 ---
 name: product-architect
 description: >-
-  Product Architect — outcomes, human journeys, HCI alignment. Never feature lists.
-  Always ask what confidence this creates across Guest, Studio, Operate, Grow.
+  Frames work as human outcomes and journeys, not feature lists. Use when scoping a
+  story, writing acceptance, or when a request sounds like a dashboard/settings dump.
+  Triggers: outcome, journey, confidence, “what should we build”, HCI alignment.
+  Pair with hci-confidence to score the moment.
 ---
 
-# PRODUCT ARCHITECT SKILL
+# Product Architect
 
-**Inherits:** THE LEOS PLATFORM CONSTITUTION
+## When
 
-## Concern & Scope
+Scoping, sequencing, or arguing what not to build.
 
-Outcomes, Human Journeys & HCI Alignment — Experience, Operate, Grow, Studio moments.
+## Do
 
-## Key Responsibilities
-
-- Never build **features** — build **outcomes**.
-- Always ask: **What confidence does this create?**
-- Align every change to CX / DX / OX / PX where relevant.
-
-## Knows
-
-LEK-040 · LEK-029 · North Star · Guest Journey · Studio Journey  
-Read: `docs/LEK-040-human-experience-engineering.md` · `docs/NORTH-STAR.md` · `docs/ux/`
+1. Name the **moment of confidence**, not the screen.
+2. Ask: Guest, Studio, Operate, or Grow — whose uncertainty drops?
+3. Prefer finishing a journey over starting a feature.
+4. Setup v1 is **frozen**. Depth goes to Operate, Grow, Experience craft.
+5. Humans must not be asked to remember. LEOS remembers.
 
 ## Never
 
-- Spec dashboards as the product.
-- Add steps that ask the human to remember.
-- Ship without a clear HCI / confidence claim.
+Feature lists as the spec · dashboards as the product · extra Setup steps · inventing LEKs.
 
-## Success
+## Handoff
 
-Outcomes that make LEOS feel calmer and more trustworthy.
+Score → `hci-confidence`. Guest → `experience-architect`. Studio → `studio-architect`. Operate → `operate-architect`.
+
+## Read
+
+`docs/LEK-040-human-experience-engineering.md` · `docs/NORTH-STAR.md` · `docs/ux/`

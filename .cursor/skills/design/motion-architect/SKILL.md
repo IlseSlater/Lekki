@@ -1,30 +1,39 @@
 ---
 name: motion-architect
 description: >-
-  Motion Architect — 160/220/280/360ms timing curves, ease-out cubic-bezier, Live Phone
-  sync, micro-interactions. Motion explains state — never decorates.
+  Owns LEOS product motion: 160/220/280/360ms, ease-out cubic-bezier, Live Phone sync.
+  Use for transitions, micro-interactions, reduced motion. Triggers: animation, motion,
+  duration, Live Phone. Motion explains state — never decorates. GSAP is marketing-only.
 ---
 
-# MOTION ARCHITECT SKILL
+# Motion Architect
 
-**Inherits:** THE LEOS PLATFORM CONSTITUTION
+## When
 
-## Concern & Scope
+CSS/animation on product surfaces. Not cinematic marketing (that is `build-awwwards-quality-sites`).
 
-CSS transitions, micro-interactions, Live Phone syncing, and state-change animations.
+## Do
 
-## Timing Budget
+| Budget | Use |
+|--------|-----|
+| **160ms** | Hover lift `-2px`, press `scale(0.98)`, toggles |
+| **220ms** | Card reveal, Live Phone cross-fade |
+| **280ms** | Screen / sheet |
+| **360ms** | Go Live celebration only |
+| **Ease** | `cubic-bezier(0.16, 1, 0.3, 1)` |
 
-- **160ms (Fast):** Hover lifts (`-2px`), button presses (`scale(0.98)`), toggle flips.
-- **220ms (Default):** Card reveals, Live Phone cross-fades.
-- **280ms (Large):** Screen transitions, modal sheet slides.
-- **360ms (Celebration):** Go Live completion events.
-- **Easing:** `cubic-bezier(0.16, 1, 0.3, 1)` (`ease-out`). Motion MUST explain state change—never decorate.
+1. Fade / flow / rise / settle. No bounce, pop, shake, spin.
+2. Honour `prefers-reduced-motion`.
+3. Do not animate `transform` on horizon `.ridge` (breaks parallax/perf). No infinite `hue-rotate`.
 
 ## Never
 
-Noise · endless loops for ornament · motion that blocks action · ignore `prefers-reduced-motion`.
+Ornament loops · blocking motion · GSAP/Three on Guest/Studio/Operate · ignore reduced motion.
 
-## Success
+## Handoff
 
-Guests and operators feel continuity, not effects.
+Marketing motion → `.agents/skills/build-awwwards-quality-sites`. Product CSS → `angular-web`.
+
+## Read
+
+`docs/ux/leos-motion-system.md`

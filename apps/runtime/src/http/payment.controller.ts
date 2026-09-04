@@ -1,6 +1,8 @@
-import { Body, Controller, HttpCode, Param, Post, Query, Req } from '@nestjs/common';
+import { Body, Controller, HttpCode, Param, Post, Req, UseGuards, ForbiddenException } from '@nestjs/common';
 import type { Request } from 'express';
 import { LeosService } from '../leos/leos.service';
+import { RequireStaffPermission, StaffAuthGuard } from '../staff-auth/staff-auth.guard';
+import { MissingFieldError } from '../leos/domain-errors';
 
 @Controller('payments')
 export class PaymentController {
@@ -10,30 +12,54 @@ export class PaymentController {
   request(
     @Param('sessionId') sessionId: string,
     @Body()
-    body?: { tipAmount?: number; scope?: 'visit' | 'mine' | 'equal'; participantId?: string },
+    body?: {
+      tipAmount?: number;
+      tipPercent?: number;
+      scope?: 'visit' | 'mine' | 'equal';
+      participantId?: string;
+      participantSecret?: string;
+    },
   ) {
     const scope =
       body?.scope === 'mine' ? 'mine' : body?.scope === 'equal' ? 'equal' : 'visit';
+    const participantSecret = body?.participantSecret?.trim();
+    if ((scope === 'mine' || scope === 'equal') && !participantSecret) {
+      throw new MissingFieldError('participantSecret');
+    }
     return this.leos.requestPayment(sessionId, {
-      tipAmount: typeof body?.tipAmount === 'number' ? body.tipAmount : 0,
+      tipAmount: typeof body?.tipAmount === 'number' ? body.tipAmount : undefined,
+      tipPercent: typeof body?.tipPercent === 'number' ? body.tipPercent : undefined,
       scope,
       participantId: typeof body?.participantId === 'string' ? body.participantId : undefined,
+      participantSecret,
     });
   }
 
+  /** Staff-only manual settlement — guests must never call this in production. */
   @Post(':paymentId/complete')
-  complete(
-    @Param('paymentId') paymentId: string,
-    @Query('fail') fail?: string,
-  ) {
-    return this.leos.completePayment(paymentId, { fail: fail === 'true' });
+  @UseGuards(StaffAuthGuard)
+  @RequireStaffPermission('payment.complete')
+  complete(@Param('paymentId') paymentId: string) {
+    if (
+      process.env.NODE_ENV === 'production' &&
+      process.env.LEOS_ALLOW_MANUAL_COMPLETE !== '1'
+    ) {
+      throw new ForbiddenException('Manual payment completion is disabled in production');
+    }
+    return this.leos.completePayment(paymentId);
   }
 
-  /**
-   * PayFast Instant Transaction Notification (ITN).
-   * Must return HTTP 200 quickly; PayFast retries on non-200.
-   * Local sandbox ITN requires a public notify URL (e.g. ngrok).
-   */
+  /** Staff refund — routes through the active payment connector for the payment's org/venue. */
+  @Post(':paymentId/refund')
+  @UseGuards(StaffAuthGuard)
+  @RequireStaffPermission('payment.complete')
+  refund(
+    @Param('paymentId') paymentId: string,
+    @Body() body?: { amount?: number },
+  ) {
+    return this.leos.refundPayment(paymentId, body?.amount);
+  }
+
   @Post('payfast/notify')
   @HttpCode(200)
   async payfastNotify(@Req() req: Request, @Body() body: Record<string, unknown>) {

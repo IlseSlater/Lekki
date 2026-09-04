@@ -189,7 +189,7 @@ type PanelView = 'home' | 'details';
         height: 2.5rem;
         border: 0;
         border-radius: 999px;
-        background: var(--leos-warm-sand, #faf7f2);
+        background: var(--leos-warm-sand, #ffffff);
         border: 1px solid var(--leos-warm-sand-dark, #e7e2db);
         color: var(--leos-ink, #1b2230);
         font-size: 1.1rem;
@@ -214,7 +214,7 @@ type PanelView = 'home' | 'details';
       .pm-card {
         border: 1px solid var(--leos-border-card, #eee7de);
         border-radius: 1.1rem;
-        background: color-mix(in srgb, var(--leos-warm-sand, #faf7f2) 55%, #fff);
+        background: color-mix(in srgb, var(--leos-warm-sand, #ffffff) 55%, #fff);
         overflow: hidden;
       }
 

@@ -1,5 +1,6 @@
 import { Body, Controller, Post } from '@nestjs/common';
 import { LeosService } from '../leos/leos.service';
+import { MissingFieldError } from '../leos/domain-errors';
 
 @Controller('transactions')
 export class TransactionController {
@@ -11,15 +12,17 @@ export class TransactionController {
     body: {
       sessionId: string;
       participantId?: string;
+      participantSecret?: string;
       lines: Array<{
         catalogueItemId: string;
-        label: string;
         quantity: number;
-        unitPrice: number;
-        routingTags: string[];
+        notes?: string;
+        selectionsJson?: unknown;
       }>;
     },
   ) {
-    return this.leos.createTransaction(body);
+    const participantSecret = body?.participantSecret?.trim();
+    if (!participantSecret) throw new MissingFieldError('participantSecret');
+    return this.leos.createTransaction({ ...body, participantSecret });
   }
 }

@@ -6,6 +6,108 @@
       "sourceType": "github",
       "skillPath": "skills/magicpath/SKILL.md",
       "computedHash": "9fc23598ebd385bcc5f1bb19726a78b76ce825122e55cc8fab680e82f2da7443"
+    },
+    "grill-me": {
+      "source": "julianoczkowski/designer-skills",
+      "sourceType": "github",
+      "skillPath": "grill-me/SKILL.md",
+      "computedHash": "8079c2802774f9001b08d3a1e9dace4ecb33d48116a8f04e34d33dce61323306",
+      "adapted": true,
+      "adaptedNote": "Content customised for Lekki/LEOS (LVES 2.0 tokens, frozen-area guardrails, Angular+SCSS stack, no dark mode) — not a verbatim mirror of upstream. computedHash covers the local adapted file, not the upstream original."
+    },
+    "design-brief": {
+      "source": "julianoczkowski/designer-skills",
+      "sourceType": "github",
+      "skillPath": "design-brief/SKILL.md",
+      "computedHash": "17be727170a930a1059515b82e45d9780751dfe6987d108fc5654e7ed6ce76d7",
+      "adapted": true,
+      "adaptedNote": "Content customised for Lekki/LEOS (LVES 2.0 tokens, frozen-area guardrails, Angular+SCSS stack, no dark mode) — not a verbatim mirror of upstream. computedHash covers the local adapted file, not the upstream original."
+    },
+    "information-architecture": {
+      "source": "julianoczkowski/designer-skills",
+      "sourceType": "github",
+      "skillPath": "information-architecture/SKILL.md",
+      "computedHash": "27d88a4f14f852e635252181cfb1317b8862d5cc6b86b846c57236b663074961",
+      "adapted": true,
+      "adaptedNote": "Content customised for Lekki/LEOS (LVES 2.0 tokens, frozen-area guardrails, Angular+SCSS stack, no dark mode) — not a verbatim mirror of upstream. computedHash covers the local adapted file, not the upstream original."
+    },
+    "design-tokens": {
+      "source": "julianoczkowski/designer-skills",
+      "sourceType": "github",
+      "skillPath": "design-tokens/SKILL.md",
+      "computedHash": "fc19221e2b6f8fe85c778a055d9cb30e5c71e5b8fc297dd9cb201af8947f856c",
+      "adapted": true,
+      "adaptedNote": "Content customised for Lekki/LEOS (LVES 2.0 tokens, frozen-area guardrails, Angular+SCSS stack, no dark mode) — not a verbatim mirror of upstream. computedHash covers the local adapted file, not the upstream original."
+    },
+    "brief-to-tasks": {
+      "source": "julianoczkowski/designer-skills",
+      "sourceType": "github",
+      "skillPath": "brief-to-tasks/SKILL.md",
+      "computedHash": "260f5ed96415f72c8942a7945ef05654e6cfc07000748bbab2a8715c5a0e8e94",
+      "adapted": true,
+      "adaptedNote": "Content customised for Lekki/LEOS (LVES 2.0 tokens, frozen-area guardrails, Angular+SCSS stack, no dark mode) — not a verbatim mirror of upstream. computedHash covers the local adapted file, not the upstream original."
+    },
+    "frontend-design": {
+      "source": "julianoczkowski/designer-skills",
+      "sourceType": "github",
+      "skillPath": "frontend-design/SKILL.md",
+      "computedHash": "f8d762928f9c88ed7b56773b8e7b0d4c11ff54d1b02109891e5de5f39fa469ec",
+      "adapted": true,
+      "adaptedNote": "Content customised for Lekki/LEOS (LVES 2.0 tokens, frozen-area guardrails, Angular+SCSS stack, no dark mode) — not a verbatim mirror of upstream. computedHash covers the local adapted file, not the upstream original."
+    },
+    "design-review": {
+      "source": "julianoczkowski/designer-skills",
+      "sourceType": "github",
+      "skillPath": "design-review/SKILL.md",
+      "computedHash": "7d7d7c183d9cd744941fa185ffe57026d30e876d4fe6693f2c341a0c08ac21a0",
+      "adapted": true,
+      "adaptedNote": "Content customised for Lekki/LEOS (LVES 2.0 tokens, frozen-area guardrails, Angular+SCSS stack, no dark mode) — not a verbatim mirror of upstream. computedHash covers the local adapted file, not the upstream original."
+    },
+    "design-flow": {
+      "source": "julianoczkowski/designer-skills",
+      "sourceType": "github",
+      "skillPath": "design-flow/SKILL.md",
+      "computedHash": "9acb4f6036793c6de7b74030a9dc698e40e1c138ab39d6435488da08b60c7757",
+      "adapted": true,
+      "adaptedNote": "Content customised for Lekki/LEOS (LVES 2.0 tokens, frozen-area guardrails, Angular+SCSS stack, no dark mode) — not a verbatim mirror of upstream. computedHash covers the local adapted file, not the upstream original."
+    },
+    "build-awwwards-quality-sites": {
+      "source": "MengTo/Skills",
+      "sourceType": "github",
+      "skillPath": "agent-skills/web-design/build-awwwards-quality-sites/SKILL.md",
+      "computedHash": "30eccff8844b43f3fa6fa55564aa01d73751a1a7f318222b95b9e9e547d88d58",
+      "adapted": true,
+      "adaptedNote": "Scoped for Lekki: applies ONLY to the public marketing site (website-home.page.ts and future landing pages), never to LEOS Studio or Experience product surfaces, which are governed by the frozen leos-motion-system.md (no bounce/pop/shake/spin, no parallax, no Three.js). computedHash covers the local adapted file, not the upstream original."
+    },
+    "web-design-engineer": {
+      "source": "ConardLi/garden-skills",
+      "sourceType": "github",
+      "skillPath": "skills/web-design-engineer/SKILL.md",
+      "computedHash": "db5639da7b84ab426a7e8d175a5b220ddaa3685dcf56eefe81d02b2830d600c6",
+      "treeHash": "555bb457ab100fc8c1b2ed56d5452def987ba0cdcfd31814a82fd73a18b38942",
+      "fileCount": 37,
+      "adapted": true,
+      "adaptedNote": "SKILL.md customised for Lekki/LEOS (treat brand/tokens as already established, map LVES to apple-hig/linear recipes, no dark mode, Angular+SCSS not React/Tailwind, defers production edits to frontend-design skill). All references/ files (style-recipes, advanced-patterns, etc.) installed verbatim from upstream as general design reference material."
+    },
+    "tastemaker": {
+      "source": "codeswithroh/tastemaker",
+      "sourceType": "github",
+      "skillPath": "skills/tastemaker/SKILL.md",
+      "computedHash": "0e4defb7716c63534eaf3fb4d570258380a9f1fa912cdf4b5c0e67e9d7c46ce3",
+      "treeHash": "236bd08374670eec462c825e9c3226a20dcc42b3dd511d22ff46f87fa93749a4",
+      "fileCount": 70,
+      "adapted": true,
+      "adaptedNote": "SKILL.md customised for Lekki/LEOS with a prepended Lekki Context block and ~15 inline annotations: treats apps/web/src/styles/_tokens.scss and docs/ux/lves.md as the real source of truth (outranking this skill's own .tastemaker/style-lock.md if they ever disagree), scopes its default GSAP/ScrollTrigger motion and shadcn/React component-sourcing to marketing-site/prototype work only (never Studio or Experience, which are governed by docs/ux/leos-motion-system.md, Frozen), no dark mode, preserves existing brand/icon assets instead of sourcing new ones, and defers actual Angular implementation to the frontend-design skill. .tastemaker/style-lock.md was pre-seeded (not left for the skill to generate cold) with Lekki's real palette/typography/shape/motion tokens and a computed WCAG contrast matrix, so this skill's own Step 0 'reuse, don't re-derive' memory check activates correctly by default. references/, scripts/, assets/, ideagram/ (vendored sub-skill), and SECURITY.md installed verbatim from upstream."
+    },
+    "impeccable": {
+      "source": "pbakaus/impeccable",
+      "sourceType": "github",
+      "skillPath": ".agent/skills/impeccable/SKILL.md",
+      "computedHash": "1c1dee3b8f8b5cb353f8f7d57e0ae5eb01a1c789ef5cdb46b36efae6e44f880c",
+      "treeHash": "9aa9a808f18ac47bfc916ffb6446d8c575870ec11516f82a526306db88c6a286",
+      "fileCount": 153,
+      "adapted": true,
+      "adaptedNote": "SKILL.md prepended with a Lekki Context block: Angular 19 standalone components + SCSS (not React/Tailwind), LVES 2.0 '--leos-*' tokens are canonical, Fraunces/Sora fonts only, gold CTA rationed, no dark mode, frozen surfaces (experience/, studio/, setup/, docs/ux/), GSAP/ScrollTrigger permitted for marketing site only, 'live' command Angular adapter unsupported. All script path references corrected from '.agent/skills/impeccable/scripts/' to '.agents/skills/impeccable/scripts/' to match Lekki's monorepo layout. All 153 reference/, scripts/, and agents/ files installed verbatim from upstream."
     }
   }
 }

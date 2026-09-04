@@ -8,10 +8,13 @@ import { FulfilmentController } from './http/fulfilment.controller';
 import { PaymentController } from './http/payment.controller';
 import { CatalogueController } from './http/catalogue.controller';
 import { IdentityController } from './http/identity.controller';
+import { OauthController } from './http/oauth.controller';
 import { AssistanceController } from './http/assistance.controller';
 import { ProfileController } from './http/profile.controller';
 import { HealthController } from './http/health.controller';
 import { SetupPaymentsController } from './http/setup-payments.controller';
+import { SetupBrandController } from './http/setup-brand.controller';
+import { SetupEntryController } from './http/setup-entry.controller';
 import { GrowController } from './http/grow.controller';
 import { OperateController } from './http/operate.controller';
 import { EventsModule } from './events/events.module';
@@ -28,10 +31,13 @@ import { StaffAuthModule } from './staff-auth/staff-auth.module';
     PaymentController,
     CatalogueController,
     IdentityController,
+    OauthController,
     ProfileController,
     AssistanceController,
     HealthController,
     SetupPaymentsController,
+    SetupBrandController,
+    SetupEntryController,
     GrowController,
     OperateController,
   ],

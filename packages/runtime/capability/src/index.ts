@@ -17,8 +17,21 @@ export interface FulfilmentConnectorBinding {
   priority: number;
 }
 
+export type PaymentTenantRef = {
+  organisationId: string;
+  venueId?: string;
+};
+
+export function paymentTenantKey(ref: PaymentTenantRef): string {
+  const org = ref.organisationId?.trim();
+  const venue = ref.venueId?.trim();
+  if (org && venue) return `${org}:${venue}`;
+  return org || 'default';
+}
+
 export class CapabilityRuntime {
   private paymentBindings: PaymentConnectorBinding[] = [];
+  private paymentByTenant = new Map<string, PaymentConnectorBinding>();
   private fulfilmentBindings: FulfilmentConnectorBinding[] = [];
 
   constructor(private readonly profiles: ProfileEngine) {}
@@ -28,13 +41,41 @@ export class CapabilityRuntime {
     this.paymentBindings.sort((a, b) => a.priority - b.priority);
   }
 
-  /** Replace all payment bindings with a single active connector (Setup Studio activate). */
+  /** Replace all default payment bindings with a single active connector (legacy / dev). */
   replacePaymentConnector(binding: PaymentConnectorBinding): void {
     this.paymentBindings = [binding];
   }
 
-  peekPaymentConnectorId(): string | undefined {
+  /** Activate payment connector for one tenant (org or org:venue). */
+  replacePaymentConnectorForTenant(
+    tenant: PaymentTenantRef,
+    binding: PaymentConnectorBinding,
+  ): void {
+    this.paymentByTenant.set(paymentTenantKey(tenant), binding);
+  }
+
+  peekPaymentConnectorId(tenant?: PaymentTenantRef): string | undefined {
+    if (tenant?.organisationId) {
+      const exact = this.paymentByTenant.get(paymentTenantKey(tenant));
+      if (exact) return exact.connectorId;
+      const orgOnly = this.paymentByTenant.get(
+        paymentTenantKey({ organisationId: tenant.organisationId }),
+      );
+      if (orgOnly) return orgOnly.connectorId;
+    }
     return this.paymentBindings[0]?.connectorId;
+  }
+
+  private pickPaymentBinding(tenant?: PaymentTenantRef): PaymentConnectorBinding | undefined {
+    if (tenant?.organisationId) {
+      const exact = this.paymentByTenant.get(paymentTenantKey(tenant));
+      if (exact) return exact;
+      const orgOnly = this.paymentByTenant.get(
+        paymentTenantKey({ organisationId: tenant.organisationId }),
+      );
+      if (orgOnly) return orgOnly;
+    }
+    return this.paymentBindings[0];
   }
 
   registerFulfilmentConnector(binding: FulfilmentConnectorBinding): void {
@@ -44,6 +85,7 @@ export class CapabilityRuntime {
 
   async resolvePaymentConnector(
     profileRef: ProfileRef,
+    tenant?: PaymentTenantRef,
   ): Promise<Result<PaymentCapability>> {
     const enabled = await this.profiles.resolveCapability(
       profileRef,
@@ -55,7 +97,7 @@ export class CapabilityRuntime {
     if (!enabled.value) {
       return err('Payment capability not enabled for profile');
     }
-    const binding = this.paymentBindings[0];
+    const binding = this.pickPaymentBinding(tenant);
     if (!binding) {
       return err('No payment connector registered');
     }
@@ -85,12 +127,29 @@ export class CapabilityRuntime {
   async createPayment(
     profileRef: ProfileRef,
     request: CreatePaymentRequest,
+    tenant?: PaymentTenantRef,
   ) {
-    const connector = await this.resolvePaymentConnector(profileRef);
+    const connector = await this.resolvePaymentConnector(
+      profileRef,
+      tenant ?? { organisationId: request.organisationId },
+    );
     if (!connector.ok) {
       return connector;
     }
     return ok(await connector.value.createPayment(request));
+  }
+
+  async refundPayment(
+    profileRef: ProfileRef,
+    paymentId: import('@lekki/contracts').PaymentId,
+    amount: number,
+    tenant?: PaymentTenantRef,
+  ) {
+    const connector = await this.resolvePaymentConnector(profileRef, tenant);
+    if (!connector.ok) {
+      return connector;
+    }
+    return ok(await connector.value.refundPayment(paymentId, amount));
   }
 
   async createFulfilmentsForTransaction(input: {

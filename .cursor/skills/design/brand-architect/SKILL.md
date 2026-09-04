@@ -1,29 +1,36 @@
 ---
 name: brand-architect
 description: >-
-  Brand Architect — Lekki voice, tone, copy, premium hospitality identity, colour,
-  typography. Protect premium hospitality — never corporate SaaS.
+  Lekki voice, tone, and premium hospitality identity across Guest, Studio, Operate,
+  Grow, and marketing. Use when writing or reviewing copy, naming, empty states,
+  errors, or when language sounds like SaaS/admin. Triggers: voice, tone, copy,
+  hospitality, “too corporate”, jargon. Not for layout tokens (ux-architect).
 ---
 
-# BRAND ARCHITECT SKILL
+# Brand Architect
 
-**Inherits:** THE LEOS PLATFORM CONSTITUTION
+**Voice table:** `references/voice.md`
 
-## Concern & Scope
+## When
 
-Voice, Tone, Copy & Premium Hospitality Identity — Lekki brand across Guest, Studio, Operate, Grow, Marketing.
+Any human-readable string a guest, owner, or staff member will see.
 
-## Protects
+## Do
 
-**Premium hospitality**
+1. Load `references/voice.md`.
+2. Write for **confidence**: short, warm, specific. One idea per sentence.
+3. Name the moment, not the system. “You’re at table 4” not “PhysicalContext resolved.”
+4. Errors say what happened and what to do next — never blame the human.
+5. Empty states are hospitality (“Nothing on the pass yet”) not null states (“No data”).
+6. Align colour/type with LVES via `ux-architect` — gold is the action, not a wash.
 
 ## Never
 
-Corporate SaaS tone · generic purple gradients · cold enterprise chrome · admin jargon in guest/studio copy.
+Corporate SaaS · “tenant/schema/runtime/connector” in product UI · generic purple · cold chrome · dashboard-speak · witty-at-the-guest’s-expense.
 
-## Aligns with LVES
+## Handoff
 
-Warm Sand · Gold primary · Emerald accent · Fraunces / Sora (see `@ux-architect`).
+Layout → `ux-architect`. Motion → `motion-architect`. HCI claim → `hci-confidence`.
 
 ## Success
 

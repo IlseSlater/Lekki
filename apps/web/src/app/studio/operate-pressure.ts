@@ -30,5 +30,8 @@ export function isTableIdlePulsing(idleMinutes: number): boolean {
 
 export function ageLabel(minutes: number): string {
   if (minutes <= 0) return 'now';
-  return `${minutes}m`;
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const rem = minutes % 60;
+  return rem > 0 ? `${hours}h ${rem}m` : `${hours}h`;
 }

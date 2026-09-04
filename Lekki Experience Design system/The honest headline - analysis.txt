@@ -1,0 +1,1472 @@
+
+Lekki · LEOS
+Independent teardown · 1 September 2026
+You have a product. You do not yet have a system you can take money through.
+A line-by-line read of Leo Studio, the guest Experience app, the staff boards, the NestJS runtime and the marketing site — plus the SEO strategy the site currently has no way to execute. Every finding below cites the file and line it came from. Nothing here is inferred from documentation; it is all read from code.
+
+apps/web · 13,517 lines
+apps/runtime · 38 files
+packages · 5
+connectors · 2
+prisma · 22 models
+The verdict
+The thinking in this codebase is unusually good. The continuity modules, the outbox write path, the PayFast signature encoding, the equal-share arithmetic, the permission language that says "they can see / act / finish" instead of showing a checkbox matrix — that is real product craft, and it is rare.
+
+The enforcement is missing. Of 14 controllers, 4 apply an auth guard and 2 of those make it optional. Studio has no authentication at all — signIn() writes a boolean to localStorage. Money is a floating-point number in all five monetary columns. There are no database migrations and effectively no tests. Any guest on the venue Wi-Fi can settle their own bill for free, read every other table's payments, and end a stranger's meal.
+
+None of this is unfixable, and most of it is a week's disciplined work on a codebase this well-factored. But it is the difference between a demo and a product, and right now the gap runs straight through the money.
+
+44
+Stop-ship
+73
+Serious
+19
+Polish
+Severity is about consequence, not effort. A P0 is something that loses money, leaks a tenant's data, or lies to a guest. Several P0s below are one-line fixes.
+
+Start here
+
+The seven that would stop me shipping
+Ordered by how fast they cost you money or trust. Everything else in this document can wait behind these.
+
+1
+A guest can settle their own bill for free
+
+payment.controller.ts:24 — POST /payments/:id/complete has no guard, and the guest's own browser calls it (guest.page.ts:2186). For the manual connector — which is the .env default — the browser declares its own payment successful and the transaction is marked settled. No card, no gateway, no money.
+
+2
+The client sets the price
+
+transaction.controller.ts:8 — POST /transactions accepts lines[].unitPrice from the request body and never consults the catalogue. Post the same order with unitPrice: 0.01 and the kitchen cooks the ribeye while the bill reads two cents.
+
+3
+Studio has no authentication
+
+studio-auth.service.ts:38 — signIn() takes an email, no password, and writes {signedIn:true} to localStorage. There are zero route guards in the entire app. Every Studio endpoint is unauthenticated server-side, and GET /identity/staff with no org param returns every staff member of every organisation, with emails and permissions.
+
+4
+One guest tapping "Leave" ends the whole table
+
+guest.page.ts:2240 — leave() closes the entire ExperienceSession with no participant scoping and no settlement check. "Leave" is a full-weight tab in the bottom bar. Alice pays her share and taps it; Bob, Carol and Dave lose their session mid-meal with R900 outstanding.
+
+5
+Every new venue ships the same demo QR token
+
+experience-registry.ts:87 — defaults.token: 'qr-demo-restaurant', copied verbatim into every experience of that type. Two unrelated restaurants both print a QR encoding /e/qr-demo-restaurant; their guests land in the same session and their orders route to the same kitchen.
+
+6
+Money is a float, and the code already knows it
+
+schema.prisma:158,172,207,209,274 — all five monetary columns are Float (Postgres double precision). Settlement compares with a deliberate fudge: paidTowardTx + 0.001 >= total (leos.service.ts:717). That epsilon is a tenth-of-a-cent giveaway in one direction and a permanently unsettleable bill in the other.
+
+7
+The marketing site is invisible to AI search and has no metadata at all
+
+index.html — title is the literal string "Lekki". No description, no canonical, no Open Graph, no structured data, no robots.txt, no sitemap.xml, no SSR or prerender. GPTBot, ClaudeBot and PerplexityBot do not execute JavaScript, so they see an empty <lekki-root>. Every word of your positioning is unreadable to the channel that is growing fastest.
+
+The full board
+
+All findings
+Filter by severity and area. Each finding names the file and line, the concrete failure scenario, and the fix.
+
+Severity
+P0
+P1
+P2
+Area
+Studio
+Guest
+Staff
+Platform
+136 of 136 shown
+P0
+One guest tapping Leave ends the whole table's session
+Guest
+apps/web/src/app/pages/guest.page.ts:2240 · packages/runtime/experience/src/index.ts:141
+leave() calls closeSession(sessionId), which sets the entire ExperienceSession to completed and clears the physical-context binding — no participant scoping, no settlement check. Leave is a permanent, equal-weight tab in the bottom bar. Scenario: four friends at Table 12. Alice pays her equal share and taps Leave. Bob, Carol and Dave — mid-meal, food in the kitchen, R900 unpaid — have their session terminated and the table unbound, so a new scan starts fresh and their bill is orphaned.
+
+Fix
+Leave should mark this participant departed; close the session only when nothing is unsettled and no other participant is active.
+P0
+The receipt claims money was paid that was not
+Guest
+apps/web/src/app/pages/guest.page.ts:538,574,1785
+lastOrderTotal is the sum of all transactions, settled or not, and the receipt renders 'Paid {{ lastOrderTotal }}'. Two routes reach it without payment: 'Finish' when pay is disabled with a balance due, and 'Finish' when balanceDue is false — which is a false negative whenever the last refresh errored. Scenario: a guest at a venue with Pay disabled orders R420, taps the gold Finish button, and gets a screen reading 'You're finished / Paid R420.00'. Then walks out.
+
+Fix
+Only ever display an amount derived from completed payments; label the no-pay path 'Settle with the team'.
+P0
+Cart and phase are in-memory only
+Guest
+apps/web/src/app/pages/guest.page.ts:700,715
+phase and cart are plain fields; the session service persists only identifiers, and nothing hooks visibilitychange or pagehide. Scenario: a guest spends four minutes assembling a 9-item table order with choice selections, a WhatsApp notification pulls them out of Safari, iOS discards the tab, they come back — empty cart, dumped on Browse, no indication anything was lost.
+
+Fix
+Persist cart and phase to sessionStorage on mutation, keyed by sessionId.
+P0
+Multi-order visits produce a bill that cannot settle and a Pay button that lies
+Guest
+apps/web/src/app/pages/guest.page.ts:1729 · leos.service.ts:428
+Each order creates a new Transaction. The client sums across all transactions in the session; the server picks exactly one — the most recent committed — and scopes payments to it. Scenario: starters R200 (tx1), mains R150 (tx2). The bill says 'Pay R350.00'. The guest taps it and is charged R150. The bill recomputes to 'Pay R50.00'. They tap it and are charged R200. They were quoted R350, then R50, and paid R350 in two charges whose amounts never matched the button.
+
+Fix
+Make requestPayment operate over all committed transactions in the session, or model a single running bill per session.
+P0
+Session hijacking by typing someone else's first name
+Guest
+packages/runtime/experience/src/index.ts:42 · entry.controller.ts:9
+findResumableParticipant falls back to matching a lowercased display name, and POST /entry/resolve is unauthenticated. Scenario: a stranger photographs the printed QR from the next table, enters 'Sarah', and is resumed as Sarah's participant — inheriting her participantId. They see her 'Mine' bill, can claim her items, request payment as her, and close the table.
+
+Fix
+Bind resume to a server-issued participant secret, never a display name.
+P0
+Choice selections and special requests never reach the kitchen
+Guest
+apps/web/src/app/pages/guest.page.ts:1638 · prisma/schema.prisma:164
+The choices sheet renders a Special requests textarea and stores selections on the cart line, but the API contract maps only id, label, quantity, price and routing tags — and TransactionLine has no column for any of it. Scenario: a guest selects 'Steak — Rare, no onions, extra chips' (paying the +R25 delta correctly) and types 'severe shellfish allergy, please keep separate'. The kitchen ticket reads Steak × 1. The allergy note is discarded silently and nothing warns the guest. This is a safety issue, not a data-loss one.
+
+Fix
+Add notes and selections columns to TransactionLine, propagate to FulfilmentLine, surface on the station board. Until then, hide the textarea.
+P0
+Studio→Guest continuity reads the operator's localStorage on the guest's phone
+Guest
+apps/web/src/app/studio/pay-continuity.ts:33 and three siblings
+resolveAllowPay/Tip/Help/ShowSpecials read leos.studio.workspace — a Studio operator key. A guest's phone never has it, so the lookup never matches and every toggle falls through to a default derived from the QR token string. Scenario: an operator turns Pay off and Tips off in Studio; every real guest phone still shows the Bill tab, tip chips and a Pay button. The feature only works in the demo where operator and guest share one browser.
+
+Fix
+Return guestDesign from POST /entry/resolve — which already returns brand fields — and delete the workspace read from the guest path.
+P0
+No allergen or dietary data exists anywhere
+Guest
+prisma/schema.prisma:258
+RestaurantCatalogItem has label, description, imageUrl, unitPrice, routingTags, category and choiceGroups — no allergens, no dietary tags, no ingredients. GuestExperienceDesign has an allergies toggle that maps to no guest UI at all. Combined with the dropped special-request note above, a guest with a nut allergy has literally no in-app channel.
+
+Fix
+Add allergens and dietary columns, surface as filter chips and per-item badges, and make the note field reach the kitchen before shipping.
+P0
+No item availability — 86'd items keep selling all night
+Guest
+prisma/schema.prisma:258
+No available, inStock or soldOut field exists on the catalogue. Scenario: the kitchen runs out of lamb at 8pm. Guests keep ordering it, the kitchen keeps receiving tickets it cannot fill, and the only feedback loop is a waiter walking to the table.
+
+Fix
+An availability flag on the catalogue item, pushed over the socket you already have.
+P0
+The first five seconds are a blocking splash, then a seven-step account wall
+Guest
+apps/web/src/app/pages/guest-splash.page.ts:8 · onboarding.page.ts:10
+A full-bleed JPEG with a fake 3.8-second progress bar, no skip and no tap-to-dismiss — and only then, for a first-time guest, account → verify → name → birthday → gender → phone → welcome, before the menu appears. Scenario: a hungry diner scans a table QR and is asked their date of birth and gender by a restaurant, with no 'continue as guest', before they can read a price. This directly contradicts Entry's own copy: 'we'll take you straight in. No account needed.'
+
+Fix
+Menu first. Identity only when it's needed, at pay. Splash under one second and interruptible.
+P0
+The OTP is theatre
+Guest
+apps/web/src/app/pages/onboarding.page.ts:631,657
+verifyCode() accepts any six digits and writes verified: true; sendCode() is a 700 ms setTimeout that sends no email. The social buttons prefill you@gmail.com and fall into the same fake flow. Scenario: the guest is shown 'We have sent you a 6-digit code', waits for an email that never arrives, then discovers 000000 works.
+
+Fix
+Delete the step or wire a real provider. Do not ship a screen that lies about sending mail.
+P0
+The whole app ships in one eager bundle
+Guest
+apps/web/src/app/app.routes.ts:2
+Every page component is a top-of-file static import — Setup Payments, Studio Team, Places, Station, Go Live, 20+ operator-only screens. Only the marketing page is lazy, with a comment claiming this keeps weight off the guest bundle; the opposite is true. Budget is 2 MB error. Scenario: a guest scans a QR on cellular in a restaurant basement and waits for the Setup Studio, Places editor and Kitchen board to download before seeing a menu.
+
+Fix
+loadComponent every route; at minimum put the studio and staff trees behind loadChildren.
+P0
+The PWA never registers its service worker
+Guest
+apps/web/src/main.ts:8 vs angular.json:35
+serviceWorker is configured so ngsw-worker.js is emitted, but bootstrap provides only router and http — there is no provideServiceWorker and nothing ever registers. dataGroups is also empty. Scenario: the guest loses signal and pulls to refresh. They get the browser offline page. The app's own 'You're offline — we'll show the last update we have' message is unreachable because the shell never loads.
+
+Fix
+Add provideServiceWorker and a freshness dataGroup for session endpoints.
+P0
+Guests can settle their own payments
+Platform
+apps/runtime/src/http/payment.controller.ts:24
+POST /payments/:paymentId/complete has no guard, no ownership check, and a ?fail=true query that flips any payment to failed. For the manual connector — the .env default — the guest's browser calls it directly (guest.page.ts:2186). Scenario: guest orders R900, reads paymentId from the network tab, POSTs complete. The transaction is marked settled and the waiter board shows the visit as paid. No money moved.
+
+Fix
+This endpoint must not exist in production. Gate it behind a dev-only flag; settlement comes from the connector/ITN path only.
+P0
+Client-supplied prices are trusted verbatim
+Platform
+apps/runtime/src/http/transaction.controller.ts:8 · leos.service.ts:196
+POST /transactions accepts lines[].unitPrice and label from the body; TransactionAggregate.total is computed over exactly those values. catalogueItemId is stored but never validated against the catalogue. Scenario: any guest posts the same order with unitPrice: 0.01; the kitchen prints the correct steak and the bill reads two cents.
+
+Fix
+Accept {catalogueItemId, quantity, choices} only and re-price server-side from the venue's catalogue inside the same transaction.
+P0
+Staff administration is entirely unauthenticated
+Platform
+apps/runtime/src/http/identity.controller.ts:407,505
+IdentityController has no @UseGuards anywhere in 593 lines. POST /identity/staff creates a staff member with an attacker-chosen role and permissions array — line 475 copies body.permissions verbatim with no allowlist. PATCH looks up by id only and rewrites role, permissions and passwordHash. Scenario: one curl mints a floor-lead account in someone else's tenant; a second resets the real manager's PIN and locks them out.
+
+Fix
+Class-level StaffAuthGuard + @RequireStaffPermission('organisation.manage'), derive org from req.staff.org, allowlist assignable permissions.
+P0
+Payment connector setup is open — full payment redirection
+Platform
+apps/runtime/src/http/setup-payments.controller.ts:34,39
+PUT /setup/payments/draft and POST /setup/payments/activate have no guard. activate() reads findFirst with no tenant filter, demotes every other active install, and replaces a process-global connector slot. Scenario: an attacker drafts their own PayFast merchant credentials and activates. Every venue on that runtime now issues checkout forms signed with the attacker's merchant ID. Guests pay; the attacker is merchant of record.
+
+Fix
+Guard with organisation.manage, filter every install query by the caller's org and venue, and make the connector registry a Map keyed by organisation rather than one slot.
+P0
+Both shared secrets have working hardcoded defaults
+Platform
+apps/runtime/src/staff-auth/staff-token.service.ts:24 · secrets-vault.service.ts:20
+STAFF_TOKEN_SECRET || 'leos-dev-staff-token-secret' and LEKKI_VAULT_KEY || 'lekki-dev-vault-key'. Neither variable appears in .env.example or the checked-in .env, so the fallback is the only path ever exercised. Compounding it: assertActive checks only that some unrevoked session row with that sid exists — never that it belongs to claims.sub or claims.org. Scenario: anyone who has seen this repo forges a token with organisation.manage for any org. The same default key decrypts every vaulted merchant credential.
+
+Fix
+Fail fast at bootstrap if either env var is unset or equals the dev value. Bind assertActive to the staff member and org. Derive the vault key with a real KDF, not a bare SHA-256.
+P0
+Staff PIN login is brute-forceable, and the directory hands you the usernames
+Platform
+apps/runtime/src/http/identity.controller.ts:95,135
+GET /identity/staff is unauthenticated and, with no org param, returns every staff member of every organisation with displayName, email, role, organisationId and permissions. POST /identity/staff/login has no rate limit, no lockout, no attempt counter, no delay, no captcha — @nestjs/throttler isn't a dependency. Minimum PIN is 4 digits; seeded PINs are 1111, 2222, 3333, 4444. Scenario: enumerate staff, pick the one whose permissions include payment.complete, walk 0000–9999. At 20 req/s that's under nine minutes, and nothing anywhere records the attempt.
+
+Fix
+Scope and strip the picker payload, add per-account and per-IP throttling with exponential lockout, require 6 digits, log every attempt.
+P0
+Cross-tenant order feed on the station endpoint
+Platform
+apps/runtime/src/http/fulfilment.controller.ts:39
+GET /fulfilments/station/:stationId has no guard and its where clause is {stationId, status: {not:'delivered'}} — no organisationId, no venueId. Station IDs are fixed global strings (station-kitchen, station-bar). Scenario: two restaurants on one deployment. GET /fulfilments/station/station-kitchen returns both venues' live tickets — item labels, quantities, place codes, session IDs — to anyone with no token. Every kitchen tablet is already showing the competitor's orders.
+
+Fix
+Guard the route, scope the query by req.staff.org, and namespace station IDs per venue.
+P0
+IDOR on the entire visit record
+Platform
+apps/runtime/src/http/session.controller.ts:15
+GET /sessions/:id is unguarded and returns participants with display names, all transactions with line-level pricing, all fulfilments, and all payments with amounts, tips, references and connector IDs. Session IDs aren't trivially guessable but they leak freely — /operate/floor returns every open sessionId unauthenticated. Scenario: open floor → collect session IDs → read every guest's bill and tip history.
+
+Fix
+Require either a participant-bound guest token or a staff token whose org matches.
+P0
+Anyone can reassign anyone's items
+Platform
+apps/runtime/src/http/session.controller.ts:74 · leos.service.ts:301
+POST /sessions/:id/claim-lines has no guard. claimLines validates that the participant is on the session and the lines belong to it — never that the caller is that participant. Scenario: guest A pushes their R600 of drinks onto guest B's participant seconds before B taps 'Pay mine'. B's share recomputes against the restamped lines and B pays for A's round.
+
+Fix
+Restrict claim-lines to the authenticated participant, and only to lines they can legitimately claim.
+P0
+WebSocket session rooms need no auth; operate rooms never check the org
+Platform
+apps/runtime/src/ws/leos.gateway.ts:41,53,85
+handleConnection joins org:{org}:session:{id} from raw handshake query with zero verification. authorizeOperate does verify the token signature but compares only claims.role to the requested room — it never compares claims.org to the requested organisationId, and never calls assertActive. Scenario: a kitchen employee of org A emits join with org B's ID and their own valid token, and receives org B's live order stream indefinitely. A revoked employee's socket keeps streaming until the process restarts.
+
+Fix
+Verify and assertActive on connection; ignore client-supplied organisationId entirely and derive rooms from the token claims.
+P0
+Events without a sessionId are broadcast to every connected client
+Platform
+apps/runtime/src/ws/leos.gateway.ts:176
+project() falls through to this.server.emit('platform.event', envelope) — a global broadcast across all tenants — whenever payload.sessionId is absent. ExperienceContextResolved has no sessionId, so this fires on every single guest arrival, carrying organisationId, venueId, physicalContextId and profileId.
+
+Fix
+Never broadcast. If a room can't be derived, drop the event and log it.
+P0
+PayFast ITN signature is unkeyed when no passphrase is set
+Platform
+connectors/payfast/src/signature.ts:57 · index.ts:185
+getPassphrase() returns undefined when unset and .env.example ships PAYFAST_PASSPHRASE= empty. The verifier then skips the passphrase salt and the signature degenerates to an MD5 of publicly-known parameters — computable by anyone. The posted merchant_id is never compared to the configured merchant, and there's no source-IP allowlist. Scenario: a guest POSTs to /payments/payfast/notify with their own pending payment ID, the exact amount, payment_status=COMPLETE and a self-computed signature. It settles for free.
+
+Fix
+Refuse to activate a PayFast install with no passphrase; assert the posted merchant_id matches; hard-fail rather than silently skip when server confirmation isn't explicitly on.
+P0
+Money is Float in all five monetary columns
+Platform
+prisma/schema.prisma:158,172,207,209,274
+Prisma Float maps to Postgres double precision. Settlement uses a deliberate epsilon — paidTowardTx + 0.001 >= transaction.total (leos.service.ts:717) — which is the code admitting the sums don't land. Four concrete failures: that epsilon is a tenth-of-a-cent giveaway on every bill; accumulated float error in the other direction leaves a fully-paid bill stuck in committed forever with no way for the guest to clear it; a 3-way split of R100 lands 33.33 × 3 = 99.99 and strands a cent; and the owner's daily takings figure is a float reduce that will not match a Postgres SUM(numeric).
+
+Fix
+Decimal @db.Decimal(12,2) or integer minor units throughout, all arithmetic through a Money value object, and delete the epsilon.
+P0
+No database migrations exist
+Platform
+prisma/ — one file
+ls prisma/ returns schema.prisma and nothing else. package.json has db:push and db:generate, no migrate; e2e:smoke runs db:push. Scenario: there is no reproducible path from empty database to production, no forward or backward roll, and no way to change Float→Decimal on live data without hand-written SQL. prisma db push against a populated database will silently offer to drop columns.
+
+Fix
+prisma migrate dev to baseline now, before any production data exists. This blocks the money fix.
+P0
+The outbox publisher head-of-line blocks forever on one bad message
+Platform
+apps/runtime/src/events/outbox-publisher.service.ts:20
+The loop has no try/catch, no attempt counter, no backoff, no dead-letter table, no FOR UPDATE SKIP LOCKED, and uses setInterval without awaiting the previous run. Scenario: one handler throws — a socket write to a closed server, a malformed envelope — and the loop aborts. That message stays unpublished and the next tick re-selects the same 50 rows one second later, forever. The entire event stream stops permanently and the only symptom is a log line. Separately: publish-then-mark replays on crash, and the dedupe set is in-memory so it's empty after restart.
+
+Fix
+Try/catch per message with attempts and nextRetryAt columns, exponential backoff, a deadLettered column with an alert, SKIP LOCKED, and a self-scheduling loop.
+P0
+Two guests scanning at once create two sessions on one table
+Platform
+packages/runtime/experience/src/index.ts:77,136
+findActiveByPhysicalContext → save → bindSession are three separate statements with no transaction and no unique constraint on (physicalContextId, status='active'). Scenario: two phones scan simultaneously, both find no active session, both create one. The table now has two open bills, the waiter board shows the same place code twice, and half the orders go to a session nobody can pay.
+
+Fix
+Wrap in a transaction and add a partial unique index on active sessions per physical context.
+P0
+Participants are deleted and rebuilt on every session write
+Platform
+apps/runtime/src/leos/repositories/session.repository.ts:101
+participants: { deleteMany: {}, create: [...] } on every update, combined with a read-modify-write in startOrResume with no transaction and no optimistic lock. Because TransactionLine.participantId and Payment.participantId have no foreign key, nothing stops the damage. Scenario: guests B and C scan within the same second; both read [A]; B saves [A,B], C saves [A,C] and the deleteMany wipes B. B's claimed lines now point at a row that doesn't exist and their 'Pay mine' charges them for the whole table.
+
+Fix
+Transaction-wrap the read-modify-write, add the missing foreign keys, and upsert participants rather than replacing them.
+P0
+check:nouns is red with 11 violations and isn't wired into CI
+Platform
+scripts/check-noun-separation.mjs
+Running it fails on fulfilment.controller.ts, identity.controller.ts, operate.controller.ts, session.controller.ts, leos.service.ts, staff-token.service.ts and leos.gateway.ts for waiter, kitchen and table. The rule isn't in build or test so nobody sees it. The violations are structural, not cosmetic: staff-token.service.ts:152 and leos.gateway.ts:110 implement authorization logic by string-matching restaurant nouns.
+
+Fix
+Wire into CI, then fix the two authorization sites first — they're the ones that actually bite.
+P0
+Essentially no tests
+Platform
+packages/profile-engine/src/profile-engine.test.ts — 43 lines, the only one
+Zero tests on apps/runtime: no controller tests, no guard tests, no service tests. The 918-line leos.service.ts — money, settlement, split-bill arithmetic — and the 170-line auth token service are entirely uncovered. pnpm test runs the single profile-engine file. What exists instead are two hand-rolled self-check scripts on bespoke npm scripts.
+
+Fix
+Before touching anything else in the money path, pin current behaviour with tests for split-bill arithmetic, ITN handling, and every guard decision.
+P0
+Zero route guards in the entire application
+Studio
+apps/web/src/app/app.routes.ts:68
+Grepping for canActivate/Guard across the app returns nothing. The only check is an imperative redirect in StudioShellComponent.ngOnInit, which is async. Scenario: paste /studio/team into a fresh browser. Angular instantiates the shell and the team page in the same change-detection tick, so listOperateStaff() has already fired and the full staff directory including every email renders behind the redirect flash.
+
+Fix
+A functional auth guard on the /studio route, and remove the ngOnInit redirect.
+P0
+Studio authentication is a client-side fiction
+Studio
+apps/web/src/app/services/studio-auth.service.ts:38
+signIn() takes {email, provider} and writes localStorage['leos.studio.auth'] = {signedIn:true}. No password field exists anywhere in the product. 'Continue with Google' doesn't even collect an email — it hardcodes operator@gmail.com. Scenario: type any string with an @ and a dot and you are a fully-privileged operator; or open devtools and set the localStorage key directly.
+
+Fix
+Real OAuth/OIDC with an httpOnly session cookie; isSignedIn() must be a server assertion.
+P0
+Multi-tenant leakage: Studio reads the global floor
+Studio
+apps/web/src/app/pages/setup-operate.page.ts:748 · studio-home.page.ts:143
+Both call listFloorTables() with no venueId or organisationId, and the controller spreads the filter conditionally — with no params the where clause is every live session in the database. Scenario: Org A's owner opens Operate and sees Org B's tables by place code, their idle minutes, and their guests' escalations — which Org A can then Claim, Resolve, or Force clear, ending a stranger's meal.
+
+Fix
+Derive organisationId from the authenticated session server-side and make the parameter non-overridable.
+P0
+Every experience of a type shares one hardcoded demo token
+Studio
+apps/web/src/app/studio/experience-registry.ts:87
+defaults.token: 'qr-demo-restaurant' (and cafe, hotel, festival, airport, healthcare), copied verbatim by startExperience and used to build the printed QR. Scenario: two unrelated restaurants complete setup; both print a QR encoding /e/qr-demo-restaurant; both sets of guests land in the same seeded venue, see the same menu, and their orders route to the same kitchen queue.
+
+Fix
+Mint a per-venue EntryToken server-side at Go Live. Never ship a default token in client code.
+P0
+New staff are silently created in a stranger's organisation
+Studio
+apps/web/src/app/pages/studio-team.page.ts:968 · identity.controller.ts:447
+const orgId = this.members[0]?.organisationId || ''. For the first-ever staff member the list is empty so organisationId is omitted, and the server falls back to organisation.findFirst({orderBy:{createdAt:'asc'}}) — the oldest organisation in the database. Scenario: a brand-new operator adds their first waiter; that waiter is created inside the demo tenant, appears in that tenant's team list, and can log into that tenant's floor.
+
+Fix
+Take the organisation from the authenticated session on both ends; never fall back to findFirst.
+P0
+Staff can never be removed
+Studio
+apps/web/src/app/pages/studio-team.page.ts:215
+There is no delete, no deactivate, and no active flag on StaffMember. Scenario: a waiter is fired at 18:00. The only lever is revoking their current session, which ends that login. Their email and PIN still authenticate at POST /identity/staff/login from any phone on the venue Wi-Fi, and they can still close sessions and take payments.
+
+Fix
+An active flag checked at login, plus a real 'remove from team' action with confirmation.
+P0
+There is no payment setup, and visiting the step marks it complete
+Studio
+apps/web/src/app/pages/setup-payments.page.ts:29,150
+The step is five checkboxes. No merchant ID, no key, no bank account, no test connection — the whole connector API and the PaymentConnectorInstall model are called by nothing from the web app. Worse, ngOnInit calls persistPayMethods(false) which sets paymentsDone, and the three card toggles default to true. Scenario: the operator clicks into 'How guests pay', clicks Back, and Studio Home now reports 'Payments · Healthy' and Go Live shows a green tick. They go live believing they can take money. They cannot take a cent.
+
+Fix
+Wire the existing connector API into the step, and never mark a step complete as a side effect of arriving at it.
+P0
+Go Live happens as a side effect of navigation and is irreversible
+Studio
+apps/web/src/app/pages/setup-golive-engine.page.ts:216
+ngOnInit runs upsertActive({token, live:true}); markStep('golive'). There is no Go Live button — merely landing on the route publishes the venue. The step rail links every step directly, so a curious operator clicking 'Go Live' to see what it is, is now live. There is no un-live: no UI calls the inverse. Scenario: operator explores the rail on Tuesday to plan Friday's launch; guests scanning any QR from Tuesday on enter a half-configured experience with a demo menu.
+
+Fix
+An explicit confirmed action, plus a 'Pause experience' control.
+P0
+Duplicate place labels merge two parties into one session
+Studio
+apps/web/src/app/pages/setup-places.page.ts:328,357 · place-sections.ts:166
+Bulk creation generates 'Table 1…20' in a new section regardless of what exists, place codes map to labels with no dedupe, and findPlaceContext returns the first label match. Scenario: operator uses the bulk tool twice — 'Main Dining' then 'Patio' — producing two 'Table 1's. The Patio QR and the Main Dining QR resolve to the same physical context, and two parties' orders merge into one bill.
+
+Fix
+Enforce label uniqueness within a venue and identify places by a stable id, never by label.
+P0
+PUT /setup/brand is unauthenticated and keyed on the public QR token
+Studio
+apps/runtime/src/http/setup-brand.controller.ts:9
+No guard; body is {token, venueName, brandColour, menuBrandEnabled}, and the token is printed on every table. Scenario: a guest photographs the QR, reads the token, and PUTs {"venueName":"CLOSED — health violation"}. Every guest phone in the venue re-renders with that name at next entry.
+
+Fix
+Authenticate as owner and resolve the venue from the session, not from a public token.
+P0
+Force-clear is two un-atomic mutations with the second one's failure swallowed
+Studio
+apps/web/src/app/pages/setup-operate.page.ts:701
+closeSession succeeds then resolveAssistance fires with error: () => undefined. Scenario: the close succeeds, the resolve 500s. The guest session is destroyed but the escalation stays open, so the row reappears on the next 5s poll with a sessionId whose session no longer exists. Force-clear on it now 404s silently and the row is stuck on the board forever. No idempotency key on either call.
+
+Fix
+One server-side operation that does both atomically, with an idempotency key.
+P0
+Polling with no cancellation, no back-off, and no visibility gating
+Studio
+apps/web/src/app/pages/setup-operate.page.ts:654
+setInterval(() => this.refresh(), 5000) where refresh is a forkJoin of N station calls plus assistance plus floor. No switchMap, no takeUntil, no document.hidden check. Scenario: the API slows to 8s under load; requests pile up two then three deep; responses arrive out of order and the board flickers between stale and current. An Operate tab left open overnight makes ~17,000 request bundles. Meanwhile the websocket the service already exposes is never subscribed to by Operate.
+
+Fix
+interval().pipe(switchMap()), pause on visibilitychange, and use the existing socket as the primary channel.
+P1
+guest.page.ts is a 2282-line god component conflating eleven responsibilities
+Guest
+apps/web/src/app/pages/guest.page.ts:672
+One class owns a 670-line inline template across 7 phases, the phase machine, catalogue fetch and normalisation, cart CRUD, search and section grouping, all bill aggregation and money maths (186 lines in one subscribe callback), socket lifecycle and polling, offline queue flush, payment orchestration including a hand-rolled form POST, assistance state, onboarding greeting arbitration over three sessionStorage flags, a scroll parallax listener, and six imperative setTimeout banner timers.
+
+Fix
+Extract a GuestSessionStore, a pure BillCalculator module (unit-testable), and per-phase routed child components. The host becomes ~150 lines.
+P1
+The client's 'Mine' total uses a different rule than the server charges
+Guest
+apps/web/src/app/pages/guest.page.ts:1752 vs leos.service.ts:452
+Client matches on identity-else-lowercased-name; server matches on exact participantId. Scenario: a guest re-scans after a phone restart and gets a second participant row with the same name. The client shows both rows' items as Mine (R240); the server counts only the current participant (R120). The button says 'Pay R240.00', R120 is charged, and the guest leaves believing their share is settled.
+
+Fix
+One shared implementation — export the server rule and use it client-side.
+P1
+Tip percentage is applied to a subtotal the server ignores
+Guest
+apps/web/src/app/leos/guest-bill.component.ts:597 · guest.page.ts:2168
+The client computes an absolute tip from its own subtotal and sends it; the server adds it to its different base. Scenario: in the two-transaction case above, the client subtotal is R350 so 15% is R52.50 — but the server base is R150, so the guest tips 35% of what they were actually charged.
+
+Fix
+Send tipPercent and compute the tip server-side from the authoritative base.
+P1
+Nothing can cancel an order, at any stage
+Guest
+apps/web/src/app/pages/guest.page.ts · transaction.controller.ts
+TransactionAggregate has a cancelled status and the client's terminal-status list includes cancelled — but there is no guest path and no API route to reach it. Scenario: a guest taps Place order, immediately realises they added the wrong dish, and has no recourse but the Help sheet — while the Live screen reassures them 'We've got your order'.
+
+Fix
+Allow cancel while the primary fulfilment is pending, with a visible countdown; escalate to Help after that.
+P1
+Equal-share divisor counts people who ordered nothing
+Guest
+packages/domain/src/session.ts:101 · leos.service.ts:479
+Every participant with role guest is counted, and the base is recomputed on every request. Scenario: three diners on a R300 bill. A fourth person scans the QR out of curiosity and never orders. Everyone's share drops from R100 to R75; the three pay R225 total and the bill never settles, because the fourth guest has gone.
+
+Fix
+Divide by participants who ordered or explicitly opted in, and freeze the divisor once the first equal payment lands.
+P1
+Arriving anonymously gives a table no split-bill at all
+Guest
+apps/web/src/app/pages/guest.page.ts:1722,1756
+multiGuest requires two distinct share keys, and both entry pages default displayName to 'Guest'. Scenario: three anonymous guests scan Table 12. All three collapse to one key, so multiGuest is false, every line reads as Mine for everyone, no Claim buttons render, and the Equal-share tab is hidden. A table of three gets no split feature whatsoever.
+
+Fix
+Key on participantId, not display name.
+P1
+An invalid participantId silently attributes your order to a stranger
+Guest
+apps/runtime/src/leos/leos.service.ts:178
+An unrecognised participantId falls back to session.participants[0]. Scenario: a guest's localStorage carries a participantId from yesterday's visit at the same table code. Today's session doesn't contain it, so their entire order is stamped onto the first person who scanned. That guest's Mine bill includes food they didn't order; the real orderer's is empty.
+
+Fix
+Reject unknown participant ids with a 400 rather than guessing.
+P1
+A closed session still accepts new orders
+Guest
+apps/runtime/src/leos/leos.service.ts:173
+createTransaction checks only that the session exists — no status check. Scenario: Alice's Leave closes the table; Dave's phone still has the cart and taps Place order. The order is accepted, fulfilments are created, and the kitchen cooks food against a completed session that will never appear on the floor board.
+
+Fix
+Reject writes to non-active sessions.
+P1
+getSession returns null for a dead session and the client throws forever
+Guest
+apps/runtime/src/http/session.controller.ts:31 · guest.page.ts:1704
+The controller returns null with HTTP 200; the client immediately reads a property off it and throws. The staleness check only recognises 404 and 'not found', so the recovery path never fires. Scenario: staff clear the table. The guest's poll silently throws every 3 seconds, the screen freezes on stale data, and nothing tells them their visit ended.
+
+Fix
+Return 404 from the controller and treat null as stale client-side.
+P1
+Refresh mid-payment silently abandons the gateway round-trip
+Guest
+apps/web/src/app/pages/guest.page.ts:1237,2263
+Checkout is a hidden form with a top-level submit, losing all in-memory state; on return the app relies on a query param read from a route snapshot. Scenario: the guest pays at PayFast but the return never fires — they close the payment tab, or the bank app hijacks the redirect. They come back with no param, the bill still shows the full amount while the ITN may already have settled it, and they pay twice.
+
+Fix
+Persist an awaitingPaymentId in sessionStorage and poll that payment's status on every load.
+P1
+Offline queue never flushes on startup, has no attempt cap, and isn't session-scoped
+Guest
+apps/web/src/app/services/offline-queue.ts:56 · guest.page.ts:1374
+Failures re-queue forever with an attempts counter nothing reads; hasPending is global, not keyed by session; and flush is only called from the online event, never from ngOnInit. Scenario: guest goes offline, taps Place order (queued), locks the phone, walks into signal, reopens the tab. navigator.onLine was already true so no event fires. The order never sends, and a fake 'Order saved, we'll send it when you're back online' card renders forever — then poisons the next visit, because the flag is global.
+
+Fix
+Flush in ngOnInit, cap attempts and surface a real failure, and drop actions whose sessionId no longer matches.
+P1
+No prep-time estimate, and real orders show no timestamp
+Guest
+apps/web/src/app/pages/guest.page.ts:789 · guest-orders.component.ts:104
+Real fulfilments are mapped without createdAt — it's only set on the synthetic offline card — so the time element never renders for a genuine order. There is no ETA anywhere; the strongest signal is 'Preparing'. For a product whose stated purpose is to reduce uncertainty, the single biggest uncertainty a diner has — when will my food arrive — is unaddressed.
+
+Fix
+Return createdAt on fulfilments (the controller already selects it) and add a station-level ETA.
+P1
+No VAT or service-charge line, and currency is hardcoded ZAR
+Guest
+apps/web/src/app/leos/guest-bill.component.ts:180 · leos.service.ts:189
+The bill shows subtotal, service fee/tip, total. Currency is hardcoded in the aggregate, in the money pipe default, and in nine template call sites — Transaction.currency exists and the UI overrides it. Intl is called with locale 'en', not the device locale. Scenario: a South African bill legally requires a VAT breakdown; the guest gets a total they cannot reconcile. A non-ZAR venue's bill still renders R.
+
+Fix
+Return a tax breakdown from the server and pipe the transaction's own currency through.
+P1
+No receipt delivery
+Guest
+apps/web/src/app/pages/guest.page.ts:524
+The receipt is an ephemeral screen — no email, no download, no share, no order reference — and leave() then wipes all state. Scenario: a guest needs the slip for expenses. The moment they tap 'Thanks — leave table' the record is unreachable from their phone. Onboarding already captured their email and uses it for nothing.
+
+Fix
+Email or PDF receipt on settle.
+P1
+No age verification on alcohol
+Guest
+apps/web/src/app/leos/menu-card.component.ts:57
+The catalogue has no age-restricted flag, and a drink-icon regex is the only alcohol awareness in the app. Onboarding collects a birthday that is stored in localStorage and never checked. Scenario: a minor at the table orders four beers to the table's tab with no interstitial and no signal to staff.
+
+Fix
+An ageRestricted catalogue flag, a confirm step, and a flag on the bar ticket.
+P1
+'Payment method' is a fiction the guest is asked to author
+Guest
+apps/web/src/app/leos/guest-payment-methods-panel.component.ts:104,487
+The panel's own comment says 'UI-only first ship'. 'Add card' just sets a ready flag; the details view asks the guest to type the brand, nickname and last four digits, and the save defaults last4 to '4242'. The bill then renders 'Payment method — Card · •••• 4242 / Change' next to 'Nothing is charged until you confirm.' Scenario: the guest reasonably concludes a card is on file. At settle they're bounced to a gateway form they never expected — or charged nothing at all.
+
+Fix
+Remove the panel until real tokenisation exists.
+P1
+There is no way back, anywhere
+Guest
+apps/web/src/app/shells/experience-shell.component.ts:14
+The shell header is a logo, a venue name and a 12px place code. No back affordance, no breadcrumb. Navigation is 26 imperative phase = 'x' assignments, so the browser Back button always exits the experience entirely. Scenario: a guest opens the Bill from Live, hits Android hardware Back, and lands on the marketing home page with their session apparently gone.
+
+Fix
+Make phase a routed child so Back works and refresh preserves position.
+P1
+'Stay' from the Leave confirm dumps you on the receipt
+Guest
+apps/web/src/app/pages/guest.page.ts:1170
+stayFromLeave() sets phase to receipt whenever anything has been ordered. Scenario: a guest mis-taps Leave, taps 'Stay' to back out, and lands on a screen headed 'You're finished — thanks for joining us today' while still eating. The phase before the prompt is never captured.
+
+Fix
+Store phaseBeforeLeave in requestLeave() and restore it.
+P1
+Six tabs, one of which destroys the session, at 58px wide
+Guest
+apps/web/src/app/leos/guest-tab-bar.component.ts:16
+Specials, Menu, Orders, Bill, Help, Leave — each flex: 1 1 0 with an 11px label. On a 360px viewport each target is ~58px wide, and Leave sits at the far right, in the thumb's most reachable zone, styled identically to Menu. The confirm's primary is a gold 'I'm finished' button and the escape is a secondary 'Stay' that then dumps you on the receipt.
+
+Fix
+Maximum four tabs; move Leave into an overflow or the receipt screen only.
+P1
+Screen-reader users are never told the order status changed
+Guest
+apps/web/src/app/pages/guest.page.ts:755 · status-timeline.component.ts:41
+rebuildTimeline() computes a carefully worded timelineAnnouncement, and StatusTimelineComponent has a dedicated visually-hidden aria-live paragraph. Neither is ever rendered — the component appears nowhere in the guest template and the announcement is bound to nothing. ConfidenceIndicator and PaymentSummary are likewise dead in the guest journey. A blind guest gets no announcement when their food goes Ready.
+
+Fix
+Render the timeline, or bind the announcement to a live region.
+P1
+Three modal sheets with aria-modal and no focus management
+Guest
+apps/web/src/app/leos/guest-choices-sheet.component.ts:41 and two siblings
+Grepping those three files for Escape, focus() or inert returns nothing. Scenario: a keyboard or switch-control user opens the choices sheet, tabs straight past it into the menu behind, and cannot close it. A screen-reader cursor is never moved into the dialog and the background is not hidden. On mobile the page behind scrolls under the sheet.
+
+Fix
+Focus trap, Escape handler, and inert on the shell.
+P1
+Zero OnPush, and template getters do localStorage parses every tick
+Guest
+apps/web/src/app/pages/guest.page.ts:1066,820,980
+No component in the app uses OnPush. menuBrand does a full workspace read, JSON.parse and map — and is reached four times per tick from the template. offlinePending parses localStorage per tick. Scenario: a 40-item menu on a mid-range Android — every tap triggers dozens of synchronous localStorage parses and the menu scrolls with visible jank.
+
+Fix
+Resolve these once in ngOnInit; OnPush on the presentational components.
+P1
+A window scroll listener runs full change detection every frame
+Guest
+apps/web/src/app/pages/guest.page.ts:1354
+The listener is registered inside the component so Zone patches it: every scroll event schedules a change-detection pass over the whole tree — re-running the section grouping, the filtered catalogue, the localStorage getters above, and eight regexes per menu card. Scenario: flicking through a long menu on a phone drops frames continuously.
+
+Fix
+Register inside runOutsideAngular, write to a CSS custom property directly, and markForCheck only on threshold crossings.
+P1
+Component animations ignore prefers-reduced-motion
+Guest
+apps/web/src/styles/_leos.scss:280
+The guard covers only the screen header and footer. The bill's pulse and flash animations, the payment panel's slide-up, the choices-sheet transitions and the Specials carousel all animate unconditionally. Only the splash page handles the query.
+
+Fix
+One global reduced-motion block disabling animation and transition.
+P1
+No input validation anywhere
+Platform
+apps/runtime/package.json:37
+class-validator and class-transformer are dependencies with zero imports, no DTO classes, and no global ValidationPipe. Every @Body() is a raw TypeScript interface, erased at runtime. Scenario: quantity: -5 produces a negative total; 1e308 overflows; a 50 MB label is persisted, since no body size limit is configured either.
+
+Fix
+Global ValidationPipe with whitelist and forbidNonWhitelisted, real DTO classes, and a body size limit.
+P1
+CORS reflects any origin with credentials
+Platform
+apps/runtime/src/main.ts:43
+origin: true, credentials: true — the maximally permissive configuration, applied unconditionally with no NODE_ENV branch. enableCors is also called twice. Combined with unauthenticated mutation endpoints, any webpage a staff member visits can drive the API.
+
+Fix
+Explicit origin allowlist per environment.
+P1
+Permissions frozen into a 12-hour bearer token
+Platform
+apps/runtime/src/staff-auth/staff-token.service.ts:17,71
+Role and permissions are copied into the signed payload at login and never re-read; changing a role via PATCH has no effect on live tokens. Scenario: a waiter is suspended mid-shift and their tablet keeps session.close and fulfilment.update for up to 12 hours unless someone finds and revokes that specific session row by hand.
+
+Fix
+Keep the token as an opaque session reference and resolve role/permissions from the database on each request — you already hit the DB in assertActive.
+P1
+@OptionalStaff silently defeats @RequireStaffPermission
+Platform
+apps/runtime/src/staff-auth/staff-auth.guard.ts:40
+When no auth header is present and optional is set, canActivate returns true at line 41 — before the permission reflector runs at line 51. AssistanceController stacks both on acknowledge and resolve, so the permission is enforced only for callers who bothered to authenticate. The service-layer fallback throws a bare Error matched by a regex on its message string.
+
+Fix
+Run the permission check before the optional bail-out, and replace message-regex error handling with typed exceptions.
+P1
+A guest QR token unlocks venue rename and full revenue figures
+Platform
+apps/runtime/src/http/setup-brand.controller.ts:9 · grow.controller.ts:9
+PUT /setup/brand authenticates by the printed-on-every-table EntryToken alone and updates venue name, brand colour and menu-brand toggle. GET /grow/overview?token= uses the same guest token to return takings today and yesterday, guest counts, average wait and best-selling item — and with no token at all it aggregates across every organisation in the database. Scenario: a guest curls /grow/overview with no token and reads the platform's total daily revenue.
+
+Fix
+Owner authentication on both; resolve the venue from the session, never from a public token; never fall through to an unfiltered aggregate.
+P1
+Entry tokens are the primary key, arbitrary, and guessable
+Platform
+prisma/schema.prisma:46 · scripts/seed-demo.ts:170
+EntryToken.token is a client-supplied String @id. Seeded values are qr-demo-restaurant, -t2, -t3, -t4. Nothing in the runtime generates tokens with entropy. Scenario: guess -t5, join table 5's open visit, read their bill, claim their lines, or close their session.
+
+Fix
+Server-minted high-entropy tokens with a separate surrogate key, rotatable per venue.
+P1
+Six declared foreign keys are unconstrained strings
+Platform
+prisma/schema.prisma:196,198,184,213,175,49,35
+FulfilmentLine.transactionLineId, .stationId, Fulfilment.stationId, Payment.participantId, TransactionLine.participantId, EntryToken.physicalContextId, PhysicalContext.organisationId — none have @relation, so Postgres enforces nothing. You can already see the bug rendering: session.controller.ts:55 and fulfilment.controller.ts:65 both do labelByTxLine.get(...) ?? 'Item'. A kitchen ticket reading "2× Item" is this finding.
+
+Fix
+Add the relations and let the database enforce them.
+P1
+Almost no indexes on the hot paths
+Platform
+prisma/schema.prisma — 10 index declarations, 8 on secrets/staff tables
+Missing on: Fulfilment(stationId,status) polled every 4s by every station tablet; ExperienceSession(venueId,status,startedAt) polled every 4s by every waiter tablet; Transaction(sessionId), TransactionLine(transactionId), Payment(transactionId) — every one traversed by GET /sessions/:id; and OutboxMessage(publishedAt,createdAt), which is scanned once per second forever on an append-only table that is never pruned.
+
+Fix
+Add the composite indexes; add a retention job for the outbox table.
+P1
+No state machine on fulfilment status — last write wins, backwards
+Platform
+apps/runtime/src/leos/leos.service.ts:367
+updateFulfilmentStatus accepts any string, cast without validation, then blindly updates. No where: {status: expectedPrevious}, no version column. Scenario: kitchen taps Ready while the waiter taps Served on a stale board. Both succeed; whichever lands second wins. A delivered plate silently reverts to ready, reappears on the waiter's board, and gets carried out twice.
+
+Fix
+Conditional update on the expected previous status, return 409 on mismatch, and write a status-history row with the actor.
+P1
+No transaction boundary between reading a balance and taking a payment
+Platform
+apps/runtime/src/leos/leos.service.ts:416,697
+requestPayment reads the transaction, computes remainingVisit, and creates a Payment — all outside the transaction block. No row lock, no unique constraint, no idempotency key. Scenario: Bob and Carol both tap 'Pay R650' within a second. Both read paid=0, both create a full payment, both settle. The table is charged R1300 and neither guest is told — and there is no refund path, because both connectors' refundPayment are stubs.
+
+Fix
+SELECT … FOR UPDATE on the transaction row inside a single database transaction; reject when the new payment would exceed the total; accept a client idempotency key.
+P1
+No updatedAt on the models where mutation matters
+Platform
+prisma/schema.prisma
+Only Fulfilment, SecretsVaultEntry and PaymentConnectorInstall have it. Transaction, Payment, TransactionLine, ExperienceSession, StaffMember and AssistanceRequest do not. Scenario: a payment goes pending → completed → failed and the only timestamp is createdAt. In a chargeback dispute there is no way to establish when the status changed — and Grow buckets payments by createdAt, so one requested at 23:58 and settled at 00:03 lands on the wrong trading day.
+
+Fix
+Add @updatedAt across the board and bucket revenue by settlement time.
+P1
+No audit trail and no actor on any business action
+Platform
+prisma/schema.prisma · fulfilment.controller.ts:23
+SecretsVaultAudit exists for secrets, and nothing equivalent exists for money or orders. Fulfilment.status is overwritten in place with no history row and no actor column — even though req.staff is right there at the call site. Scenario: a R2,400 table is cleared without payment. The session row says status:'completed'. There is no way to answer 'who cleared it' and no way to un-clear it.
+
+Fix
+Stamp staffMemberId and staffSessionId on every status change and session close. Two lines at the call sites plus a migration.
+P1
+Guests are matched by lowercased display name
+Platform
+packages/runtime/experience/src/index.ts:56 · packages/domain/src/session.ts:91
+participants.find(p => p.displayName.trim().toLowerCase() === name). Scenario: two people at a table of six both enter 'John'. The second John resumes the first John's participant record, sees his items on their bill, and 'Pay mine' charges them for his food. For equal split, six guests collapse to five keys, the bill divides five ways, one person pays nothing and it never settles.
+
+Fix
+Bind resume to a server-issued participant secret; key sharing on participantId, never on a name.
+P1
+No structured logging, no end-to-end correlation, no metrics
+Platform
+apps/runtime/src — whole tree
+correlationId is generated per session and carried in every event envelope — genuinely good — but it never reaches an HTTP request log, is never accepted from an inbound header, and is never returned in a response. Logging is two Logger instances plus a console.log. No request middleware, no metrics endpoint, no terminus. Scenario: a guest says their payment vanished. You have a paymentId and no way to trace it across HTTP → outbox → socket.
+
+Fix
+Pino with a request-scoped correlation id accepted from and echoed in headers; a metrics endpoint.
+P1
+/health returns 200 when the database is down
+Platform
+apps/runtime/src/http/health.controller.ts:8
+One SELECT 1, and it returns HTTP 200 with status:'degraded' when the DB is unreachable — a load balancer checking status codes routes traffic to a runtime that cannot serve a single request. No /ready, and nothing checks the two things most likely to be broken: outbox backlog age and whether a payment connector is actually bound.
+
+Fix
+Non-200 on degraded, add /ready, and surface outbox lag and connector binding as checks.
+P1
+No rate limiting, no security headers, and a debug route in every environment
+Platform
+apps/runtime/src/main.ts:39
+No throttler, no helmet, no body size limit, no request timeout. The only middleware added is a /dev/lan debug route registered unconditionally in every environment, which discloses the host's internal LAN address.
+
+Fix
+Helmet, throttler, body limits, and environment-gate the debug route.
+P1
+testConnection never contacts PayFast — 'Verified' is a hardcoded string
+Platform
+apps/runtime/src/leos/setup-payments.service.ts:197
+The lookup is a literal object with connected: true and merchantStatus: 'Verified'. The only validation is length < 5. It then stores the unverified credentials in the vault and marks the install verified — which is exactly the precondition activate() checks. Scenario: an operator typos their merchant key, sees a green 'Verified · PayFast Merchant', activates, and every checkout fails at PayFast — discovered by guests, at the till, during service.
+
+Fix
+Make the test call PayFast for real, and refuse to mark verified on anything less.
+P1
+Settlement bank details stored as unencrypted JSON
+Platform
+prisma/schema.prisma:314 · setup-payments.service.ts:93
+The plaintext merchantKey/passphrase columns are correctly nulled by current code — that part is done right. But settlementJson stores accountNumber and branchCode as plain JSON, outside the vault entirely. The legacy columns also still exist with no migration nulling historical rows.
+
+Fix
+Route settlement details through the vault; ship a migration that nulls then drops the legacy columns.
+P1
+There is no undo, and the API forbids building one for waiters
+Staff
+apps/web/src/app/pages/service.page.ts:1542 · fulfilment.controller.ts:33
+serveFulfilmentIds marks N tickets delivered at once, terminal and irreversible — and the server explicitly blocks the reversal: a waiter can only set 'delivered'. A waiter physically cannot undo their own mis-tap and must find a colleague with a different role. Scenario: 40-cover Saturday; the thumb lands on Table 12's 'Serve Table (4)' instead of Table 11's. Four plates vanish from the Ready board, the kitchen sees them delivered, and the guests never got them.
+
+Fix
+A 5-second undo toast that re-issues the previous status, plus a revert permission and status-history rows.
+P1
+Mis-tap protection is inverted
+Staff
+apps/web/src/app/pages/service.page.ts:1600 vs 1491
+clearTable — one table, recoverable-ish — gets a blocking native confirm(). serveTableReady and serveGroup — which mark N tickets terminally delivered — get no confirmation at all. The sticky bottom CTA does whichever it decides is next, with a label that changes underneath the operator's finger every 4 seconds. Scenario: the operator reaches for 'Serve Next — Table 7 (2 items)'; a poll lands between decision and tap, the sort changes, and the button now means Table 3.
+
+Fix
+Freeze the sticky CTA's target for ~2s after render; confirm destructive bulk actions inline, not with confirm().
+P1
+The ready queue is sorted by size, not by how long food has been sitting
+Staff
+apps/web/src/app/pages/service.page.ts:1349
+Sorted by readyCount descending. Wait time is displayed on the card but is not a sort key, and there is no escalation styling for ready-too-long. The PENDING_SLA_MINUTES constant exists but is applied only to pending tickets on the station board, never to ready ones. Scenario: Table 4's single steak has been under the pass for 12 minutes. Table 9 just got 5 drinks. Table 9 sorts to the top and the steak goes cold at position six.
+
+Fix
+Sort by oldest unserved; add a ready-SLA escalation tone.
+P1
+At 40 open orders the board degrades badly
+Staff
+apps/web/src/app/pages/service.page.ts:1199,1271
+this.tables is unfiltered and untruncated, each rendered as a card containing a full list of every active item. No virtual scroll, no collapse, no pagination — roughly 280 DOM rows re-rendered every 4 seconds. Meanwhile the history list is capped at 40. The least important list is the only one bounded.
+
+Fix
+Virtualise, collapse item lists behind a count by default, and sort by oldest unserved.
+P1
+Every tablet issues ~7 requests every 4 seconds with no cancellation
+Staff
+apps/web/src/app/pages/service.page.ts:1172
+refresh() builds one fulfilment call per station plus assistance plus floor, in a forkJoin, with no request cancellation, so a slow response overlaps the next tick's fan-out. Scenario: 3 stations across 6 tablets is ~10 requests/second of unindexed multi-join queries, sustained, against endpoints with no rate limiting. That is a self-inflicted denial of service at exactly peak service.
+
+Fix
+One board endpoint returning a diff since a cursor; socket as primary, poll at 30s as fallback.
+P1
+No shift handover, no idle lock, 12-hour credential on an unattended tablet
+Staff
+apps/runtime/src/staff-auth/staff-token.service.ts:17 · operate-staff-session.service.ts:79
+The session stores a timestamp nothing ever reads. No inactivity timeout, no screen lock, no re-prompt, and sign-out is a text link labelled 'Switch'. Scenario: the tablet is left on the pass at end of shift, still signed in as the floor lead. Anyone — cleaner, delivery driver, a guest walking past — can clear tables, resolve help requests and mark orders served for the next twelve hours, attributed to nobody.
+
+Fix
+10–15 minute inactivity re-PIN, and make 'who's on this device' a persistent header element.
+P1
+monitor=1 is a client-side read bypass that works because the server has no auth
+Staff
+apps/web/src/app/pages/service.page.ts:1102 · staff-auth.interceptor.ts:8
+requireStaff() returns true unconditionally when the URL contains monitor=1, and the interceptor strips credentials for those URLs. That would be a sane design if the read endpoints were guarded — they aren't. Scenario: a guest who glimpses the URL on the waiter's tablet opens /staff/service?monitor=1 on their phone and gets the complete live floor: every table, every open order, every help request.
+
+Fix
+Guard the read endpoints, then decide whether monitor mode still needs to exist.
+P1
+The socket is a process-wide singleton that survives shift handover
+Staff
+apps/web/src/app/services/leos-api.service.ts:535
+The connection is created once with the then-current staff token baked into the handshake query, and is never torn down on sign-out — clear() touches only localStorage, and joinOperate never calls leave. Scenario: Thabo signs out at 18:00, Nomsa signs in. The socket still carries Thabo's token and is still joined to every room he joined — all four station rooms if his role was staff. Nomsa's tablet keeps receiving them under his identity, after his session is revoked.
+
+Fix
+Tear down and re-establish the socket on session change; leave rooms explicitly.
+P1
+Missed events on reconnect, and the poll interval frozen at startup
+Staff
+apps/web/src/app/pages/service.page.ts:1061 · station.page.ts:654
+The interval is chosen once in ngOnInit, before the socket has had time to connect. No disconnect handler, no event sequence number, no backfill on reconnect. Scenario: the socket was up at init so the poll is 8s; it then drops for 90 seconds. Every event in that window is lost and the board is up to 8s stale with no indication — the station page has no socket-status field at all and swallows silent polling errors.
+
+Fix
+Re-evaluate cadence on socket state change, show a connection indicator, and backfill from a cursor on reconnect.
+P1
+The staff app breaks the moment you secure the server
+Staff
+apps/web/src/app/services/staff-auth.interceptor.ts:15
+needsStaff matches only fulfilments, assistance ack/resolve, session close and identity logout. /operate/floor, GET /assistance, /sessions/:id, /transactions and /payments/* never carry a token. This is a coupled fix, not two independent ones — guarding the server without widening the interceptor allowlist will take the floor boards down.
+
+Fix
+Widen the allowlist in the same change as the server guards, and test them together.
+P1
+Nothing in setup is persisted server-side
+Studio
+apps/web/src/app/services/studio-context.service.ts:178
+The entire business configuration lives in one localStorage key. Venue name, location, places, sections, guest design and payment choices never leave the browser — only the brand PUT reaches the API. Scenario: an operator sets up on the office laptop, then opens Studio on the floor iPad. hasExperiences() is false, they get the 'create your first experience' empty state, and setup starts from zero. Clearing site data destroys the business.
+
+Fix
+A Studio workspace API, with localStorage as cache only.
+P1
+Base64 images in localStorage, oversize picks fail silently, quota errors uncaught
+Studio
+apps/web/src/app/pages/setup-identity.page.ts:372,395,436
+onLogoPick returns with no message above 1.2 MB and onCoverPick above 1.8 MB — nothing happens, no error, no hint. On success the data URL goes into the workspace JSON. Scenario: a 1.2 MB logo plus a 1.8 MB cover base64-expand to ~4 MB in one localStorage key, at or over the 5 MB quota. The next save throws QuotaExceededError uncaught, and every subsequent setup step silently stops saving.
+
+Fix
+Upload to the API and store a URL; show a real error on rejection; wrap setItem in try/catch.
+P1
+StudioContextService is a 458-line localStorage god-service with no reactive state
+Studio
+apps/web/src/app/services/studio-context.service.ts:158
+readWorkspace() does a JSON.parse on every call and is invoked from seven different accessors, several times per render. Only cosmetic fields are signals. Scenario: SetupPlacesPageComponent.persist fires every 280 ms while typing a section name — each call parses and re-serializes the whole workspace including base64 logo and cover data URLs.
+
+Fix
+One signal<Workspace> loaded once, persisted on a debounced effect.
+P1
+Setup steps can be completed out of order and Go Live never blocks
+Studio
+apps/web/src/app/pages/setup-golive-engine.page.ts:193
+The checklist computes ok flags for identity, experience, places and payments — and then goes live regardless. The flags are decorative. Scenario: operator jumps straight to Go Live from the rail with zero places enabled; the checklist reads 'Where guests join · None yet', the venue goes live, and the QR points at a venue with no scannable place.
+
+Fix
+Make Go Live conditional on the checklist actually passing.
+P1
+/studio/setup/golive with no experience creates a phantom live venue
+Studio
+apps/web/src/app/app.routes.ts:79 · setup-golive-engine.page.ts:179
+Every other setup page redirects to /studio/create when there's no active experience. The Go Live page does not — it handles null with optional chaining and then calls upsertActive({token, live:true}), which creates an experience from scratch. Scenario: a signed-in user with no experiences opens the URL directly and a phantom 'Blue Door' restaurant is created and immediately marked live.
+
+Fix
+Same guard as every other step.
+P1
+'Create another experience' silently deletes the in-progress draft
+Studio
+apps/web/src/app/services/studio-context.service.ts:283
+ws.experiences = [...live, exp] — anything not yet live is dropped. And select() calls startExperience immediately on click, before Continue is ever pressed. Scenario: operator spends ten minutes configuring a café, goes back to Create to look at the Hotel option, taps it — the café draft is gone with no confirmation and no undo.
+
+Fix
+Preserve drafts; only commit on Continue; confirm before discarding.
+P1
+Grow reports someone else's numbers, or everyone's
+Studio
+apps/runtime/src/http/grow.controller.ts:23 · studio-grow.page.ts:118
+venueFilter = venueId ? {venueId} : {} — if the token doesn't resolve, every count and sum runs unfiltered. Studio passes the experience token, which for a locally-created experience is qr-demo-restaurant. Scenario: the operator's Grow story reports the demo venue's guests and takings as their own — or, if that seed row was deleted, the aggregate of every tenant in the database.
+
+Fix
+Resolve venue from the authenticated session; never fall through to an unfiltered aggregate.
+P1
+'Today' is the server's calendar day, everywhere
+Studio
+apps/runtime/src/http/grow.controller.ts:174
+new Date(y, m, d + offset) uses the Node process timezone, and there is no timezone field on Organisation or Venue. Scenario: a venue at UTC+2 on a UTC runtime — everything after 22:00 local counts as tomorrow. 'You welcomed 0 guests today' appears at the busiest moment of the night, and 'yesterday you took R…' spans two trading nights.
+
+Fix
+Store an IANA timezone per organisation and compute day bounds in it.
+P1
+Currency is hardcoded to South Africa and rounds away the cents
+Studio
+apps/web/src/app/studio/grow-breath.ts:286
+Intl.NumberFormat('en-ZA', {currency: currency||'ZAR', maximumFractionDigits: 0}). Scenario: a UK airport café receives GBP from the API and Grow renders £1,247 in South African grouping conventions; a day's takings of £1,247.60 displays as £1,248, so the owner reconciling against the bank is systematically off by up to a unit a day.
+
+Fix
+Locale and currency from the organisation record; never drop the minor unit on a money figure.
+P1
+Claim and Resolve have no rollback and no concurrency guard
+Studio
+apps/web/src/app/pages/setup-operate.page.ts:661 · assistance.controller.ts:43
+The endpoint requires no token and does no status precondition check. Scenario: two managers on two devices both see the same open escalation and both press Claim. Both get 'claimed — guest will see you're on the way'. Both walk to the table. The third table that actually needed help is unattended.
+
+Fix
+Conditional update on status='open', return 409, and show 'already claimed by X'.
+P1
+Six orphaned page components — ~800 lines of dead, divergent code
+Studio
+apps/web/src/app/pages/studio-choose.page.ts and five others
+StudioChoose, StudioConfigure, StudioLive, SetupOrganisation, SetupHub, SetupGolive have no route and no import. They still write legacy localStorage keys that migrateLegacy reads. One hardcodes six fake venues; another links to a route that now redirects. There are two competing 'go live' implementations in the tree.
+
+Fix
+Delete all six.
+P1
+Studio is coupled to restaurant vocabulary in code, not data
+Studio
+apps/web/src/app/pages/setup-operate.page.ts:635,817 · operate-stations.ts:148
+guestActivityLine is a nested ternary over six literal typeIds, prepWord repeats the same switch, places hardcode a default section name per type, and station lists are a switch returning literals. Adding a seventh experience type means editing at least six files. Scenario: a Gym experience shows tables as 'currently dining' and a Kitchen station. Note the irony: ExperienceDefinition already has a terminology block that does this correctly — it's just bypassed.
+
+Fix
+Move nouns and station sets into ExperienceDefinition and read them uniformly.
+P1
+API base URL is hardcoded http:// — production is impossible
+Studio
+apps/web/src/app/services/public-origin.ts:133
+resolveApiBaseUrl() returns http://localhost:3000 or http://{host}:3000. Scenario: Studio served over HTTPS makes every XHR to http, the browser blocks all of them as mixed content, and the operator sees 'Couldn't load team — is the API running?' with no way to diagnose.
+
+Fix
+Environment-driven base URL inheriting the page's protocol.
+P1
+Studio Home's primary CTA drops the operator back into the wizard
+Studio
+apps/web/src/app/pages/studio-home.page.ts:53
+'Open Experience' is routerLink="/studio/setup/golive". For an already-live venue, the most prominent button on the front door goes to the setup wizard's last step — which re-runs upsertActive({live:true}) on every visit. Scenario: during service the owner taps the big gold button expecting the guest view and lands on a QR-download screen inside wizard chrome.
+
+Fix
+Point it at the live guest experience.
+P1
+Destructive actions have no confirmation, except one
+Studio
+apps/web/src/app/pages/studio-team.page.ts:997 · setup-places.page.ts:343
+Revoke session fires immediately on click. Remove section deletes 20 configured places instantly. Clear logo and clear cover are instant. The only guarded action in all of Studio is force-clear, and it uses a native confirm() whose default focus is OK. Scenario: mid-service, an owner mis-taps 'End now' on the wrong row and logs the kitchen tablet out; the flash message tells them what they did, too late.
+
+Fix
+Undo-first for reversible actions; a typed confirm for genuinely destructive ones.
+P1
+Empty states are indistinguishable from healthy states
+Studio
+apps/web/src/app/pages/setup-operate.page.ts:186,748 · studio-home.page.ts:131
+With no live sessions the floor board renders 'Tables / All calm'. When the API is unreachable, catchError(() => of({tables:[]})) produces the identical row. On Home, 'Everything is ready.' is both the pre-fetch default and the success state. Scenario: the runtime is down for 20 minutes on a Saturday night and Studio calmly reports that everything is fine while guests press the help button.
+
+Fix
+Distinguish empty from unreachable; a persistent connectivity banner.
+P1
+The glance hides exactly the rows an operator needs to count
+Studio
+apps/web/src/app/pages/setup-operate.page.ts:551
+glancePlaces filters out calm rows and slices to 8, and the whole floor section is hidden when guestCount is 0. Scenario: 14 tables need attention; the board shows 8 and gives no indication the other 6 exist — no '+6 more', no count. The operator believes they've triaged everything.
+
+Fix
+Always show the true count, even when the list is truncated.
+P1
+No loading states after first paint; rows reorder under the finger
+Studio
+apps/web/src/app/pages/setup-operate.page.ts:78,839
+loading is set false on the first refresh and never true again. Every subsequent 5s poll swaps content with no skeleton and no transition, and the sort re-runs. Scenario: a poll lands between the operator's decision and their tap; the row they were reaching for has moved and they claim the wrong table.
+
+Fix
+Freeze row order briefly after a render; show a subtle refreshing state rather than a silent swap.
+P1
+Urgency changes are never announced to screen readers
+Studio
+apps/web/src/app/pages/setup-operate.page.ts:88,100
+Action results correctly use role="status"/alert. But calmLine, the escalation list and the station rows all mutate every 5 seconds inside plain paragraphs with no aria-live region. And the SLA pulse is purely animated colour with no text — disabled entirely under prefers-reduced-motion. Scenario: a screen-reader user, or a colour-blind one, or one with reduced motion set, gets no urgency signal at all. The one thing this screen exists to tell you is the one thing it never says out loud.
+
+Fix
+An aria-live region for the escalation count and the calm line; a text label alongside the pulse.
+P1
+Focus is never managed when panels open or close
+Studio
+apps/web/src/app/pages/setup-operate.page.ts:558 · studio-team.page.ts:181
+Panels toggle aria-hidden but focus stays on the button behind them. No focus trap, no Escape handler, no return-focus on close. Scenario: a keyboard user opens the staff editor and tabs straight through the page behind it; on mobile the panel is fixed and covers the screen, so they're tabbing through invisible controls.
+
+Fix
+Trap focus, handle Escape, restore focus on close, and mark the background inert.
+P1
+No mobile or tablet story for the tri-column workspace
+Studio
+apps/web/src/app/leos/studio-workspace.component.ts:36
+max-width: calc(640px + 420px + 6rem) ≈ 1120px for story rail plus config plus a live phone preview that is always rendered. Operate and Team have a single 900px breakpoint. Scenario: on an iPad in portrait — the device an operator actually holds — the config card is squeezed under a persistent phone mockup showing nothing they need. Between 900 and 1120px, three columns render in ~500px of usable width.
+
+Fix
+Drop the preview below the config under 1120px and add a tablet breakpoint.
+P2
+Two parallel implementations of the guest UI
+Guest
+apps/web/src/app/leos/guest-shell-projection.component.ts — 866 lines
+Used only by the Studio preview, it re-implements the browse, cart and bill chrome. Guaranteed drift between what an operator previews and what a guest actually sees.
+
+Fix
+Preview the real components inside a phone frame.
+P2
+Specials filtering hides items from search
+Guest
+apps/web/src/app/pages/guest.page.ts:888 · specials-continuity.ts:97
+The filtered catalogue strips every item whose category or tag marks it special, and search runs over the filtered list. Scenario: a guest searches 'burger', the burger is tagged special, and search returns 'Nothing matches that'.
+
+Fix
+Never hide items from search; de-duplicate presentationally only.
+P2
+Six overlapping banner systems driven by one string and setTimeout equality checks
+Guest
+apps/web/src/app/pages/guest.page.ts:1293
+Welcome-back, joined, still-in, item-added, help and payment banners all write this.message, and each schedules a timeout that clears it only if the string still matches exactly. Scenario: a guest adds an item while a help acknowledgement arrives; the ack overwrites the message, the 'Added' timer's equality check fails, and the ack banner persists past its window. All six timers also survive ngOnDestroy.
+
+Fix
+A small toast queue with ids.
+P2
+Muted text carries load-bearing copy below contrast minimum
+Guest
+apps/web/src/styles/_leos.scss:1815 · _tokens.scss:34
+--leos-neutral-muted #64748b is borderline at ~4.5:1 and carries empty-state instructions, price-remaining lines, the trust line and the leave-confirm body. --leos-ink-muted #94a3b8 is 2.6:1 and fails outright. Separately, gold as a flat CTA fill is 2.31:1 — the existing primary button compensates with a coloured drop-shadow, so any new gold control that skips it won't.
+
+Fix
+Raise muted text to ≥4.5:1 and reserve the lighter token for non-text decoration. This is a design-system decision, not a bug fix — flagging, not changing.
+P2
+Scanning the wrong table's QR is undetectable and irreversible
+Guest
+apps/web/src/app/pages/entry.page.ts:195
+The only feedback is the place code rendered as a passive 12px hint. There is no 'Not your table? Rescan' affordance anywhere in the guest shell. Scenario: a guest scans the neighbouring table's laminated QR, orders, and the food goes to Table 11.
+
+Fix
+A confirm-the-place step and a persistent 'Wrong place?' action in the header.
+P2
+Entry errors loop the guest back into signup
+Guest
+apps/web/src/app/pages/guest-splash.page.ts:240
+The error handler navigates to /onboarding regardless of cause. A transient 500 or a dropped packet sends a returning guest back to the 'create an account' screen.
+
+Fix
+Branch on error type; retry transient failures in place.
+P2
+No quantity limits, and no multi-language
+Guest
+apps/web/src/app/leos/quantity-stepper.component.ts:56 · index.html:2
+The stepper supports a max that nothing ever binds, so a guest can add 999 of one item. Separately, every sentence is hardcoded English including 30+ literals inside guest.page.ts — the terminology system swaps nouns per vertical, not per language. For a QR hospitality product this is a hard blocker in most markets.
+
+Fix
+Bind a max from the catalogue; extract copy to a translation layer before international packs ship.
+P2
+No consent record is ever created despite the schema modelling one
+Guest
+prisma/schema.prisma:63 · onboarding.page.ts:718
+IdentityConsent and Identity.consentGranted are never written; resolveEntry takes an optional identityId the guest client never sends. Meanwhile onboarding collects email, phone, date of birth and gender into localStorage with no privacy notice, no consent checkbox and no policy link — and the footer's Privacy and Terms are inert spans.
+
+Fix
+Either stop collecting DOB, gender and phone, or ship a real consent flow that writes IdentityConsent.
+P2
+canAccessStation fails open for the kitchen role
+Platform
+apps/runtime/src/staff-auth/staff-token.service.ts:161
+if (role === 'kitchen') return ... || (!id.includes('bar') && !id.includes('counter')) — any station id not literally containing those substrings is writable by kitchen staff. Substring matching also means station-cellar-bar matches for the bar role by accident, and station-barista was special-cased in the gateway but not here, so the two functions disagree.
+
+Fix
+Replace substring heuristics with an explicit station→role table stored per venue.
+P2
+Business errors surface as HTTP 500
+Platform
+apps/runtime/src/leos/leos.service.ts:177,427,449,754
+Bare Error for every domain failure — 'Session not found', 'Already settled', 'Nothing left to pay'. Nest maps these to 500 with a generic body, so the message never reaches the guest, the stack dumps unstructured to stdout, and the staff app's 401/403 branching sees an untyped 500 and shows 'try again'.
+
+Fix
+Typed exceptions plus an exception filter that attaches the correlation id.
+P2
+No OpenAPI spec
+Platform
+apps/runtime/package.json
+@nestjs/swagger isn't a dependency and no spec exists. The Angular client re-declares every response shape by hand across 652 lines of leos-api.service.ts, drifting from the server with nothing to catch it.
+
+Fix
+Generate a spec and either generate the client or type-check it against the spec in CI.
+P2
+Hot-kitchen accessibility: 11px type, colour-only status, no haptics
+Staff
+apps/web/src/app/pages/station.page.ts · service.page.ts:214
+Ticket metadata renders at 0.7–0.75rem — at arm's length, through steam, in glare. Status is colour plus a glyph marked aria-hidden, so the distinction is unavailable to a screen reader and marginal to a colourblind operator. Success feedback is a text flash with no sound and no vibrate. Scenario: in a noisy kitchen with gloved hands the operator cannot tell whether their tap registered — which invites the double-tap that serveGroup, unlike serveTableReady, does not guard against.
+
+Fix
+16px minimum on ticket bodies, 44px+ targets, redundant shape and text encoding, haptic and audio confirmation.
+P2
+The Team page's tab bar sits below the content it controls
+Studio
+apps/web/src/app/pages/studio-team.page.ts:130
+The tablist renders after the People section and the action buttons, so reading order and DOM order both contradict the tab metaphor. They are also plain buttons: no role="tab", no aria-selected, no aria-controls, no arrow-key navigation.
+
+Fix
+Move the tablist above the panel and give it real tab semantics.
+P2
+Three competing headline sentences with no hierarchy
+Studio
+apps/web/src/app/pages/setup-operate.page.ts:79
+calmLine ('A guest is waiting for you.'), handoffLine (a constant string of product philosophy that never changes) and ownerHint ('Claim Table 4 first.') stack as three sibling paragraphs — and handoffLine repeats a fourth time in the footer. The most actionable line is third.
+
+Fix
+Lead with the actionable line; demote the constant to a one-time hint.
+P2
+Stale config: Operate never notices the venue went live
+Studio
+apps/web/src/app/pages/setup-operate.page.ts:623
+readConfig() is captured in ngOnInit only, so live, typeId, placeNoun and the station list never refresh. Scenario: the operator has Operate open in one tab and completes Go Live in another. The Operate tab shows 'Go live first' indefinitely, with a Go Live button, while the venue is live and guests are pressing help.
+
+Fix
+Re-read config on each poll, or drive it from a signal.
+P2
+'Saved automatically' fires on a debounce and lies on failure
+Studio
+apps/web/src/app/pages/setup-identity.page.ts:418,441,459
+The flash is set unconditionally in persist(); the brand save's error handler is error: () => undefined and does not clear it. It also strobes on every keystroke pause while typing a venue name.
+
+Fix
+Set the flash from the success callback only, and show a real error on failure.
+P2
+rankEscalations sorts malformed rows to the top
+Studio
+apps/web/src/app/studio/operate-glance.ts:13
+Date.parse(createdAt) || 0 — an unparseable or missing timestamp becomes 0 and sorts first. Scenario: one malformed row from the API permanently pins itself above every genuine escalation and takes the single gold Claim button.
+
+Fix
+Sort unparseable timestamps last, and log them.
+P2
+Duration and idle minutes computed against client clock skew
+Studio
+apps/web/src/app/pages/setup-operate.page.ts:717
+Date.now() - new Date(createdAt) clamped at 0. Scenario: the venue tablet's clock is 4 minutes behind the server; every escalation shows 'Just now' for its first four minutes and never pulses, so the SLA signal is disabled on exactly the device that needs it.
+
+Fix
+Have the server send elapsed seconds, or compute an offset once from a response header.
+P2
+Sign-out loads the whole marketing bundle
+Studio
+apps/web/src/app/shells/studio-shell.component.ts:177
+navigate(['/']) loads the lazy 1090-line marketing page. Signing out at the end of a shift downloads the motion-heavy landing page instead of returning to /signin.
+
+Fix
+Navigate to /signin.
+Data model
+
+Forms & missing fields
+Every form in the product, what it collects, and what a real hospitality business needs that isn't there. The gaps in the top three rows are the reason a venue cannot legally issue a receipt.
+
+Form	Collects today	Missing — and why it matters
+Organisation
+no form exists	name (seeded only)	Timezone — "today" is computed in the server's timezone (grow.controller.ts:174), so a Cape Town venue on a UTC runtime attributes all trade after 22:00 to tomorrow. Default currency — hardcoded en-ZA/ZAR (grow-breath.ts:288) in a product shipping airport and festival packs. VAT number, registered name, billing address, country — all legally required on a South African tax invoice.
+Venue / Identity
+setup-identity.page.ts:16	name, logo, brand colour, menu-brand toggle, cover image, free-text "city or suburb"	Street address, postcode, country, timezone, opening hours, phone, capacity, service-charge %, tax rate. Location is an unvalidated string that is never geocoded and only used as display text. Colour validation silently reverts — typing #fff leaves the bad text visible while saving the old value, with no message.
+Payments
+setup-payments.page.ts:29	five checkboxes: Card, Apple Pay, Google Pay, Tips, Split bill	There is no payment setup. No merchant ID, no API key, no bank account, no settlement schedule, no test-connection. The entire connector API and the PaymentConnectorInstall model are called by nothing from the web app. Worse: merely visiting the step marks payments complete (ngOnInit:150) because the three toggles default to true — so Go Live shows a green tick for a venue that cannot take a cent.
+Menu / catalogue
+no editor exists	—	There is no way to create a menu item anywhere in Studio. RestaurantCatalogItem exists and getCatalogue is in the API service, but no page writes to it. An operator finishes all five setup steps, goes live, and guests see the seeded demo menu with someone else's prices. Also missing on the model itself: allergens, dietary tags, availability / 86'd flag, age-restricted flag, prep-time estimate.
+Staff
+studio-team.page.ts:198	name, email, PIN (4–6), experience, permission checkboxes	No phone number (nor on the model). No email format validation — "sarah" is accepted and occupies the unique index forever. No confirm-PIN field, so a typo locks a new hire out on their first shift. PIN policy is length ≥ 4 and nothing else — 0000 and 1234 pass. Staff can never be removed — no delete, no deactivate, no active flag. A fired waiter's email and PIN still authenticate from any phone on the venue Wi-Fi.
+Places
+setup-places.page.ts:29	label, enabled; section name; bulk count	No seats/capacity, no place type, no per-place QR token, no station routing. Nothing prevents duplicate labels, and places are identified by label — run the bulk tool twice and two "Table 1"s resolve to the same physical context, merging two parties' orders into one session.
+Guest onboarding
+onboarding.page.ts:10	email, OTP, name, birthday, gender, phone — seven steps, before the menu	The opposite problem: it collects too much, with no privacy notice, no consent checkbox, no policy link, and writes it to localStorage only. IdentityConsent is modelled and never written. The OTP accepts any six digits (:657) and sendCode() is a 700 ms setTimeout that sends no email. The birthday it captures is never checked against alcohol orders.
+Order line
+guest-choices-sheet.component.ts:98	choices, quantity, special requests textarea	The special-request text and the choice selections never reach the kitchen. TransactionLine has no column for either; createTransaction maps only id, label, quantity, price and routing tags. A guest types "severe shellfish allergy, keep separate" and the ticket prints Steak × 1. This is a safety issue, not a data-loss one.
+Sign-in
+studio-signin.page.ts:38	email	No password, no verification, no reset, no MFA, no session expiry. "Continue with Google" hardcodes operator@gmail.com. A departing manager's laptop works forever; there is no way to revoke an owner.
+Cross-cutting: there is no CanDeactivate guard anywhere in the codebase, so every form in Studio silently discards an in-progress draft when the operator clicks a tab or a sidebar link. And no form moves focus to the offending field on error — the role="alert" announcements are correct, but a screen-reader user is told "couldn't create" with no route back and no indication of which field.
+
+Growth
+
+SEO strategy
+The honest starting position: you are not ranking badly, you are not indexable. Fixing that is mechanical. What follows is the strategy I'd run once it is.
+
+Where you actually stand
+Your marketing page is a lazy-loaded Angular route rendered entirely client-side. Googlebot runs headless Chrome and will eventually see it — on a second-wave crawl, with a delay. GPTBot, ClaudeBot, PerplexityBot, OAI-SearchBot and Bingbot do not execute JavaScript at all. An analysis of over 500 million GPTBot fetches found zero evidence of JS execution. They fetch index.html, see <lekki-root></lekki-root>, and leave.
+
+That matters more each quarter: AI bots are now ~4.2% of all HTML page requests and GPTBot traffic is growing 305% year over year. The failure mode is specific and worth naming — split visibility: you can rank acceptably on Google while being completely absent from the answer that ChatGPT or Claude gives a restaurateur asking "what should I use for QR ordering in South Africa". For a category that buyers research conversationally, that is the whole game.
+
+On top of that: no robots.txt, no sitemap.xml, no meta description, no canonical, no Open Graph or Twitter card, no structured data, and no Title/Meta service usage anywhere in the app. Your Privacy and Terms links are inert <span>s — which is both an SEO signal and, for a payments product, a trust problem.
+
+The strategy, in one paragraph
+Do not chase "restaurant software" — you will lose to incumbents with a decade of domain authority. Win evaluation-stage queries instead: the buyer has already decided they want QR ordering and is now comparing vendors. Those queries are low-volume, high-intent, and largely unclaimed in the South African market. Build three page types that incumbents neglect — comparison pages ("Lekki vs X", "X alternatives"), an indexed pricing page, and use-case pages per pack (cafés, hotels, festivals, airports) — then make all of them server-rendered and schema-marked so both Google and the answer engines can read them. Comparison pages intercept buyers at the highest-intent touchpoint in a B2B journey that averages 62 touches before close.
+
+Keyword clusters to own
+Cluster	Example queries	Page type	Why you can win it
+Category + geo	QR code ordering system South Africa · table ordering app for restaurants SA · scan to order menu Cape Town	Landing + city pages	Geo-qualified, thin competition, and PayFast integration is a genuine local differentiator no global vendor has.
+Competitor conquesting	[competitor] alternatives · [competitor] vs Lekki · [competitor] pricing South Africa	Comparison	Highest intent in the whole funnel and almost always neglected by the incumbent, who won't write about rivals.
+Job-to-be-done	how to split the bill at a restaurant app · reduce table turn time · let guests pay without waiting for the card machine	Guide + FAQ	Maps directly onto your actual thesis ("less time waiting"). Answer-shaped, so it's what AI Overviews and LLMs quote.
+Integration	PayFast restaurant integration · POS with PayFast · QR ordering that works with [POS]	Integration pages	Buyers search by the thing they already own. One page per connector, indexed, is cheap and converts.
+Pack verticals	hotel room service ordering app · festival cashless ordering · airport lounge ordering system	Use-case	Your "one platform, many packs" architecture is the story here — and each vertical is a separate, low-competition SERP.
+One strategic note worth weighing: the site currently sells to operators, but every guest who scans a QR lands on your domain. That is a large, recurring, geo-tagged audience arriving on a page with no metadata. Whether the guest surface should be indexable at all is a real decision — I'd argue no for session URLs, but a public, indexed, server-rendered menu page per venue would be a genuinely strong local-SEO asset for your customers, and a reason for them to stay.
+
+Execution
+
+SEO tracklist
+Sequenced deliberately — technical foundation before content, because publishing into an unindexable site is the most expensive mistake available. Tick items as you go; progress is saved in this browser.
+
+0 of 31 done
+Foundation
+Week 1–2
+Nothing else works until these ship. Publishing content into an unindexable site is the most expensive mistake available, and it is the one every team makes.
+
+Task
+Effort
+Impact
+
+Add SSR or prerender to the marketing route
+@angular/ssr on the / route, or split marketing onto a static generator. Without this, GPTBot, ClaudeBot and PerplexityBot see an empty div — they do not execute JavaScript.
+Large
+Critical
+
+Write real <title> and meta description per route
+Angular's Title and Meta services are currently used nowhere in the app. Today every page is titled the literal string "Lekki".
+Small
+Critical
+
+Ship robots.txt
+Allow Googlebot, GPTBot, ClaudeBot, PerplexityBot, OAI-SearchBot on marketing. Disallow /studio, /staff, /experience, /entry, /e/ — guest session URLs must never be indexed.
+Small
+Critical
+
+Ship sitemap.xml and submit to Search Console + Bing
+Generate at build time from the route table. Bing feeds ChatGPT's search index, so it is not optional.
+Small
+High
+
+Add canonical tags on every indexable route
+Prevents the /#pricing anchors and any future query params from splitting authority.
+Small
+High
+
+Add Open Graph and Twitter card tags
+Every share of your link into a WhatsApp group or Slack currently renders as a bare URL. In hospitality, WhatsApp is the channel.
+Small
+High
+
+Make Privacy and Terms real, linked pages
+They are inert <span> elements today. For a payments product this is a trust and compliance problem before it is an SEO one.
+Medium
+High
+
+Set html lang and add hreflang if you ship beyond ZA
+Currently hardcoded lang="en" with no regional signal.
+Small
+Med
+Machine readability
+Week 2–3
+Schema is the highest-leverage technical decision after rendering. It is what lets an answer engine state a fact about you with confidence rather than paraphrasing your homepage.
+
+Task
+Effort
+Impact
+
+SoftwareApplication schema on the homepage
+name, description, applicationCategory: BusinessApplication, operatingSystem: Web, offers with real pricing, aggregateRating once you have reviews.
+Small
+Critical
+
+Organization schema with sameAs links
+Ties the brand to its social and directory profiles so entity resolution works.
+Small
+High
+
+FAQPage schema on every guide and comparison page
+This is the format AI Overviews and LLMs quote directly. Answer-shaped content is the single common factor in pages that get cited.
+Medium
+High
+
+BreadcrumbList on all nested pages
+Improves SERP presentation and helps crawlers understand the site's shape.
+Small
+Med
+
+Publish llms.txt
+Low cost, uncertain payoff — adoption is not universal and it is not a substitute for SSR. Do it after the foundation, never instead of it.
+Small
+Low
+
+Pass Core Web Vitals on mobile
+Pages with faster first contentful paint earn roughly 3× the ChatGPT citations of slower ones. Start by not shipping the Studio bundle to marketing visitors.
+Medium
+High
+Content that converts
+Week 3–10
+Built in intent order, highest first. Comparison pages intercept buyers at the point of decision and incumbents almost never write them.
+
+Task
+Effort
+Impact
+
+Indexed pricing page at a real URL
+Currently an anchor on the homepage. B2B buyers search "[product] pricing" directly, and an anchor cannot rank for it.
+Medium
+Critical
+
+Three comparison pages: Lekki vs the top SA incumbents
+Honest, specific, table-led. Name what they do better — it is more credible and it ranks for their brand terms.
+Large
+Critical
+
+Two "[competitor] alternatives" pages
+Different search intent from vs-pages and a different SERP. Both are worth owning.
+Medium
+High
+
+One use-case page per pack
+Cafés, hotels, festivals, airports. Your pack architecture is the story and each vertical is a separate low-competition SERP.
+Large
+High
+
+PayFast integration page
+Buyers search by the thing they already own. This is your clearest local differentiator and no global vendor has it.
+Small
+High
+
+Guides answering the job-to-be-done
+How to split a bill at the table · how to cut table turn time · how to take payment without the card machine. Question-shaped headings, direct answers in the first sentence.
+Large
+Med
+
+Geo pages for Cape Town, Johannesburg, Durban
+Only once you have a real customer in each — thin geo pages without local proof are a liability, not an asset.
+Medium
+Med
+Proof and distribution
+Ongoing
+Schema and content get you eligible. Third-party corroboration is what makes an answer engine willing to name you.
+
+Task
+Effort
+Impact
+
+Claim Capterra, GetApp and G2 profiles
+These rank for your category terms already and are heavily cited by LLMs as neutral sources. Claiming is free.
+Small
+High
+
+Get the first 5 real reviews
+aggregateRating schema is dead weight without them, and review count is a direct AI-citation signal.
+Medium
+High
+
+Publish two named customer case studies
+Named venue, real numbers, a quote from the owner. This is the EEAT signal that separates you from a landing page.
+Medium
+High
+
+Bylined content from someone with operations credibility
+An author entity with a real bio and a real history beats an anonymous blog for both Google and answer engines.
+Medium
+Med
+
+Expose an MCP server for product data
+Speculative but cheap and directionally right — AI agents doing vendor research can query structured product data directly. Apaleo shipped the first one in hospitality; being second in your niche is still early.
+Medium
+Low
+Measurement
+Week 2, then monthly
+Without this loop you will not know which of the pages above earned anything, and you will optimise for impressions instead of revenue.
+
+Task
+Effort
+Impact
+
+GA4 with demo requests as a conversion event
+Set up before the content ships, not after — you cannot backfill attribution.
+Small
+Critical
+
+Pass original traffic source into the CRM at lead creation
+This is the join that makes everything below possible.
+Medium
+High
+
+Track AI referrals separately
+chatgpt.com, perplexity.ai, claude.ai and Copilot referrers in a dedicated GA4 segment. This is the channel you are currently invisible to; measure it from day one.
+Small
+High
+
+Monitor AI crawler hits in server logs
+GPTBot, ClaudeBot, PerplexityBot, OAI-SearchBot user agents. It is the fastest way to confirm SSR actually worked.
+Small
+High
+
+Report net new ARR from organic monthly
+Not sessions, not impressions. The number that decides whether any of this continues.
+Medium
+Med
+Over to you
+
+Questions for you
+These are the decisions I cannot make from the code. Several findings above have two legitimate fixes and the right one depends on your answer — I've grouped them by what they unblock.
+
+Where you are in the world
+Unblocks: security scope, migration urgency, how much of the P0 list is theoretical.
+
+Is anything live with real guests and real money today, or is this all pre-launch? The answer changes whether the float-to-decimal migration is a schema edit or a data migration with reconciliation.
+Is the runtime currently deployed anywhere reachable from the public internet? Several findings go from "serious" to "actively exploitable" if yes.
+Is STAFF_TOKEN_SECRET or LEKKI_VAULT_KEY set in any deployed environment? Neither is in .env.example, so the hardcoded dev defaults are the only path anyone has exercised.
+Who is the first paying customer, and what is their actual venue? Almost every "missing field" question resolves instantly against one real business.
+The money model
+Unblocks: the entire payment rebuild, and whether split-bill stays as designed.
+
+Are you the merchant of record, or is each venue? Right now the payment connector is a single process-wide slot, so in a multi-tenant deployment every org's payments route to whichever merchant activated last. The fix differs completely depending on your answer.
+Do you take a platform fee, and if so is it per transaction or subscription? Nothing in the schema models revenue to Lekki at all.
+When a guest disputes a charge, who handles it? There is no refund path — the manual connector's refundPayment returns success without doing anything, and PayFast's always returns failed.
+Is a venue allowed to run without a PayFast passphrase? If yes, ITN signatures are unkeyed and forgeable; I'd argue activation should simply refuse.
+Should the equal-split divisor count people who ordered nothing? Today a curious passer-by who scans and leaves permanently lowers everyone's share and the bill never settles.
+Identity and trust
+Unblocks: onboarding redesign, consent, and the single biggest conversion risk in the product.
+
+Why does a guest need an account before seeing a menu? Onboarding asks for date of birth and gender across seven steps before a price is visible — while Entry's own copy promises "we'll take you straight in. No account needed." Which is the intended product?
+What do you actually do with birthday and gender? If the answer is "nothing yet", collecting them is pure risk under POPIA with no consent record being written.
+Is the 5-second unskippable splash a deliberate brand decision you want to defend, or an artefact? I'd cut it to under a second and make it tappable, but it's your brand moment.
+Should a guest be able to re-join a session by name? Today typing another diner's first name resumes their participant and inherits their bill. Fixing it properly means a server-issued participant token — which changes the entry flow.
+Operating reality
+Unblocks: staff app redesign, accountability model, and what "Operate" is for.
+
+How many staff share one device, and does the business need to know who did what? Right now nothing records which staff member cleared a table or marked an order served — req.staff is available at the call site and simply isn't persisted. Adding it is two lines and a migration, but only if accountability matters to you.
+Is Studio's Operate board meant to be used during service, or is it an owner's overview? It currently sits between the two — it shows live escalations and lets you force-clear a table, but its copy says "overview only".
+What is the busiest realistic service you need to survive? At 40 covers with 6 tablets the current polling design issues ~10 requests/second of unindexed multi-join queries against endpoints with no rate limiting.
+Who configures a venue — you, or the operator? "Go live in minutes" and "no menu editor exists" cannot both be true, so today the answer must be you. Is that the intended business model?
+Scope and sequence
+Unblocks: what I'd actually do next, and in what order.
+
+Six page components are orphaned — no route, no import, ~800 lines including a second competing "go live" implementation. Safe to delete, or is something planned for them?
+pnpm run check:nouns is currently red with 11 violations, and it isn't wired into build or test. Do you want the rule enforced, or relaxed? Two of the violations are authorization logic implemented by string-matching restaurant nouns, which is the version that actually bites.
+Is Angular the long-term choice for the marketing site? Adding SSR to the existing app is the smaller change; splitting marketing onto a static generator would be faster to rank and keeps guest-app weight down. I'd lean toward the second, but it's a real fork.
+What's your appetite for a hard freeze on features until the money path is correct? My honest recommendation is roughly two weeks — auth, decimal money, server-side pricing, and migrations — before anything new ships.
+Credit where due
+
+What's genuinely good
+Do not lose these in the rebuild
+The continuity modules. operate-glance.ts, grow-breath.ts, team-confidence.ts and the *-continuity.ts family are pure, dependency-free, injectable-clock, unit-tested functions with no DOM coupling. This is the healthiest layer in the codebase and the bugs are in where they're wired, not what they do.
+The outbox write path is correct. OutboxService.append takes an optional transaction client and every important write passes it, so events and state commit atomically. Only the publisher half is broken.
+Claim-from-table with a real undo. The server returns previousParticipantId per line and the client replays it — one tap to claim, one tap to undo, no allocation wizard. This is the best-designed interaction in the product.
+PayFast signature encoding is right. Uppercase hex, + for spaces, the !'()* escapes, insertion order preserved rather than sorted, empty values skipped. This is the detail most PayFast integrations get wrong.
+Permission language that speaks human. "They can see / act / finish" with a why sentence per group, and sessionRevokeCopy answering "is it safe to end this login?" with consequence-then-aftermath. That is real product thinking about an operator's actual anxiety.
+The staff-facing API shows you already know how to do this. FulfilmentController.updateStatus chains a guard, a permission decorator, an explicit org check and a station-access check. The pattern the Studio endpoints are missing is already written, in your own codebase, twenty lines away.
+prefers-reduced-motion honoured consistently across Studio, and safeGuestImageUrl allow-listing image schemes rather than blocklisting. Both are the kind of thing teams skip.
+One thing worth saying plainly: the reason this teardown is so long is that there is enough here to be worth tearing down. A thin product produces a short list.
+
+Read from source on 1 September 2026 — apps/web, apps/runtime, packages/*, connectors/*, prisma/schema.prisma, scripts/check-noun-separation.mjs. Line numbers refer to that commit.
+
+SEO research sources: Passionfruit — JavaScript rendering and AI crawlers · SaaSHero — Hospitality tech SEO strategies · Witscode — AI search optimisation guide · CXL — Answer engine optimisation

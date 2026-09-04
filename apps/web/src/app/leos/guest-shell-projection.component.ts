@@ -1,17 +1,19 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, OnChanges, OnDestroy, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   type GuestExperienceDesign,
+  type ProjectionItem,
   categoriesFromDesign,
   visibleProjectionItems,
 } from '../studio/guest-experience-design';
 import { choiceGroupHint, projectionOrderCopy, safeGuestImageUrl } from './catalogue-parity';
 
-type PreviewTab = 'menu' | 'orders' | 'bill';
+type PreviewTab = 'specials' | 'menu' | 'orders' | 'bill';
 
 /**
  * Experience Shell projection for Studio Live Experience.
  * Same grammar guests use after Go Live — never a layout builder.
+ * Specials Continuity: when guestDesign.specials, dock + body match Guest.
  */
 @Component({
   selector: 'leos-guest-shell-projection',
@@ -29,11 +31,96 @@ type PreviewTab = 'menu' | 'orders' | 'bill';
         }
       </header>
 
-      <div class="gsp__body">
+      <div class="gsp__body" (scroll)="onBodyScroll($event)">
+        @if (tab === 'specials' && design.specials) {
+          <p class="gsp__hi">Specials</p>
+          @if (specialsToday.length) {
+            <p class="gsp__section-label">Today</p>
+            <div class="gsp__carousel" role="list" aria-label="Current specials">
+              @for (item of specialsToday; track item.id) {
+                <article
+                  class="gsp__carousel-card"
+                  role="listitem"
+                  [attr.data-item]="item.id"
+                  (click)="bumpPreview(item.id)"
+                >
+                  <div class="gsp__carousel-media" aria-hidden="true">
+                    @if (showFoodImages && itemImage(item.imageUrl)) {
+                      <img [src]="itemImage(item.imageUrl)" alt="" />
+                    }
+                  </div>
+                  <strong>{{ item.label }}</strong>
+                  <span class="gsp__price">{{ item.price }}</span>
+                  @if (showAdd) {
+                    <span class="gsp__carousel-add" aria-hidden="true">+</span>
+                  }
+                </article>
+              }
+            </div>
+          } @else {
+            <p class="gsp__muted">No specials on the board — favourites from the menu.</p>
+          }
+          @if (specialsFeatured.length) {
+            <p class="gsp__section-label">Most ordered</p>
+            <ul class="gsp__list" role="list" (click)="onCatalogueClick($event)">
+              @for (item of specialsFeatured; track item.id) {
+                <li
+                  class="gsp__row"
+                  [attr.data-item]="item.id"
+                  [attr.data-has-choices]="item.choiceGroups?.length ? 'true' : null"
+                >
+                  <div class="gsp__thumb" aria-hidden="true">
+                    @if (previewQty[item.id]) {
+                      <span class="gsp__qty-badge">{{ previewQty[item.id] }}</span>
+                    }
+                    @if (showFoodImages && itemImage(item.imageUrl)) {
+                      <img
+                        class="gsp__thumb-img"
+                        [src]="itemImage(item.imageUrl)"
+                        alt=""
+                        width="44"
+                        height="44"
+                      />
+                    }
+                  </div>
+                  <div class="gsp__meta">
+                    <strong>{{ item.label }}</strong>
+                    @if (item.description) {
+                      <span class="gsp__desc">{{ item.description }}</span>
+                    }
+                    <span class="gsp__price">{{ item.price }}</span>
+                  </div>
+                  @if (showAdd) {
+                    <span class="gsp__add" data-add="true" aria-hidden="true">+</span>
+                  }
+                </li>
+              }
+            </ul>
+          }
+        }
+
         @if (tab === 'menu') {
           @if (!canBrowse) {
             <p class="gsp__empty">Nothing to browse yet.</p>
           } @else {
+            @if (menuBrandEnabled) {
+              <div
+                class="gsp__menu-brand"
+                [style.--menu-brand-progress]="menuBrandProgress"
+                [style.--menu-brand-colour]="brandColour"
+                aria-hidden="true"
+              >
+                <div class="gsp__menu-brand-fill">
+                  @if (coverSrc) {
+                    <img class="gsp__menu-brand-cover" [src]="coverSrc" alt="" />
+                  }
+                  <span class="gsp__menu-brand-shade"></span>
+                  @if (logoSrc) {
+                    <img class="gsp__menu-brand-logo" [src]="logoSrc" alt="" />
+                  }
+                </div>
+              </div>
+            }
             <p class="gsp__hi">{{ greeting }}</p>
             <div class="gsp__chips" role="toolbar" aria-label="Categories">
               <button
@@ -172,15 +259,22 @@ type PreviewTab = 'menu' | 'orders' | 'bill';
       </div>
 
       <nav class="gsp__dock" aria-label="Guest navigation">
+        @if (design.specials) {
+          <button type="button" [class.is-on]="tab === 'specials'" (click)="tab = 'specials'">
+            Specials
+          </button>
+        }
         <button type="button" [class.is-on]="tab === 'menu'" (click)="tab = 'menu'">
           {{ catalogueLabel }}
         </button>
         <button type="button" [class.is-on]="tab === 'orders'" (click)="tab = 'orders'">
           {{ transactionPlural }}
         </button>
-        <button type="button" [class.is-on]="tab === 'bill'" (click)="tab = 'bill'">
-          {{ paymentLabel }}
-        </button>
+        @if (design.payAtTable) {
+          <button type="button" [class.is-on]="tab === 'bill'" (click)="tab = 'bill'">
+            {{ paymentLabel }}
+          </button>
+        }
         @if (design.callStaff) {
           <span class="gsp__dock-quiet" aria-hidden="true">Help</span>
         }
@@ -195,7 +289,7 @@ type PreviewTab = 'menu' | 'orders' | 'bill';
         flex-direction: column;
         height: 100%;
         min-height: 100%;
-        background: #faf7f2;
+        background: #ffffff;
         color: #1b2230;
         font-family: 'Sora', system-ui, sans-serif;
         border-radius: 0;
@@ -216,7 +310,7 @@ type PreviewTab = 'menu' | 'orders' | 'bill';
       }
       .gsp__header {
         padding: 1rem 1.1rem 0.75rem;
-        background: #faf7f2;
+        background: #ffffff;
       }
       .gsp__logo {
         width: 2rem;
@@ -242,16 +336,140 @@ type PreviewTab = 'menu' | 'orders' | 'bill';
         overflow: auto;
         padding: 0.5rem 1.1rem 1rem;
       }
+      .gsp__menu-brand {
+        --menu-brand-progress: 0;
+        --menu-brand-colour: #d7a14a;
+        --menu-brand-height: 7.75rem;
+        position: relative;
+        width: calc(100% + 0.4rem);
+        margin: 0 -0.2rem 0.55rem;
+        height: calc(var(--menu-brand-height) * (1 - (var(--menu-brand-progress) * 0.88)));
+        min-height: 0;
+        opacity: calc(1 - (var(--menu-brand-progress) * 0.95));
+        pointer-events: none;
+        overflow: hidden;
+      }
+      .gsp__menu-brand-fill {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        border-radius: 0 0 50% 50% / 0 0 42% 42%;
+        background-color: #0b0f16;
+        overflow: hidden;
+        box-shadow: inset 0 -14px 22px rgba(11, 15, 22, 0.28);
+      }
+      .gsp__menu-brand-cover {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .gsp__menu-brand-shade {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          180deg,
+          color-mix(in srgb, #0b0f16 28%, transparent) 0%,
+          color-mix(in srgb, color-mix(in srgb, var(--menu-brand-colour) 40%, #0b0f16) 78%, transparent)
+            100%
+        );
+      }
+      .gsp__menu-brand-logo {
+        position: relative;
+        z-index: 1;
+        width: 2.75rem;
+        height: 2.75rem;
+        border-radius: 12px;
+        object-fit: cover;
+        border: 2px solid rgba(255, 255, 255, 0.55);
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+        transform: scale(calc(1 - (var(--menu-brand-progress) * 0.35)));
+        opacity: calc(1 - (var(--menu-brand-progress) * 0.85));
+      }
       .gsp__hi {
         margin: 0 0 0.75rem;
         font-size: 0.9375rem;
         font-weight: 600;
       }
+      .gsp__section-label {
+        margin: 0.35rem 0 0.45rem;
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: #6b7280;
+      }
+      .gsp__carousel {
+        display: flex;
+        gap: 0.65rem;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        padding: 0.1rem 0 0.65rem;
+        margin: 0 -0.15rem 0.35rem;
+        scrollbar-width: none;
+      }
+      .gsp__carousel::-webkit-scrollbar {
+        display: none;
+      }
+      .gsp__carousel-card {
+        flex: 0 0 78%;
+        scroll-snap-align: start;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        padding-bottom: 0.25rem;
+        cursor: pointer;
+      }
+      .gsp__carousel-media {
+        width: 100%;
+        aspect-ratio: 4 / 3;
+        border-radius: 0.9rem;
+        overflow: hidden;
+        background: linear-gradient(
+          145deg,
+          color-mix(in srgb, var(--brand, #d7a14a) 18%, #f9f8f6),
+          color-mix(in srgb, var(--brand, #d7a14a) 45%, #e8c178)
+        );
+      }
+      .gsp__carousel-media img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+      .gsp__carousel-card strong {
+        font-size: 0.8125rem;
+        padding-right: 1.75rem;
+      }
+      .gsp__carousel-add {
+        position: absolute;
+        right: 0.2rem;
+        bottom: 0.15rem;
+        width: 1.65rem;
+        height: 1.65rem;
+        border-radius: 999px;
+        background: var(--brand, #d7a14a);
+        color: #fff;
+        font-size: 1rem;
+        font-weight: 650;
+        display: grid;
+        place-items: center;
+        line-height: 1;
+      }
       .gsp__chips {
         display: flex;
         flex-wrap: wrap;
         gap: 0.4rem;
-        margin-bottom: 0.85rem;
+        margin: 0 -0.15rem 0.85rem;
+        padding: 0.35rem 0.15rem;
+        position: sticky;
+        top: 0;
+        z-index: 4;
+        background: color-mix(in srgb, #ffffff 92%, transparent);
+        backdrop-filter: blur(8px);
       }
       .gsp__chip {
         padding: 0.3rem 0.65rem;
@@ -290,7 +508,7 @@ type PreviewTab = 'menu' | 'orders' | 'bill';
         overflow: hidden;
         background: linear-gradient(
           145deg,
-          color-mix(in srgb, var(--brand, #d7a14a) 18%, #efe8dc),
+          color-mix(in srgb, var(--brand, #d7a14a) 18%, #f9f8f6),
           color-mix(in srgb, var(--brand, #d7a14a) 55%, #e8c178)
         );
       }
@@ -436,7 +654,7 @@ type PreviewTab = 'menu' | 'orders' | 'bill';
       .gsp__dock {
         display: flex;
         border-top: 1px solid #e7e2db;
-        background: #faf7f2;
+        background: #ffffff;
         padding: 0.35rem 0.25rem calc(0.35rem + env(safe-area-inset-bottom, 0));
       }
       .gsp__dock button {
@@ -466,13 +684,15 @@ type PreviewTab = 'menu' | 'orders' | 'bill';
     `,
   ],
 })
-export class GuestShellProjectionComponent {
+export class GuestShellProjectionComponent implements OnChanges, OnDestroy {
   @Input({ required: true }) design!: GuestExperienceDesign;
   @Input() venueName = 'Blue Door';
   @Input() placeCode = '';
   @Input() greeting = 'Hi there';
   @Input() brandColour = '#d7a14a';
   @Input() logoUrl = '';
+  @Input() menuBrandEnabled = false;
+  @Input() menuCoverUrl = '';
   /** Fill parent phone screen — never escape the desk frame. */
   @Input() fillFrame = false;
   /** @deprecated use fillFrame — kept so callers compile during migrate */
@@ -485,6 +705,8 @@ export class GuestShellProjectionComponent {
   @Input() transactionLabel = 'Order';
   @Input() leaveLabel = 'Leave';
   @Input() sampleItemLabel = 'Classic Burger';
+  /** When set, Live Experience shows the venue’s real menu instead of pack defaults. */
+  @Input() venueCatalogue: ProjectionItem[] | null = null;
   @Input() experienceTypeId = 'restaurant';
   @Input() payMethods: { card: boolean; applePay: boolean; googlePay: boolean } = {
     card: false,
@@ -497,14 +719,58 @@ export class GuestShellProjectionComponent {
   categoryFilter = '';
   openChoiceId = '';
   previewQty: Record<string, number> = {};
+  menuBrandProgress = 0;
   readonly choiceGroupHint = choiceGroupHint;
+
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['menuBrandEnabled'] && !this.menuBrandEnabled) {
+      this.menuBrandProgress = 0;
+    }
+    if (changes['menuBrandEnabled']?.currentValue) {
+      this.tab = 'menu';
+      this.menuBrandProgress = 0;
+    }
+    if (!changes['design'] && !changes['menuBrandEnabled']) return;
+    if (this.menuBrandEnabled) {
+      this.tab = 'menu';
+    } else if (this.design?.specials) {
+      if (this.tab === 'menu' || !this.tab) this.tab = 'specials';
+    } else if (this.tab === 'specials') {
+      this.tab = 'menu';
+    }
+    if (!this.design?.payAtTable && this.tab === 'bill') {
+      this.tab = this.design?.specials && !this.menuBrandEnabled ? 'specials' : 'menu';
+    }
+  }
+
+  ngOnDestroy() {
+    this.menuBrandProgress = 0;
+  }
+
+  onBodyScroll(ev: Event) {
+    if (!this.menuBrandEnabled || this.tab !== 'menu') {
+      this.menuBrandProgress = 0;
+      return;
+    }
+    const el = ev.target as HTMLElement | null;
+    const y = el?.scrollTop ?? 0;
+    this.menuBrandProgress = Math.min(1, Math.max(0, y / 120));
+  }
 
   get logoSrc(): string | null {
     return safeGuestImageUrl(this.logoUrl);
   }
 
+  get coverSrc(): string | null {
+    return safeGuestImageUrl(this.menuCoverUrl);
+  }
+
   itemImage(url: string | undefined): string | null {
     return safeGuestImageUrl(url);
+  }
+
+  bumpPreview(id: string) {
+    this.previewQty = { ...this.previewQty, [id]: (this.previewQty[id] ?? 0) + 1 };
   }
 
   onCatalogueClick(event: Event) {
@@ -518,7 +784,7 @@ export class GuestShellProjectionComponent {
       this.openChoiceId = this.openChoiceId === id ? '' : id;
       return;
     }
-    this.previewQty = { ...this.previewQty, [id]: (this.previewQty[id] ?? 0) + 1 };
+    this.bumpPreview(id);
   }
 
   get canBrowse(): boolean {
@@ -537,16 +803,39 @@ export class GuestShellProjectionComponent {
   }
 
   get categoryChips(): string[] {
-    return categoriesFromDesign(this.design, this.experienceTypeId);
+    return categoriesFromDesign(this.design, this.experienceTypeId).filter(
+      (c) => !(this.design.specials && c === 'Specials'),
+    );
   }
 
   get items() {
+    if (this.venueCatalogue?.length) return this.venueCatalogue;
     return visibleProjectionItems(this.design, this.experienceTypeId);
   }
 
+  get specialsToday(): ProjectionItem[] {
+    return this.items.filter((i) => (i.category || '').toLowerCase() === 'specials').slice(0, 8);
+  }
+
+  get specialsFeatured(): ProjectionItem[] {
+    const specialIds = new Set(this.specialsToday.map((i) => i.id));
+    return this.items
+      .filter((i) => {
+        if (specialIds.has(i.id)) return false;
+        const cat = (i.category || '').toLowerCase();
+        if (cat === 'specials' || cat.includes('drink')) return false;
+        return true;
+      })
+      .slice(0, 4);
+  }
+
   get filteredItems() {
-    if (!this.categoryFilter) return this.items;
-    return this.items.filter((i) => i.category === this.categoryFilter);
+    let list = this.items;
+    if (this.design.specials) {
+      list = list.filter((i) => (i.category || '').toLowerCase() !== 'specials');
+    }
+    if (!this.categoryFilter) return list;
+    return list.filter((i) => i.category === this.categoryFilter);
   }
 
   get hasBillChrome(): boolean {

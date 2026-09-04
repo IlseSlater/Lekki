@@ -23,10 +23,19 @@ export type WorkspaceExperience = {
   id: string;
   typeId: ExperienceTypeId;
   venueName: string;
+  /** Runtime venue id — set after identity / go live context resolve */
+  venueId?: string;
+  organisationId?: string;
+  /** Runtime physical context for entry token minting. */
+  physicalContextId?: string;
   /** Optional brand mark shown on Live Experience splash / arrival */
   logoUrl: string;
   /** Brand accent (#hex) — Live Experience morph */
   brandColour: string;
+  /** Guest menu half-moon brand band (above filters) */
+  menuBrandEnabled: boolean;
+  /** Optional cover image for menu half-moon (data URL) */
+  menuCoverUrl: string;
   /** Where guests find you (city / suburb / address line) */
   location: string;
   placeCode: string;
@@ -127,6 +136,8 @@ export class StudioContextService {
       venueName: venueName || def?.defaults.venueName || 'Blue Door',
       logoUrl: '',
       brandColour: '#d7a14a',
+      menuBrandEnabled: false,
+      menuCoverUrl: '',
       location: '',
       placeCode: placeCode || codes[0] || def?.defaults.placeCode || 'Table 12',
       placeCodes: placeCode ? [placeCode] : codes,
@@ -212,6 +223,8 @@ export class StudioContextService {
         venueName: def?.defaults.venueName ?? '',
         logoUrl: '',
         brandColour: '#d7a14a',
+        menuBrandEnabled: false,
+        menuCoverUrl: '',
         location: '',
         placeCode: def?.defaults.placeCode ?? '',
         placeCodes: [def?.defaults.placeCode ?? ''],
@@ -254,6 +267,8 @@ export class StudioContextService {
       venueName: inherit && source?.venueName?.trim() ? source.venueName : def.defaults.venueName,
       logoUrl: inherit ? source?.logoUrl || '' : '',
       brandColour: inherit && source?.brandColour ? source.brandColour : '#d7a14a',
+      menuBrandEnabled: inherit ? !!source?.menuBrandEnabled : false,
+      menuCoverUrl: inherit ? source?.menuCoverUrl || '' : '',
       location: inherit ? source?.location || '' : '',
       placeCode: def.defaults.placeCode,
       placeCodes: placeCodesFromSections(sections),
@@ -394,6 +409,8 @@ function normalizeExperience(
     placeSections?: PlaceSection[];
     logoUrl?: string;
     brandColour?: string;
+    menuBrandEnabled?: boolean;
+    menuCoverUrl?: string;
     location?: string;
   },
 ): WorkspaceExperience {
@@ -433,6 +450,8 @@ function normalizeExperience(
     ...e,
     logoUrl: e.logoUrl ?? '',
     brandColour: e.brandColour || '#d7a14a',
+    menuBrandEnabled: !!e.menuBrandEnabled,
+    menuCoverUrl: e.menuCoverUrl ?? '',
     location: e.location ?? '',
     guestDesign,
     placeSections,

@@ -79,16 +79,14 @@ declare global {
   styles: [
     `
       .scan {
-        --scan-bg: var(--leos-warm-sand, #faf7f2);
+        --scan-bg: var(--leos-warm-sand, #ffffff);
         --scan-ink: var(--leos-ink, #1b2230);
         --scan-muted: var(--leos-ink-secondary, #6b7280);
         --scan-brand: var(--leos-gold, #d7a14a);
         --scan-line: var(--leos-warm-sand-dark, #e7e2db);
         --scan-surface: #fff;
         min-height: 100dvh;
-        background:
-          radial-gradient(120% 80% at 50% -10%, rgba(215, 161, 74, 0.14), transparent 55%),
-          var(--scan-bg);
+        background: transparent;
         color: var(--scan-ink);
         font-family: var(--leos-font-sans, 'Sora', system-ui, sans-serif);
         padding: 1.25rem 1.25rem 2rem;
@@ -119,6 +117,7 @@ declare global {
         font-size: 1.35rem;
         font-weight: 650;
         letter-spacing: -0.02em;
+        color: #f6f1ea;
       }
       .scan__stage {
         display: flex;
