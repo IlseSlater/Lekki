@@ -4,6 +4,7 @@ import {
   assertRuntimeSecrets,
   FORBIDDEN_STAFF_TOKEN_SECRET,
   FORBIDDEN_VAULT_KEY,
+  requirePilotPosWebhookSecret,
   requireStaffTokenSecret,
   requireVaultKey,
 } from './runtime-secrets';
@@ -64,4 +65,18 @@ test('Batch 2: refuses published LEKKI_VAULT_KEY default', () => {
 test('Batch 2: require helpers return the configured value', () => {
   assert.equal(requireStaffTokenSecret(ok), ok.STAFF_TOKEN_SECRET);
   assert.equal(requireVaultKey(ok), ok.LEKKI_VAULT_KEY);
+});
+
+test('Pilot POS: requirePilotPosWebhookSecret fails closed when unset/short', () => {
+  assert.throws(() => requirePilotPosWebhookSecret({}), /PILOT_POS_WEBHOOK_SECRET/);
+  assert.throws(
+    () => requirePilotPosWebhookSecret({ PILOT_POS_WEBHOOK_SECRET: 'too-short' }),
+    /PILOT_POS_WEBHOOK_SECRET/,
+  );
+  assert.equal(
+    requirePilotPosWebhookSecret({
+      PILOT_POS_WEBHOOK_SECRET: 'long-enough-pilot-hook-secret',
+    }),
+    'long-enough-pilot-hook-secret',
+  );
 });

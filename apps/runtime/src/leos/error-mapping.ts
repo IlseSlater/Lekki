@@ -2,6 +2,7 @@ import {
   InvalidParticipantError,
   MissingFieldError,
   PaymentConflictError,
+  SessionNotActiveError,
 } from './domain-errors';
 import { NothingLeftToPayError } from './payment-invariants';
 
@@ -58,6 +59,14 @@ export function mapDomainError(err: unknown): MappedError {
       status: 409,
       code: 'payment_conflict',
       message: 'This visit changed while you were paying.',
+    };
+  }
+
+  if (err instanceof SessionNotActiveError) {
+    return {
+      status: 409,
+      code: 'session_not_active',
+      message: 'This visit is no longer open.',
     };
   }
 

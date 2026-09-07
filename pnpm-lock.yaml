@@ -11,6 +11,9 @@ importers:
       '@lekki/connector-payfast':
         specifier: workspace:*
         version: link:connectors/payfast
+      '@lekki/connector-pilot-pos':
+        specifier: workspace:*
+        version: link:connectors/pilot-pos
       '@lekki/pack-airport':
         specifier: workspace:*
         version: link:packs/airport
@@ -47,6 +50,9 @@ importers:
       '@lekki/connector-payfast':
         specifier: workspace:*
         version: link:../../connectors/payfast
+      '@lekki/connector-pilot-pos':
+        specifier: workspace:*
+        version: link:../../connectors/pilot-pos
       '@lekki/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
@@ -242,6 +248,12 @@ importers:
       '@lekki/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+    devDependencies:
+      typescript:
+        specifier: ^5.8.3
+        version: 5.8.3
+
+  connectors/pilot-pos:
     devDependencies:
       typescript:
         specifier: ^5.8.3

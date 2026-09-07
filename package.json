@@ -27,6 +27,7 @@
   },
   "devDependencies": {
     "@lekki/connector-payfast": "workspace:*",
+    "@lekki/connector-pilot-pos": "workspace:*",
     "@lekki/pack-airport": "workspace:*",
     "@lekki/pack-festival": "workspace:*",
     "@lekki/pack-healthcare": "workspace:*",

@@ -4,6 +4,7 @@ import {
   InvalidParticipantError,
   MissingFieldError,
   PaymentConflictError,
+  SessionNotActiveError,
 } from './domain-errors';
 import { mapDomainError } from './error-mapping';
 import { NothingLeftToPayError } from './payment-invariants';
@@ -31,6 +32,12 @@ test('row 5: a concurrent payment conflict maps to 409', () => {
   const mapped = mapDomainError(new PaymentConflictError());
   assert.equal(mapped.status, 409);
   assert.equal(mapped.code, 'payment_conflict');
+});
+
+test('POS ingress: inactive session maps to 409', () => {
+  const mapped = mapDomainError(new SessionNotActiveError());
+  assert.equal(mapped.status, 409);
+  assert.equal(mapped.code, 'session_not_active');
 });
 
 test('an unknown error maps to 500 and leaks no internals', () => {

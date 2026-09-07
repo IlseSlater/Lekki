@@ -34,3 +34,11 @@ export class PaymentConflictError extends Error {
     this.name = 'PaymentConflictError';
   }
 }
+
+/** POS / staff tried to mutate a visit that has already left the floor. */
+export class SessionNotActiveError extends Error {
+  constructor(message = 'Session is no longer active') {
+    super(message);
+    this.name = 'SessionNotActiveError';
+  }
+}

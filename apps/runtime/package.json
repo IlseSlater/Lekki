@@ -17,6 +17,7 @@
   "dependencies": {
     "@lekki/connector-manual-payment": "workspace:*",
     "@lekki/connector-payfast": "workspace:*",
+    "@lekki/connector-pilot-pos": "workspace:*",
     "@lekki/contracts": "workspace:*",
     "@lekki/domain": "workspace:*",
     "@lekki/pack-airport": "workspace:*",

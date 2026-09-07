@@ -27,7 +27,13 @@ import {
   settlementCapacityAction,
 } from './payment-session-cap';
 import { equalShareForParticipant } from './equal-share-candidates';
-import { MissingFieldError, PaymentConflictError } from './domain-errors';
+import { MissingFieldError, PaymentConflictError, SessionNotActiveError } from './domain-errors';
+import {
+  assertExternalLineInput,
+  externalLineBillMinorDelta,
+  externalLineTotalMajor,
+  type ExternalLineOrigin,
+} from './append-external-line';
 import {
   assertClaimLinesAllowed,
   resolveParticipantBySecret,
@@ -439,6 +445,148 @@ export class LeosService {
     });
 
     return { transactionId: aggregate.id, fulfilments: fulfilments.value };
+  }
+
+  /**
+   * POS ingress — idempotent append of a till-punched line onto an open visit.
+   * Does not create Fulfilment tickets: Pilot already owns kitchen for that punch.
+   * Guest phone updates via TransactionCreated → existing Socket.IO rooms.
+   */
+  async appendExternalLine(input: {
+    sessionId: string;
+    externalRef: string;
+    externalCheckId: string;
+    catalogueItemId?: string | null;
+    labelFallback: string;
+    quantity: number;
+    unitPrice: number;
+    origin?: ExternalLineOrigin;
+  }): Promise<{ transactionId: string; duplicated: boolean }> {
+    assertExternalLineInput(input);
+    const origin: ExternalLineOrigin = input.origin ?? 'staff_pos';
+    const externalRef = input.externalRef.trim();
+    const externalCheckId = input.externalCheckId.trim();
+    const label = input.labelFallback.trim();
+    const catalogueItemId = input.catalogueItemId?.trim() || null;
+
+    const existing = await this.prisma.transactionLine.findUnique({
+      where: { externalRef },
+      select: { transactionId: true },
+    });
+    if (existing) {
+      return { transactionId: existing.transactionId, duplicated: true };
+    }
+
+    const totalMajor = externalLineTotalMajor(input.quantity, input.unitPrice);
+    const billDeltaMinor = externalLineBillMinorDelta(input.quantity, input.unitPrice);
+    const txId = newId('tx');
+    const lineId = newId('txl');
+    let duplicated = false;
+    let transactionId = txId;
+
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        const session = await tx.experienceSession.findUnique({
+          where: { id: input.sessionId.trim() },
+          select: {
+            id: true,
+            venueId: true,
+            organisationId: true,
+            status: true,
+            correlationId: true,
+          },
+        });
+        if (!session || session.status === 'completed' || session.status === 'archived') {
+          throw new SessionNotActiveError();
+        }
+
+        // Re-check inside the txn in case two webhooks raced past the fast path.
+        const raced = await tx.transactionLine.findUnique({
+          where: { externalRef },
+          select: { transactionId: true },
+        });
+        if (raced) {
+          duplicated = true;
+          transactionId = raced.transactionId;
+          return;
+        }
+
+        await tx.transaction.create({
+          data: {
+            id: txId,
+            sessionId: session.id,
+            organisationId: session.organisationId,
+            status: 'committed',
+            currency: 'ZAR',
+            total: totalMajor,
+            lines: {
+              create: {
+                id: lineId,
+                catalogueItemId,
+                label,
+                quantity: input.quantity,
+                unitPrice: input.unitPrice,
+                routingTags: [],
+                origin,
+                externalRef,
+                externalCheckId,
+              },
+            },
+          },
+        });
+
+        await tx.experienceSession.update({
+          where: { id: session.id },
+          data: {
+            billMinor: { increment: billDeltaMinor },
+            version: { increment: 1 },
+          },
+        });
+
+        await this.outbox.append(
+          this.envelope(
+            'TransactionCreated',
+            session.organisationId,
+            session.venueId,
+            session.correlationId,
+            {
+              transactionId: txId,
+              total: totalMajor,
+              sessionId: session.id,
+              origin,
+              externalCheckId,
+              lines: [
+                {
+                  id: lineId,
+                  label,
+                  quantity: input.quantity,
+                  unitPrice: input.unitPrice,
+                  isUnmapped: catalogueItemId === null,
+                },
+              ],
+            },
+          ),
+          tx,
+        );
+      });
+    } catch (err) {
+      // Concurrent webhook: unique(externalRef) won the race.
+      if (
+        err &&
+        typeof err === 'object' &&
+        'code' in err &&
+        (err as { code?: string }).code === 'P2002'
+      ) {
+        const again = await this.prisma.transactionLine.findUnique({
+          where: { externalRef },
+          select: { transactionId: true },
+        });
+        if (again) return { transactionId: again.transactionId, duplicated: true };
+      }
+      throw err;
+    }
+
+    return { transactionId, duplicated };
   }
 
   /**

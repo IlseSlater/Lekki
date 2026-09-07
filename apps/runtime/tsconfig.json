@@ -18,6 +18,7 @@
     { "path": "../../packages/shared" },
     { "path": "../../packs/restaurant" },
     { "path": "../../connectors/manual-payment" },
-    { "path": "../../connectors/payfast" }
+    { "path": "../../connectors/payfast" },
+    { "path": "../../connectors/pilot-pos" }
   ]
 }

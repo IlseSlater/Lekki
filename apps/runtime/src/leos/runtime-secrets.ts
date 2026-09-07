@@ -9,6 +9,7 @@ export const FORBIDDEN_VAULT_KEY = 'lekki-dev-vault-key';
 export type RuntimeSecretEnv = {
   STAFF_TOKEN_SECRET?: string;
   LEKKI_VAULT_KEY?: string;
+  PILOT_POS_WEBHOOK_SECRET?: string;
 };
 
 function readStaff(env: RuntimeSecretEnv): string {
@@ -44,4 +45,20 @@ export function requireVaultKey(env: RuntimeSecretEnv = process.env): string {
     );
   }
   return vault;
+}
+
+/**
+ * Shared secret for Pilot POS webhooks (Bearer or HMAC).
+ * Required whenever the Pilot ingress endpoint is used — fail closed.
+ */
+export function requirePilotPosWebhookSecret(
+  env: RuntimeSecretEnv = process.env,
+): string {
+  const secret = env.PILOT_POS_WEBHOOK_SECRET?.trim() ?? '';
+  if (!secret || secret.length < 16) {
+    throw new Error(
+      'PILOT_POS_WEBHOOK_SECRET must be set to a strong value (16+ chars; see .env.example)',
+    );
+  }
+  return secret;
 }

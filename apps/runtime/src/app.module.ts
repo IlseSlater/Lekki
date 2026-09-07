@@ -8,6 +8,7 @@ import { SessionController } from './http/session.controller';
 import { TransactionController } from './http/transaction.controller';
 import { FulfilmentController } from './http/fulfilment.controller';
 import { PaymentController } from './http/payment.controller';
+import { PilotPosController } from './http/pilot-pos.controller';
 import { CatalogueController } from './http/catalogue.controller';
 import { IdentityController } from './http/identity.controller';
 import { OauthController } from './http/oauth.controller';
@@ -44,6 +45,7 @@ import { StaffAuthModule } from './staff-auth/staff-auth.module';
     TransactionController,
     FulfilmentController,
     PaymentController,
+    PilotPosController,
     CatalogueController,
     IdentityController,
     OauthController,
