@@ -15,8 +15,8 @@ import { LeosApiService } from '../services/leos-api.service';
 type PayOption = { key: GuestDesignKey | 'card' | 'applePay' | 'googlePay'; label: string };
 
 /**
- * Setup — How guests pay.
- * PayFast credentials + guest payment toggles; Continue only when connector is active.
+ * Setup — How guests pay (thin gateway).
+ * Guest checkout toggles here; PayFast credentials live under Integrations.
  */
 @Component({
   standalone: true,
@@ -29,82 +29,17 @@ type PayOption = { key: GuestDesignKey | 'card' | 'applePay' | 'googlePay'; labe
         }
 
         <section class="pay-section">
-          <h3 class="pay-section__title">PayFast</h3>
-          <p class="pay-section__hint">
-            Your venue receives payments. LEOS takes a subscription fee only.
+          <h3 class="pay-section__title">Payment connection</h3>
+          <p
+            class="pay-section__status"
+            [class.pay-section__status--ok]="payfastStatus === 'active'"
+            role="status"
+          >
+            {{ payfastStatusLabel }}
           </p>
-          @if (payfastStatus === 'active') {
-            <p class="pay-section__status pay-section__status--ok" role="status">
-              PayFast is live{{ payfastMerchantId ? ' · ' + payfastMerchantId : '' }}
-            </p>
-          } @else if (payfastStatus === 'verified') {
-            <p class="pay-section__status" role="status">Credentials verified — activate to go live</p>
-          }
-
-          <label class="pay-field">
-            <span class="pay-field__label">Environment</span>
-            <select class="leos-field__input" [(ngModel)]="payfastEnvironment" [disabled]="payfastBusy">
-              <option value="sandbox">Sandbox (test)</option>
-              <option value="production">Production</option>
-            </select>
-          </label>
-          <label class="pay-field">
-            <span class="pay-field__label">Merchant ID</span>
-            <input
-              class="leos-field__input"
-              autocomplete="off"
-              [(ngModel)]="merchantId"
-              [disabled]="payfastBusy"
-            />
-          </label>
-          <label class="pay-field">
-            <span class="pay-field__label">Merchant key</span>
-            <input
-              class="leos-field__input"
-              type="password"
-              autocomplete="new-password"
-              [(ngModel)]="merchantKey"
-              [disabled]="payfastBusy"
-              [placeholder]="passphraseSet ? 'Leave blank to keep saved key' : ''"
-            />
-          </label>
-          <label class="pay-field">
-            <span class="pay-field__label">Passphrase</span>
-            <input
-              class="leos-field__input"
-              type="password"
-              autocomplete="new-password"
-              [(ngModel)]="passphrase"
-              [disabled]="payfastBusy"
-              [placeholder]="passphraseSet ? 'Leave blank to keep saved passphrase' : 'Required for ITN verification'"
-            />
-          </label>
-
-          @if (payfastError) {
-            <p class="pay-section__error" role="alert">{{ payfastError }}</p>
-          }
-          @if (payfastMessage) {
-            <p class="pay-section__status pay-section__status--ok" role="status">{{ payfastMessage }}</p>
-          }
-
-          <div class="pay-section__actions">
-            <button
-              type="button"
-              class="leos-btn leos-btn--secondary"
-              [disabled]="payfastBusy || !canTestPayfast"
-              (click)="testPayfast()"
-            >
-              {{ payfastBusy ? 'Testing…' : 'Test connection' }}
-            </button>
-            <button
-              type="button"
-              class="leos-btn leos-btn--primary"
-              [disabled]="payfastBusy || payfastStatus !== 'verified'"
-              (click)="activatePayfast()"
-            >
-              Activate PayFast
-            </button>
-          </div>
+          <a class="pay-section__link" routerLink="/studio/integrations/payfast"
+            >Manage PayFast integration</a
+          >
         </section>
 
         <section class="pay-section">
@@ -133,7 +68,7 @@ type PayOption = { key: GuestDesignKey | 'card' | 'applePay' | 'googlePay'; labe
         [detail]="venueName"
         [ready]="canContinue"
         okLabel="Looks good"
-        waiting="Connect and activate PayFast, then turn on at least one checkout method"
+        waiting="Connect PayFast, then turn on at least one checkout method"
       />
 
       <a escape class="leos-btn leos-btn--secondary" routerLink="/studio/setup/places">Back</a>
@@ -164,13 +99,8 @@ type PayOption = { key: GuestDesignKey | 'card' | 'applePay' | 'googlePay'; labe
         text-transform: uppercase;
         color: var(--studio-ink-tertiary, #8f96a3);
       }
-      .pay-section__hint {
-        margin: 0 0 0.85rem;
-        font-size: 0.875rem;
-        color: var(--studio-ink-secondary, #6b7280);
-      }
       .pay-section__status {
-        margin: 0 0 0.75rem;
+        margin: 0 0 0.5rem;
         font-size: 0.875rem;
         font-weight: 600;
         color: var(--studio-ink-secondary, #6b7280);
@@ -178,26 +108,14 @@ type PayOption = { key: GuestDesignKey | 'card' | 'applePay' | 'googlePay'; labe
       .pay-section__status--ok {
         color: #4f8a6b;
       }
-      .pay-section__error {
-        margin: 0 0 0.75rem;
+      .pay-section__link {
         font-size: 0.875rem;
-        color: #b42318;
-      }
-      .pay-section__actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-        margin-top: 0.75rem;
-      }
-      .pay-field {
-        display: grid;
-        gap: 0.35rem;
-        margin-bottom: 0.65rem;
-      }
-      .pay-field__label {
-        font-size: 0.8125rem;
         font-weight: 600;
-        color: var(--studio-ink, #1b2230);
+        color: #d7a14a;
+        text-decoration: none;
+      }
+      .pay-section__link:hover {
+        text-decoration: underline;
       }
       .pay-list {
         list-style: none;
@@ -244,19 +162,11 @@ export class SetupPaymentsPageComponent implements OnInit, OnDestroy {
   applePay = true;
   googlePay = true;
   savedFlash = false;
-
-  merchantId = '';
-  merchantKey = '';
-  passphrase = '';
-  payfastEnvironment: 'sandbox' | 'production' = 'sandbox';
   payfastStatus: 'none' | 'verified' | 'active' = 'none';
   payfastMerchantId = '';
-  passphraseSet = false;
-  payfastBusy = false;
-  payfastError = '';
-  payfastMessage = '';
 
   readonly options: PayOption[] = [
+    { key: 'payAtTable', label: 'Pay at table' },
     { key: 'card', label: 'Card' },
     { key: 'applePay', label: 'Apple Pay' },
     { key: 'googlePay', label: 'Google Pay' },
@@ -264,23 +174,28 @@ export class SetupPaymentsPageComponent implements OnInit, OnDestroy {
     { key: 'splitBill', label: 'Split bill' },
   ];
 
-  get canTestPayfast() {
-    const id = this.merchantId.trim();
-    const key = this.merchantKey.trim();
-    const phrase = this.passphrase.trim();
-    if (!id) return false;
-    if (!key && !this.passphraseSet) return false;
-    if (!phrase && !this.passphraseSet) return false;
-    return true;
+  get payfastStatusLabel() {
+    if (this.payfastStatus === 'active') {
+      return this.payfastMerchantId
+        ? `PayFast: Active · ${this.payfastMerchantId}`
+        : 'PayFast: Active';
+    }
+    if (this.payfastStatus === 'verified') return 'PayFast: Verified — activate in Integrations';
+    return 'PayFast: Not configured';
   }
 
   get canContinue() {
-    return this.payfastStatus === 'active' && (this.card || this.applePay || this.googlePay);
+    const methodsOk = this.card || this.applePay || this.googlePay;
+    if (this.design.payAtTable) {
+      return this.payfastStatus === 'active' && methodsOk;
+    }
+    return methodsOk;
   }
 
   get confidenceFact() {
     const labels: string[] = [];
     if (this.payfastStatus === 'active') labels.push('PayFast live');
+    if (this.design.payAtTable) labels.push('Pay at table');
     if (this.card) labels.push('Card');
     if (this.applePay) labels.push('Apple Pay');
     if (this.googlePay) labels.push('Google Pay');
@@ -323,60 +238,6 @@ export class SetupPaymentsPageComponent implements OnInit, OnDestroy {
     this.scheduleSave();
   }
 
-  testPayfast() {
-    this.payfastBusy = true;
-    this.payfastError = '';
-    this.payfastMessage = '';
-    this.api
-      .testPaymentConnection({
-        connectorId: 'payfast',
-        environment: this.payfastEnvironment,
-        merchantId: this.merchantId.trim(),
-        ...(this.merchantKey.trim() ? { merchantKey: this.merchantKey.trim() } : {}),
-        ...(this.passphrase.trim() ? { passphrase: this.passphrase.trim() } : {}),
-      })
-      .subscribe({
-        next: (result) => {
-          this.payfastBusy = false;
-          this.payfastStatus = 'verified';
-          this.passphraseSet = true;
-          this.merchantKey = '';
-          this.passphrase = '';
-          this.payfastMessage = result.businessName
-            ? `${result.businessName} verified`
-            : 'Credentials verified';
-          this.loadInstall();
-        },
-        error: (err) => {
-          this.payfastBusy = false;
-          this.payfastError =
-            err?.error?.message || 'Could not verify PayFast — check your dashboard credentials';
-        },
-      });
-  }
-
-  activatePayfast() {
-    this.payfastBusy = true;
-    this.payfastError = '';
-    this.payfastMessage = '';
-    this.api.activatePaymentConnector().subscribe({
-      next: () => {
-        this.payfastBusy = false;
-        this.payfastStatus = 'active';
-        this.payfastMessage = 'PayFast is live — guests can pay';
-        this.card = true;
-        this.applePay = true;
-        this.googlePay = true;
-        this.scheduleSave();
-        this.loadInstall();
-      },
-      error: (err) => {
-        this.payfastBusy = false;
-        this.payfastError = err?.error?.message || 'Could not activate PayFast';
-      },
-    });
-  }
-
   continue() {
     this.persistPayMethods(true);
     void this.router.navigate(['/studio/setup/golive']);
@@ -389,11 +250,6 @@ export class SetupPaymentsPageComponent implements OnInit, OnDestroy {
           this.payfastStatus = 'none';
           return;
         }
-        if (install.merchantId) this.merchantId = install.merchantId;
-        if (install.environment === 'production' || install.environment === 'sandbox') {
-          this.payfastEnvironment = install.environment;
-        }
-        this.passphraseSet = !!install.passphraseSet;
         this.payfastMerchantId = install.merchantId?.trim() || '';
         if (install.status === 'active') {
           this.payfastStatus = 'active';

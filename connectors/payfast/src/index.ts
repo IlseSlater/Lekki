@@ -241,6 +241,12 @@ export function createPayFastPaymentBinding(
 }
 
 export { generateSignature, verifyItnSignature, pfEncode } from './signature';
+export { generateApiSignature } from './api-signature';
+export {
+  probeMerchantCredentials,
+  type PayFastProbeInput,
+  type PayFastProbeResult,
+} from './probe';
 export {
   confirmItnWithPayFast,
   formatPayFastAmount,

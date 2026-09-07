@@ -78,6 +78,28 @@ model PosSkuMapping {
   @@index([venueId])
 }
 
+/// Studio POS connector install (Pilot first). Credentials live in SecretsVaultEntry.
+model PosConnectorInstall {
+  id                 String   @id
+  organisationId     String
+  venueId            String
+  /// pilot (future connectors share this table)
+  connectorId        String   @default("pilot")
+  /// draft | active
+  status             String   @default("draft")
+  /// lekki | pos — who owns guest settlement
+  settlementOwner    String   @default("lekki")
+  /// ledger (hybrid) — POS owns till; LEOS owns experience
+  posOwnership       String   @default("ledger")
+  apiKeySecretRef    String?
+  webhookSecretRef   String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([venueId, connectorId])
+  @@index([organisationId, venueId])
+}
+
 model EntryToken {
   token           String   @id
   organisationId  String

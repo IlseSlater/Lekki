@@ -600,6 +600,106 @@ export class LeosApiService {
     }>(`${this.api}/setup/payments/activate`, {}, { headers: this.staffAuthHeaders() });
   }
 
+  /** Studio POS — Pilot install status for venue. */
+  getPosInstall(venueId: string) {
+    return this.http.get<{
+      status: string;
+      connectorId: string;
+      settlementOwner: 'lekki' | 'pos' | string;
+      posOwnership: string;
+      apiKeySet: boolean;
+      webhookSecretSet: boolean;
+      webhookNotifyPath: string;
+    }>(`${this.api}/studio/pos/venue/${venueId}/install`, {
+      headers: this.staffAuthHeaders(),
+    });
+  }
+
+  activatePosPilot(
+    venueId: string,
+    body: {
+      apiKey?: string;
+      settlementOwner?: 'lekki' | 'pos';
+      posOwnership?: string;
+    },
+  ) {
+    return this.http.post<{
+      status: string;
+      settlementOwner: string;
+      posOwnership: string;
+      webhookSecret: string;
+      webhookNotifyPath: string;
+      message: string;
+    }>(`${this.api}/studio/pos/venue/${venueId}/activate`, body, {
+      headers: this.staffAuthHeaders(),
+    });
+  }
+
+  getPosPlaceWorkspace(venueId: string) {
+    return this.http.get<{
+      rows: Array<{
+        physicalContextId: string;
+        label: string;
+        type: string;
+        mappingId: string | null;
+        externalPlaceId: string;
+      }>;
+    }>(`${this.api}/studio/pos/venue/${venueId}/place-workspace`, {
+      headers: this.staffAuthHeaders(),
+    });
+  }
+
+  getPosSkuWorkspace(venueId: string) {
+    return this.http.get<{
+      rows: Array<{
+        catalogueItemId: string;
+        label: string;
+        category: string;
+        unitPrice: number;
+        mappingId: string | null;
+        externalSkuId: string;
+      }>;
+    }>(`${this.api}/studio/pos/venue/${venueId}/sku-workspace`, {
+      headers: this.staffAuthHeaders(),
+    });
+  }
+
+  upsertPosPlace(
+    venueId: string,
+    body: { physicalContextId: string; externalPlaceId: string },
+  ) {
+    return this.http.put<{ id: string; externalPlaceId: string }>(
+      `${this.api}/studio/pos/venue/${venueId}/places`,
+      body,
+      { headers: this.staffAuthHeaders() },
+    );
+  }
+
+  deletePosPlace(venueId: string, mappingId: string) {
+    return this.http.delete(
+      `${this.api}/studio/pos/venue/${venueId}/places/${mappingId}`,
+      { headers: this.staffAuthHeaders() },
+    );
+  }
+
+  upsertPosSku(
+    venueId: string,
+    body: { catalogueItemId: string; externalSkuId: string },
+  ) {
+    return this.http.put<{ id: string; externalSkuId: string }>(
+      `${this.api}/studio/pos/venue/${venueId}/skus`,
+      body,
+      { headers: this.staffAuthHeaders() },
+    );
+  }
+
+  deletePosSku(venueId: string, mappingId: string) {
+    return this.http.delete(
+      `${this.api}/studio/pos/venue/${venueId}/skus/${mappingId}`,
+      { headers: this.staffAuthHeaders() },
+    );
+  }
+
   /** Grow Org Memory — yesterday / wait / calm trading breath. */
   getGrowOverview(token?: string) {
     return this.http.get<{

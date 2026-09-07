@@ -147,6 +147,23 @@ export const routes: Routes = [
         ],
       },
       {
+        path: 'integrations',
+        loadComponent: () =>
+          import('./pages/setup-integrations.page').then(
+            (m) => m.SetupIntegrationsPageComponent,
+          ),
+      },
+      {
+        path: 'integrations/payfast',
+        loadComponent: () =>
+          import('./pages/setup-payfast.page').then((m) => m.SetupPayfastPageComponent),
+      },
+      {
+        path: 'integrations/pilot',
+        loadComponent: () =>
+          import('./pages/setup-pilot.page').then((m) => m.SetupPilotPageComponent),
+      },
+      {
         path: 'menu',
         loadComponent: () =>
           import('./pages/studio-menu.page').then((m) => m.StudioMenuPageComponent),

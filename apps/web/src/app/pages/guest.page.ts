@@ -44,6 +44,7 @@ import { resolveAllowPay } from '../studio/pay-continuity';
 import { resolveAllowHelp } from '../studio/help-continuity';
 import { livePayCtaLabel, liveReadyLead } from '../studio/ready-pay-continuity';
 import { composeLeaveOpenCopy } from '../studio/leave-open-continuity';
+import { hasOpenBalance, isCleared, isGreaterMinor, toMinor, fromMinor } from '../leos/money';
 import { composeStillInBanner } from '../studio/mid-visit-resume';
 import { guestPlaceSpoken } from '../studio/place-continuity';
 import {
@@ -494,11 +495,11 @@ function equalShareState(
               <p class="leos-leave-moment__title">Equal share is paid</p>
               <p class="leos-leave-moment__thanks">
                 Thanks — you’re settled for your part.
-                @if ((visitRemaining ?? 0) > 0.001) {
+                @if (visitHasOpenBalance) {
                   The rest of the visit can stay open for others, or you can cover it if you like.
                 }
               </p>
-              @if ((visitRemaining ?? 0) > 0.001) {
+              @if (visitHasOpenBalance) {
                 <p class="leos-muted" style="margin-top:0.75rem;">
                   Visit still open: {{ visitRemaining | leosMoney: 'ZAR' }}
                 </p>
@@ -569,7 +570,7 @@ function equalShareState(
         @if (phase === 'leave') {
           <div class="leos-leave-confirm" role="dialog" aria-labelledby="leave-title">
             <h2 id="leave-title" class="leos-leave-confirm__title">{{ leaveOpenCopy.title }}</h2>
-            @if (leaveOpenCopy.showVisitOpen && (visitRemaining ?? 0) > 0.001) {
+            @if (leaveOpenCopy.showVisitOpen && visitHasOpenBalance) {
               <p class="leos-muted" style="margin-top:0.75rem;">
                 Visit still open: {{ visitRemaining | leosMoney: 'ZAR' }}
               </p>
@@ -1103,19 +1104,23 @@ export class GuestPageComponent implements OnInit, OnDestroy {
     const mine = this.mineRemaining;
     const visit = this.visitRemaining;
     const equal = this.equalRemaining;
-    if (equal != null && equal <= 0.001 && visit != null && visit > 0.001) {
+    if (equal != null && isCleared(equal) && hasOpenBalance(visit)) {
       return 'Your equal share is paid — you can still cover the visit if you like.';
     }
-    if (mine != null && visit != null && mine <= 0.001 && visit > 0.001) {
+    if (mine != null && visit != null && isCleared(mine) && hasOpenBalance(visit)) {
       return 'Equal share is paid — you can still cover the visit if you like.';
     }
-    if (equal != null && equal > 0.001 && visit != null && visit > equal + 0.001) {
+    if (equal != null && hasOpenBalance(equal) && visit != null && isGreaterMinor(visit, equal)) {
       return 'Pay an equal share, your items, or the whole visit — nothing until you confirm.';
     }
-    if (mine != null && visit != null && mine > 0.001 && visit > mine + 0.001) {
+    if (mine != null && visit != null && hasOpenBalance(mine) && isGreaterMinor(visit, mine)) {
       return 'Pay for your items, or the whole visit — nothing until you confirm.';
     }
     return 'Nothing is charged until you confirm.';
+  }
+
+  get visitHasOpenBalance(): boolean {
+    return hasOpenBalance(this.visitRemaining);
   }
 
   get lead(): string {
@@ -1132,7 +1137,7 @@ export class GuestPageComponent implements OnInit, OnDestroy {
               `We’ve got your ${txn} — we’ll let you know when it’s ready.`;
       case 'payment':
         if (this.shareSettledMoment) {
-          return (this.visitRemaining ?? 0) > 0.001
+          return this.visitHasOpenBalance
             ? 'Others can still settle the visit — or you can cover it.'
             : 'You’re all set for this visit.';
         }
@@ -1903,10 +1908,12 @@ export class GuestPageComponent implements OnInit, OnDestroy {
             0,
           );
         this.receiptPaidTotal = paidToward;
-        const visitOpen = Math.max(0, Math.round((openTotal - paidToward) * 100) / 100);
+        const visitOpen = Math.max(0, fromMinor(toMinor(openTotal) - toMinor(paidToward)));
         const mineOpen = Math.max(
           0,
-          Math.round(Math.min(visitOpen, mineOrdered - minePaidToward) * 100) / 100,
+          fromMinor(
+            Math.min(toMinor(visitOpen), toMinor(mineOrdered) - toMinor(minePaidToward)),
+          ),
         );
         const paidEqualIds = new Set(
           completedPays
@@ -1915,30 +1922,30 @@ export class GuestPageComponent implements OnInit, OnDestroy {
         );
         const equal = equalShareState(guests, paidEqualIds, myPart);
         let equalOpen: number | null = null;
-        if (equal.distinct >= 2 && visitOpen > 0.001 && myPart) {
+        if (equal.distinct >= 2 && hasOpenBalance(visitOpen) && myPart) {
           if (equal.minePaid) {
             equalOpen = 0;
           } else {
             const unpaidSlots = Math.max(1, equal.unpaid);
-            equalOpen = Math.min(
-              visitOpen,
-              Math.round((visitOpen / unpaidSlots) * 100) / 100,
+            equalOpen = fromMinor(
+              Math.min(toMinor(visitOpen), Math.round(toMinor(visitOpen) / unpaidSlots)),
             );
           }
         }
         this.visitRemaining = visitOrdered > 0 ? visitOpen : null;
         this.mineRemaining = mineOrdered > 0 ? mineOpen : null;
         this.equalRemaining = equalOpen;
-        this.balanceDue = visitOpen > 0.001 && (this.lastOrderTotal > 0 || fulfilments.length > 0);
+        this.balanceDue =
+          hasOpenBalance(visitOpen) && (this.lastOrderTotal > 0 || fulfilments.length > 0);
         this.rebuildTimeline();
-        if (this.awaitingPaymentConfirm && visitOpen <= 0.001) {
+        if (this.awaitingPaymentConfirm && isCleared(visitOpen)) {
           this.awaitingPaymentConfirm = false;
           this.message = 'You’re all set';
           this.phase = 'receipt';
         }
         if (this.pendingMineSettleCheck) {
           this.pendingMineSettleCheck = false;
-          if (visitOpen <= 0.001) {
+          if (isCleared(visitOpen)) {
             this.message = 'You’re all set';
             this.balanceDue = false;
             this.shareSettledMoment = false;
@@ -1952,14 +1959,14 @@ export class GuestPageComponent implements OnInit, OnDestroy {
         // After mine/equal share is covered, keep guest on visit for the remainder.
         if (this.phase === 'payment' && this.bill && !this.shareSettledMoment) {
           if (
-            (mineOpen <= 0.001 && this.bill.scope === 'mine') ||
-            (equalOpen != null && equalOpen <= 0.001 && this.bill.scope === 'equal')
+            (isCleared(mineOpen) && this.bill.scope === 'mine') ||
+            (equalOpen != null && isCleared(equalOpen) && this.bill.scope === 'equal')
           ) {
-            if (visitOpen > 0.001) this.bill.setScope('visit');
+            if (hasOpenBalance(visitOpen)) this.bill.setScope('visit');
           } else if (
             this.preferMineScope &&
-            mineOpen > 0.001 &&
-            visitOpen > mineOpen + 0.001
+            hasOpenBalance(mineOpen) &&
+            isGreaterMinor(visitOpen, mineOpen)
           ) {
             this.bill.setScope('mine');
             this.preferMineScope = false;

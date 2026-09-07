@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LeosMoneyPipe } from './leos-money.pipe';
+import { hasOpenBalance, isCleared, fromMinor, toMinor } from './money';
 
 export type BillLine = {
   label: string;
@@ -53,7 +54,7 @@ const TIP_OPTIONS = [0, 10, 15, 18, 20];
             [class.gb__scope-btn--done]="mineSharePaid"
             [class.gb__scope-btn--pulse]="mineScopePulse"
             [attr.aria-selected]="scope === 'mine'"
-            [disabled]="mineSharePaid && visitSubtotal > 0.001"
+            [disabled]="mineSharePaid && visitHasOpenBalance"
             (click)="setScope('mine')"
           >
             {{ mineSharePaid ? 'Mine · paid' : 'Mine' }}
@@ -67,7 +68,7 @@ const TIP_OPTIONS = [0, 10, 15, 18, 20];
               [class.gb__scope-btn--on]="scope === 'equal'"
               [class.gb__scope-btn--done]="equalSharePaid"
               [attr.aria-selected]="scope === 'equal'"
-              [disabled]="equalSharePaid && visitSubtotal > 0.001"
+              [disabled]="equalSharePaid && visitHasOpenBalance"
               (click)="setScope('equal')"
             >
               {{ equalSharePaid ? 'Equal · paid' : 'Equal share' }}
@@ -75,10 +76,10 @@ const TIP_OPTIONS = [0, 10, 15, 18, 20];
             </button>
           }
         </div>
-        @if (mineSharePaid && visitSubtotal > 0.001 && scope !== 'equal') {
+        @if (mineSharePaid && visitHasOpenBalance && scope !== 'equal') {
           <p class="gb__share-note">Your share is paid — you can still cover the visit if you like.</p>
         }
-        @if (equalSharePaid && visitSubtotal > 0.001) {
+        @if (equalSharePaid && visitHasOpenBalance) {
           <p class="gb__share-note">Your equal share is paid — others can settle the rest, or you can cover the visit.</p>
         }
       }
@@ -510,7 +511,11 @@ export class GuestBillComponent {
   customTipAmount = 0;
 
   get showEqualShare(): boolean {
-    return this.equalRemaining != null && this.visitSubtotal > 0.001;
+    return this.equalRemaining != null && this.visitHasOpenBalance;
+  }
+
+  get visitHasOpenBalance(): boolean {
+    return hasOpenBalance(this.visitSubtotal);
   }
 
   get showUnclaimedHint(): boolean {
@@ -575,11 +580,11 @@ export class GuestBillComponent {
   }
 
   get mineSharePaid(): boolean {
-    return this.mineSubtotal <= 0.001 && this.sum(this.mineLines ?? []) > 0.001;
+    return isCleared(this.mineSubtotal) && hasOpenBalance(this.sum(this.mineLines ?? []));
   }
 
   get equalSharePaid(): boolean {
-    return this.showEqualShare && this.equalSubtotal <= 0.001;
+    return this.showEqualShare && isCleared(this.equalSubtotal);
   }
 
   get subtotal(): number {
@@ -591,16 +596,17 @@ export class GuestBillComponent {
   get tipAmount(): number {
     if (!this.allowTip) return 0;
     if (this.customTip) return Math.max(0, this.customTipAmount);
-    return Math.round(((this.subtotal * this.tipPercent) / 100) * 100) / 100;
+    // Percent tip in exact cents: round(subtotalMinor * pct / 100) → major.
+    return fromMinor(Math.round((toMinor(this.subtotal) * this.tipPercent) / 100));
   }
 
   get total(): number {
-    return Math.round((this.subtotal + this.tipAmount) * 100) / 100;
+    return fromMinor(toMinor(this.subtotal) + toMinor(this.tipAmount));
   }
 
   setScope(scope: BillScope) {
-    if (scope === 'mine' && this.mineSharePaid && this.visitSubtotal > 0.001) return;
-    if (scope === 'equal' && this.equalSharePaid && this.visitSubtotal > 0.001) return;
+    if (scope === 'mine' && this.mineSharePaid && this.visitHasOpenBalance) return;
+    if (scope === 'equal' && this.equalSharePaid && this.visitHasOpenBalance) return;
     if (scope === 'equal' && !this.showEqualShare) return;
     this.scope = scope;
     this.scopeChange.emit(scope);
@@ -625,7 +631,7 @@ export class GuestBillComponent {
   }
 
   private sum(lines: BillLine[]): number {
-    return Math.round(lines.reduce((n, l) => n + (Number(l.total) || 0), 0) * 100) / 100;
+    return fromMinor(lines.reduce((n, l) => n + toMinor(l.total), 0));
   }
 
   private emitMoney() {

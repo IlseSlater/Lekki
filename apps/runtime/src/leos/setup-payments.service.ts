@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { newId } from '@lekki/shared';
+import { probeMerchantCredentials } from '@lekki/connector-payfast';
 import { PrismaService } from '../prisma/prisma.service';
 import { LeosBootstrapService } from '../leos/leos-bootstrap.service';
 import { SecretsVaultService } from './secrets-vault.service';
@@ -188,12 +189,42 @@ export class SetupPaymentsService {
     if (body.connectorId !== 'payfast' && body.connectorId !== 'connector-payfast') {
       throw new BadRequestException('Only PayFast supports connection test in this release');
     }
-    const merchantId = (body.merchantId ?? '').trim();
-    const merchantKey = (body.merchantKey ?? '').trim();
+
+    const tenant = await this.resolveTenant(body);
+    const existing = await this.prisma.paymentConnectorInstall.findFirst({
+      where: {
+        organisationId: tenant.organisationId,
+        status: { in: ['draft', 'verified', 'active'] },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    const merchantId = (body.merchantId ?? existing?.merchantId ?? '').trim();
+    let merchantKey = (body.merchantKey ?? '').trim();
+    let passphrase = (body.passphrase ?? '').trim();
+
+    if (!merchantKey && existing?.merchantKeySecretRef) {
+      merchantKey =
+        (await this.vault.resolveSecret({
+          organisationId: tenant.organisationId,
+          venueId: tenant.venueId,
+          connectorId: 'connector-payfast',
+          secretRef: existing.merchantKeySecretRef,
+        })) ?? '';
+    }
+    if (!passphrase && existing?.passphraseSecretRef) {
+      passphrase =
+        (await this.vault.resolveSecret({
+          organisationId: tenant.organisationId,
+          venueId: tenant.venueId,
+          connectorId: 'connector-payfast',
+          secretRef: existing.passphraseSecretRef,
+        })) ?? '';
+    }
+
     if (!merchantId || !merchantKey) {
       throw new BadRequestException('Merchant ID and Merchant Key are required');
     }
-    const passphrase = (body.passphrase ?? '').trim();
     if (!passphrase) {
       throw new BadRequestException('PayFast passphrase is required — ITN cannot be verified without it');
     }
@@ -201,18 +232,29 @@ export class SetupPaymentsService {
       throw new BadRequestException('Credentials look incomplete — check your PayFast dashboard');
     }
 
+    const environment = body.environment ?? existing?.environment ?? 'sandbox';
+    const env =
+      environment === 'production' ? ('production' as const) : ('sandbox' as const);
+    const probe = await probeMerchantCredentials({
+      merchantId,
+      merchantKey,
+      passphrase,
+      environment: env,
+    });
+    if (!probe.ok) {
+      throw new BadRequestException(probe.reason);
+    }
+
     const lookup = {
       connected: true as const,
-      businessName:
-        body.environment === 'production' ? 'PayFast Merchant' : 'PayFast Sandbox Merchant',
+      businessName: probe.businessName,
       merchantId,
-      merchantStatus: 'Verified',
+      merchantStatus: probe.merchantStatus,
       country: 'ZA',
       currency: 'ZAR',
-      environment: body.environment ?? 'sandbox',
+      environment: probe.environment,
     };
 
-    const tenant = await this.resolveTenant(body);
     const merchantKeySecretRef = (
       await this.vault.storeSecret({
         organisationId: tenant.organisationId,
@@ -222,27 +264,22 @@ export class SetupPaymentsService {
         plaintext: merchantKey,
       })
     ).secretRef;
-    const passphraseSecretRef = body.passphrase?.trim()
-      ? (
-          await this.vault.storeSecret({
-            organisationId: tenant.organisationId,
-            venueId: tenant.venueId,
-            connectorId: 'connector-payfast',
-            secretKey: 'passphrase',
-            plaintext: body.passphrase,
-          })
-        ).secretRef
-      : null;
+    const passphraseSecretRef = (
+      await this.vault.storeSecret({
+        organisationId: tenant.organisationId,
+        venueId: tenant.venueId,
+        connectorId: 'connector-payfast',
+        secretKey: 'passphrase',
+        plaintext: passphrase,
+      })
+    ).secretRef;
 
-    const existing = await this.prisma.paymentConnectorInstall.findFirst({
-      orderBy: { updatedAt: 'desc' },
-    });
     const data = {
       organisationId: tenant.organisationId,
       venueId: tenant.venueId,
       connectorId: 'payfast',
       status: 'verified',
-      environment: body.environment ?? 'sandbox',
+      environment: env,
       merchantId,
       merchantKey: null,
       passphrase: null,

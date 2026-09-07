@@ -3,6 +3,8 @@
  * One question: Can I leave if others still owe?
  */
 
+import { hasOpenBalance } from '../leos/money';
+
 export type LeaveOpenCopy = {
   title: string;
   lead: string;
@@ -24,7 +26,7 @@ export function composeLeaveOpenCopy(
   clearedTitle: string,
   placeLabel: string,
 ): LeaveOpenCopy {
-  const open = (visitRemaining ?? 0) > 0.001;
+  const open = hasOpenBalance(visitRemaining);
   const place = placeLabel.trim() || 'this place';
 
   if (open) {
