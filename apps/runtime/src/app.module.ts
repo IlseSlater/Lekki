@@ -18,6 +18,7 @@ import { HealthController } from './http/health.controller';
 import { SetupPaymentsController } from './http/setup-payments.controller';
 import { SetupBrandController } from './http/setup-brand.controller';
 import { SetupEntryController } from './http/setup-entry.controller';
+import { SetupPosController } from './http/setup-pos.controller';
 import { GrowController } from './http/grow.controller';
 import { OperateController } from './http/operate.controller';
 import { EventsModule } from './events/events.module';
@@ -55,6 +56,7 @@ import { StaffAuthModule } from './staff-auth/staff-auth.module';
     SetupPaymentsController,
     SetupBrandController,
     SetupEntryController,
+    SetupPosController,
     GrowController,
     OperateController,
   ],

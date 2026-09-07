@@ -53,6 +53,8 @@ async function main() {
   await prisma.transaction.deleteMany();
   await prisma.sessionParticipant.deleteMany();
   await prisma.experienceSession.deleteMany();
+  await prisma.posSkuMapping.deleteMany();
+  await prisma.posPlaceMapping.deleteMany();
   await prisma.restaurantCatalogItem.deleteMany();
   await prisma.entryToken.deleteMany();
   await prisma.physicalContext.deleteMany();
@@ -333,6 +335,25 @@ async function main() {
     });
   }
 
+  // Demo Pilot maps — same shape Studio PUT /studio/pos/venue/:id/{places|skus} writes.
+  // Smoke: POST /integrations/pos/pilot/notify/:venueRestaurant with place TBL-12 / sku BEER-01.
+  await prisma.posPlaceMapping.create({
+    data: {
+      id: newId('ppm'),
+      venueId: venueRestaurant,
+      physicalContextId: ctxRestaurant,
+      externalPlaceId: 'TBL-12',
+    },
+  });
+  await prisma.posSkuMapping.create({
+    data: {
+      id: newId('psm'),
+      venueId: venueRestaurant,
+      catalogueItemId: 'item-lager',
+      externalSkuId: 'BEER-01',
+    },
+  });
+
   const pin = async (code: string) => bcrypt.hash(code, 10);
   const staffPerms = [
     'organisation.manage',
@@ -396,6 +417,8 @@ async function main() {
   console.log(
     'Demo QR: qr-demo-restaurant (T1), qr-demo-restaurant-t2|t3|t4, cafe, hotel, festival, airport, healthcare',
   );
+  console.log(`Rusty Oak venueId=${venueRestaurant} T1 physicalContextId=${ctxRestaurant}`);
+  console.log('Pilot demo maps: TBL-12 → T1 · BEER-01 → item-lager (Craft Lager)');
   console.log('Staff Experience (email / PIN → /staff):');
   console.log('  kitchen@rustyoak.demo / 1111  → Kitchen');
   console.log('  bar@rustyoak.demo / 2222      → Bar');
