@@ -35,10 +35,16 @@ import {
   type ExternalLineOrigin,
 } from './append-external-line';
 import {
+  POS_OPEN_SESSION_STATUSES,
+  resolvePosPlace,
+  resolvePosSku,
+} from './pos-ingress-resolve';
+import {
   assertClaimLinesAllowed,
   resolveParticipantBySecret,
 } from './participant-auth';
 import { PaymentExpiryService } from './payment-expiry.service';
+import type { PilotIngressPayload } from '@lekki/connector-pilot-pos';
 
 const RESTAURANT_PROFILE_FALLBACK = {
   profileId: 'profile-restaurant',
@@ -445,6 +451,82 @@ export class LeosService {
     });
 
     return { transactionId: aggregate.id, fulfilments: fulfilments.value };
+  }
+
+  /**
+   * POS ingress — resolve Pilot place/SKU maps, then appendExternalLine.
+   * Missing map or open visit → ignored (caller returns 200 so Pilot stops retrying).
+   */
+  async appendFromPilotIngress(
+    venueId: string,
+    payload: PilotIngressPayload,
+  ): Promise<
+    | { ok: true; duplicated: boolean; transactionId: string }
+    | { ok: true; ignored: true; reason: 'no_active_session_for_place' }
+  > {
+    const venue = venueId?.trim() ?? '';
+    if (!venue) throw new MissingFieldError('venueId');
+    if (!payload.externalRef?.trim()) throw new MissingFieldError('externalRef');
+    if (!payload.externalPlaceId?.trim()) throw new MissingFieldError('externalPlaceId');
+    if (!payload.labelFallback?.trim()) throw new MissingFieldError('labelFallback');
+
+    const placeMapping = await this.prisma.posPlaceMapping.findUnique({
+      where: {
+        venueId_externalPlaceId: {
+          venueId: venue,
+          externalPlaceId: payload.externalPlaceId.trim(),
+        },
+      },
+      select: { physicalContextId: true },
+    });
+
+    const openSession = placeMapping
+      ? await this.prisma.experienceSession.findFirst({
+          where: {
+            venueId: venue,
+            physicalContextId: placeMapping.physicalContextId,
+            status: { in: [...POS_OPEN_SESSION_STATUSES] },
+          },
+          select: { id: true },
+          orderBy: { startedAt: 'desc' },
+        })
+      : null;
+
+    const place = resolvePosPlace({ placeMapping, openSession });
+    if (place.kind === 'ignored') {
+      return { ok: true, ignored: true, reason: place.reason };
+    }
+
+    const skuMapping =
+      payload.externalSkuId?.trim()
+        ? await this.prisma.posSkuMapping.findUnique({
+            where: {
+              venueId_externalSkuId: {
+                venueId: venue,
+                externalSkuId: payload.externalSkuId.trim(),
+              },
+            },
+            select: { catalogueItemId: true },
+          })
+        : null;
+    const sku = resolvePosSku({ skuMapping });
+
+    const result = await this.appendExternalLine({
+      sessionId: place.sessionId,
+      externalRef: payload.externalRef,
+      externalCheckId: payload.externalCheckId || payload.externalPlaceId,
+      catalogueItemId: sku.catalogueItemId,
+      labelFallback: payload.labelFallback,
+      quantity: payload.quantity,
+      unitPrice: payload.unitPrice,
+      origin: 'staff_pos',
+    });
+
+    return {
+      ok: true,
+      duplicated: result.duplicated,
+      transactionId: result.transactionId,
+    };
   }
 
   /**

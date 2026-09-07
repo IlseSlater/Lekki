@@ -46,6 +46,36 @@ model PhysicalContext {
   createdAt       DateTime @default(now())
   venue           Venue @relation(fields: [venueId], references: [id])
   sessions        ExperienceSession[]
+  posPlaceMapping PosPlaceMapping?
+}
+
+/// Pilot (or other POS) table/place code → LEOS PhysicalContext. Venue-scoped.
+model PosPlaceMapping {
+  id                String   @id
+  venueId           String
+  /// One LEOS place maps to at most one external place.
+  physicalContextId String   @unique
+  /// Pilot place id (e.g. TBL-12). Unique per venue — not globally.
+  externalPlaceId   String
+  createdAt         DateTime @default(now())
+  physicalContext   PhysicalContext @relation(fields: [physicalContextId], references: [id])
+
+  @@unique([venueId, externalPlaceId])
+  @@index([venueId])
+}
+
+/// Pilot SKU → LEOS catalogue item id (opaque; pack owns the catalogue row). Venue-scoped.
+model PosSkuMapping {
+  id              String   @id
+  venueId         String
+  /// One LEOS sellable maps to at most one external SKU.
+  catalogueItemId String   @unique
+  /// Pilot SKU (e.g. BEER-01). Unique per venue — not globally.
+  externalSkuId   String
+  createdAt       DateTime @default(now())
+
+  @@unique([venueId, externalSkuId])
+  @@index([venueId])
 }
 
 model EntryToken {

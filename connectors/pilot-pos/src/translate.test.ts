@@ -1,20 +1,35 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { translatePilotLineWebhook } from './index';
+import { translatePilotLineWebhook } from './translate';
 
-test('Pilot stub: webhook JSON maps to LEOS append params', () => {
-  const params = translatePilotLineWebhook({
+test('Pilot stub: place + sku normalize without session or catalogue ids', () => {
+  const payload = translatePilotLineWebhook({
     lineId: 'PILOT-991',
-    checkId: 'CHK-12',
-    sessionId: 'ses_demo',
+    placeId: 'TBL-12',
+    checkId: 'CHK-88',
+    sku: 'BEER-01',
     label: 'Castle Lite',
     quantity: 1,
     unitPrice: 28.5,
   });
-  assert.equal(params.externalRef, 'PILOT-991');
-  assert.equal(params.externalCheckId, 'CHK-12');
-  assert.equal(params.sessionId, 'ses_demo');
-  assert.equal(params.labelFallback, 'Castle Lite');
-  assert.equal(params.origin, 'staff_pos');
-  assert.equal(params.catalogueItemId, null);
+  assert.equal(payload.externalRef, 'PILOT-991');
+  assert.equal(payload.externalPlaceId, 'TBL-12');
+  assert.equal(payload.externalCheckId, 'CHK-88');
+  assert.equal(payload.externalSkuId, 'BEER-01');
+  assert.equal(payload.labelFallback, 'Castle Lite');
+  assert.equal(payload.quantity, 1);
+  assert.equal(payload.unitPrice, 28.5);
+});
+
+test('Pilot stub: checkId alone is the place when table fields are absent', () => {
+  const payload = translatePilotLineWebhook({
+    lineId: 'PILOT-1',
+    checkId: 'TBL-12',
+    label: 'Castle Lite',
+    quantity: 2,
+    unitPrice: 28.5,
+  });
+  assert.equal(payload.externalPlaceId, 'TBL-12');
+  assert.equal(payload.externalCheckId, 'TBL-12');
+  assert.equal(payload.externalSkuId, null);
 });

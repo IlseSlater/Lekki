@@ -1,4 +1,13 @@
-import { Body, Controller, Headers, HttpCode, Post, Req, UnauthorizedException } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Headers,
+  HttpCode,
+  Param,
+  Post,
+  Req,
+  UnauthorizedException,
+} from '@nestjs/common';
 import type { Request } from 'express';
 import {
   assertPilotWebhookAuthorized,
@@ -9,19 +18,20 @@ import { SessionNotActiveError } from '../leos/domain-errors';
 import { requirePilotPosWebhookSecret } from '../leos/runtime-secrets';
 
 /**
- * MVP Pilot POS ingress — authenticated webhook → appendExternalLine.
- * Place/SKU mapping lands later; callers pass sessionId explicitly for now.
+ * Pilot POS ingress — authenticated webhook → place/SKU resolve → appendExternalLine.
  *
  * Auth: Authorization Bearer / X-Pilot-Webhook-Token, or X-Pilot-Signature HMAC.
- * Closed sessions return 200 ignored so the POS does not retry forever.
+ * Path venueId scopes PosPlaceMapping / PosSkuMapping (no cross-tenant SKU collisions).
+ * No open visit / closed session → 200 ignored so the till does not retry forever.
  */
 @Controller('integrations/pos/pilot')
 export class PilotPosController {
   constructor(private readonly leos: LeosService) {}
 
-  @Post('notify')
+  @Post('notify/:venueId')
   @HttpCode(200)
   async notify(
+    @Param('venueId') venueId: string,
     @Req() req: Request,
     @Body() body: unknown,
     @Headers('authorization') authorization?: string,
@@ -49,16 +59,11 @@ export class PilotPosController {
       throw err;
     }
 
-    const params = translatePilotLineWebhook(body);
+    const payload = translatePilotLineWebhook(body);
     try {
-      const result = await this.leos.appendExternalLine(params);
-      return {
-        ok: true,
-        duplicated: result.duplicated,
-        transactionId: result.transactionId,
-      };
+      return await this.leos.appendFromPilotIngress(venueId, payload);
     } catch (err) {
-      // POS must stop retrying — the visit is gone, not a transient failure.
+      // Race: visit closed between place resolve and append.
       if (err instanceof SessionNotActiveError) {
         return {
           ok: true,
