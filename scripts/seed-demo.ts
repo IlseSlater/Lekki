@@ -259,6 +259,11 @@ async function main() {
     });
   }
 
+  await prisma.restaurantCatalogItem.updateMany({
+    where: { OR: [{ id: 'item-chefs-bowl' }, { label: { contains: 'Chef' }, unitPrice: 0 }] },
+    data: { unitPrice: 140 },
+  });
+
   for (const item of cafeSeedCatalogue) {
     await prisma.restaurantCatalogItem.create({
       data: {
