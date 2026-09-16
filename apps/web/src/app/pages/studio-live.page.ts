@@ -106,15 +106,17 @@ export class StudioLivePageComponent implements OnInit {
       : [this.placeCode].filter(Boolean);
     this.remainingPlaces = this.placeCodes.filter((code) => code !== this.placeCode).join(' · ');
     this.paymentsLabel = active?.paymentsDone || legacy.paymentsDone ? 'Connected' : 'Not connected yet';
-    this.token = active?.token || legacy.token || def?.defaults.token || this.token;
+    const rawToken = active?.token || legacy.token || '';
+    this.token = rawToken.startsWith('qr-demo-') ? '' : rawToken;
     this.lead = def?.setupHints.goliveLead ?? this.lead;
 
-    this.ctx.upsertActive({ token: this.token, live: true });
-    this.ctx.markStep('golive');
-
-    void resolvePublicWebOrigin().then((origin) => {
-      this.entryUrl = entryUrlForToken(origin, this.token);
-    });
+    if (this.token) {
+      this.ctx.upsertActive({ token: this.token, live: true });
+      this.ctx.markStep('golive');
+      void resolvePublicWebOrigin().then((origin) => {
+        this.entryUrl = entryUrlForToken(origin, this.token);
+      });
+    }
   }
 
   downloadQr() {

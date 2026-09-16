@@ -162,8 +162,9 @@ import { StudioWorkspaceComponent } from '../leos/studio-workspace.component';
         text-wrap: pretty;
         transition: color var(--studio-duration-fast, 160ms) var(--studio-ease, cubic-bezier(0.22, 1, 0.36, 1));
       }
+      /* Done = check node only (AA). Label stays secondary ink — never sage on glass. */
       .setup-engine__rail-item.is-done .setup-engine__rail-title {
-        color: var(--studio-success, #4f8a6b);
+        color: var(--leos-ink-secondary, #64748b);
         font-weight: 550;
       }
       .setup-engine__rail-item.is-current .setup-engine__rail-title {
@@ -203,6 +204,56 @@ import { StudioWorkspaceComponent } from '../leos/studio-workspace.component';
       @media (prefers-reduced-motion: reduce) {
         .setup-engine__rail-why {
           animation: none;
+        }
+      }
+      @media (max-width: 1023px) {
+        .setup-engine__story-eyebrow {
+          margin: 0 0 0.5rem;
+        }
+        .setup-engine__rail {
+          display: flex;
+          flex-wrap: nowrap;
+          align-items: flex-start;
+          gap: 0.2rem;
+        }
+        .setup-engine__rail-item {
+          flex: 1;
+          min-width: 0;
+          min-height: 0;
+        }
+        .setup-engine__rail-item:not(:last-child)::before {
+          display: none;
+        }
+        .setup-engine__rail-link {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 0.3rem;
+          min-height: 0;
+        }
+        .setup-engine__rail-node {
+          margin-top: 0;
+        }
+        .setup-engine__rail-copy {
+          padding-bottom: 0;
+          width: 100%;
+          text-align: center;
+        }
+        .setup-engine__rail-title {
+          font-size: 0.625rem;
+          line-height: 1.2;
+        }
+        .setup-engine__rail-item:not(.is-current) .setup-engine__rail-title {
+          clip: rect(0 0 0 0);
+          clip-path: inset(50%);
+          height: 1px;
+          width: 1px;
+          overflow: hidden;
+          position: absolute;
+          white-space: nowrap;
+        }
+        .setup-engine__rail-why {
+          display: none;
         }
       }
     `,

@@ -69,7 +69,7 @@ type TablePulse = {
     >
       <div class="studio-operate__main">
         <header class="studio-operate__header">
-          <p class="studio-operate__now">{{ greeting }}</p>
+          <p class="studio-operate__eyebrow">Operate</p>
           <h1 class="studio-operate__venue">{{ venue }}</h1>
           @if (!live) {
             <p class="studio-operate__calm">Go live first — then oversight fills as guests arrive.</p>
@@ -219,27 +219,25 @@ type TablePulse = {
         }
 
         @if (live) {
-          <p class="studio-operate__foot">
-            @if (guestCount != null) {
-              <span>{{ guestCount }} {{ guestActivityLine }}</span>
-            }
-            @if (guestCount != null && paymentsLine) {
-              <span class="studio-operate__foot-sep" aria-hidden="true">·</span>
-            }
-            @if (paymentsLine) {
-              <span>Payments {{ paymentsLine.toLowerCase() }}</span>
-            }
-            @if (guestCount != null || paymentsLine) {
-              <span class="studio-operate__foot-sep" aria-hidden="true">·</span>
-            }
-            <a class="studio-operate__foot-a" routerLink="/studio/team">Team</a>
-            <span class="studio-operate__foot-sep" aria-hidden="true">·</span>
-            <button type="button" class="studio-operate__foot-a" (click)="openFloorPanel()">
-              Staff board
+          <div class="studio-operate__doors">
+            <button type="button" class="leos-btn leos-btn--primary" (click)="openFloorPanel()">
+              Open Staff Experience
             </button>
-            <span class="studio-operate__foot-sep" aria-hidden="true">·</span>
-            <span class="studio-operate__foot-muted">{{ handoffLine }}</span>
-          </p>
+            <div class="studio-operate__actions" aria-label="More">
+              <a class="leos-btn leos-btn--secondary" routerLink="/studio/team">Team</a>
+            </div>
+            <p class="studio-operate__status-line">
+              @if (guestCount != null) {
+                <span>{{ guestCount }} {{ guestActivityLine }}</span>
+              }
+              @if (guestCount != null && paymentsLine) {
+                <span class="studio-operate__foot-sep" aria-hidden="true">·</span>
+              }
+              @if (paymentsLine) {
+                <span>Payments {{ paymentsLine.toLowerCase() }}</span>
+              }
+            </p>
+          </div>
         }
       </div>
 

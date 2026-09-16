@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, Param, Post, Req, UseGuards, ForbiddenException } from '@nestjs/common';
+import { Body, Controller, HttpCode, Logger, Param, Post, Req, UseGuards, ForbiddenException } from '@nestjs/common';
 import type { Request } from 'express';
 import { LeosService } from '../leos/leos.service';
 import { RequireStaffPermission, StaffAuthGuard } from '../staff-auth/staff-auth.guard';
@@ -6,6 +6,8 @@ import { MissingFieldError } from '../leos/domain-errors';
 
 @Controller('payments')
 export class PaymentController {
+  private readonly logger = new Logger(PaymentController.name);
+
   constructor(private readonly leos: LeosService) {}
 
   @Post('request/:sessionId')
@@ -63,12 +65,20 @@ export class PaymentController {
   @Post('payfast/notify')
   @HttpCode(200)
   async payfastNotify(@Req() req: Request, @Body() body: Record<string, unknown>) {
+    // Always HTTP 200 so PayFast stops retry storms; body carries ok/idempotent.
     const posted: Record<string, string> = {};
     const source = (body && Object.keys(body).length > 0 ? body : req.body) ?? {};
     for (const [key, value] of Object.entries(source)) {
       if (value === undefined || value === null) continue;
       posted[key] = String(value);
     }
-    return this.leos.handlePayFastItn(posted);
+    this.logger.log(
+      `PayFast ITN received m_payment_id=${posted.m_payment_id ?? '?'} status=${posted.payment_status ?? '?'} amount_gross=${posted.amount_gross ?? '?'}`,
+    );
+    const result = await this.leos.handlePayFastItn(posted);
+    this.logger.log(
+      `PayFast ITN result m_payment_id=${posted.m_payment_id ?? '?'} ${JSON.stringify(result)}`,
+    );
+    return result;
   }
 }

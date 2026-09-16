@@ -13,12 +13,10 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
-        with:
-          version: 11
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
 
       - name: Install
@@ -26,6 +24,12 @@ jobs:
 
       - name: Noun separation (ratchet — fails if count grows)
         run: pnpm run check:nouns
+
+      - name: Page style hex (ratchet — fails on novel files)
+        run: pnpm run check:page-hex
+
+      - name: Go-live gate, confirm, recession
+        run: node --import tsx --test apps/web/src/app/studio/golive-gate.test.ts apps/web/src/app/studio/live-facts.test.ts apps/web/src/app/studio/golive-confirm.test.ts apps/web/src/app/studio/hub-recession.test.ts apps/web/src/app/studio/menu-list-import.test.ts
 
       - name: Runtime money / domain unit tests
         run: pnpm --filter @lekki/runtime-app test

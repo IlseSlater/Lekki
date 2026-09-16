@@ -412,6 +412,10 @@ export class GuestSessionService {
             this.state.guestDesign = session.guestDesign;
             this.state.persist();
           }
+          if (typeof session.paymentsActive === 'boolean') {
+            this.state.paymentsActive = session.paymentsActive;
+            this.state.persist();
+          }
           this.refreshAllowPay();
           this.refreshAllowTip();
           this.refreshAllowHelp();
@@ -652,6 +656,15 @@ export class GuestSessionService {
     return this.cart
       .filter((l) => l.catalogueItemId === catalogueItemId)
       .reduce((n, l) => n + l.quantity, 0);
+  }
+
+  /** Cart badge map for dumb menu list — keyed by catalogue item id. */
+  get cartItemCounts(): Record<string, number> {
+    const out: Record<string, number> = {};
+    for (const line of this.cart) {
+      out[line.catalogueItemId] = (out[line.catalogueItemId] || 0) + line.quantity;
+    }
+    return out;
   }
 
   allergenLine(item: CatalogueItem): string {
@@ -916,19 +929,19 @@ export class GuestSessionService {
       next: (session) => {
         this.offline = false;
         this.liveError = '';
-        if (typeof session.menuBrandEnabled === 'boolean') {
-          this.state.menuBrandEnabled = session.menuBrandEnabled;
-          this.state.brandColour = session.brandColour || this.state.brandColour || '#d7a14a';
-          if (session.venueName) this.state.venueName = session.venueName;
-          if (typeof session.logoUrl === 'string') this.state.logoUrl = session.logoUrl;
-          if (typeof session.menuCoverUrl === 'string') {
-            this.state.menuCoverUrl = session.menuCoverUrl;
-          }
-          if (typeof session.location === 'string') this.state.location = session.location;
-          this.state.persist();
-        }
+        this.state.menuBrandEnabled = false;
+        this.state.brandColour = session.brandColour || this.state.brandColour || '#d7a14a';
+        if (session.venueName) this.state.venueName = session.venueName;
+        if (typeof session.logoUrl === 'string') this.state.logoUrl = session.logoUrl;
+        this.state.menuCoverUrl = '';
+        if (typeof session.location === 'string') this.state.location = session.location;
+        this.state.persist();
         if (session.guestDesign && typeof session.guestDesign === 'object') {
           this.state.guestDesign = session.guestDesign;
+          this.state.persist();
+        }
+        if (typeof session.paymentsActive === 'boolean') {
+          this.state.paymentsActive = session.paymentsActive;
           this.state.persist();
         }
         this.refreshAllowPay();
@@ -1221,7 +1234,12 @@ export class GuestSessionService {
   /** Studio Pay → Guest Bill / dock (Pay Continuity · No Drift). */
   private refreshAllowPay() {
     const sessionDesign = this.state.guestDesign as Partial<import('../studio/guest-experience-design').GuestExperienceDesign> | null;
-    const next = resolveAllowPay(this.state.token, [], sessionDesign);
+    const next = resolveAllowPay(
+      this.state.token,
+      [],
+      sessionDesign,
+      this.state.paymentsActive === true,
+    );
     this.allowPay = next;
     if (!next && this.phase === 'payment') {
       this.phase = 'live';

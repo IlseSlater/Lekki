@@ -338,7 +338,7 @@ export function projectionItemsFromVenueCatalogue(
       id: r.id,
       label: r.label,
       category: r.category || 'Food',
-      price: `R${Number(r.unitPrice).toFixed(2).replace(/\.00$/, '')}`,
+      price: formatCataloguePriceMajor(r.unitPrice),
       description: r.description ?? undefined,
       imageUrl: r.imageUrl ?? undefined,
     }));
@@ -360,4 +360,33 @@ export function visibleProjectionItems(
   const canBrowse =
     d.browseMenu || d.orderFood || d.drinks || d.specialRequests || d.book || d.specials;
   return canBrowse ? items : [];
+}
+
+/** Zero is hospitality “Free”, never R0.00. */
+export function formatCataloguePriceMajor(unitPrice: number): string {
+  if (!Number.isFinite(unitPrice) || unitPrice <= 0) return 'Free';
+  return `R${Number(unitPrice).toFixed(2).replace(/\.00$/, '')}`;
+}
+
+export function formatCataloguePriceMinor(priceMinor: number): string {
+  return formatCataloguePriceMajor(priceMinor / 100);
+}
+
+/**
+ * Desk catalogue. Locked (default) never substitutes projection samples.
+ * Examples only when a pre-live design route opts in — and they stay marked.
+ */
+export function resolveProjectionItems(input: {
+  lockCatalogue: boolean;
+  allowExampleCatalogue?: boolean;
+  venueCatalogue: ProjectionItem[] | null | undefined;
+  design: GuestExperienceDesign;
+  typeId: string;
+}): { items: ProjectionItem[]; example: boolean } {
+  const venue = input.venueCatalogue ?? [];
+  if (input.lockCatalogue || !input.allowExampleCatalogue) {
+    return { items: venue, example: false };
+  }
+  if (venue.length) return { items: venue, example: false };
+  return { items: visibleProjectionItems(input.design, input.typeId), example: true };
 }

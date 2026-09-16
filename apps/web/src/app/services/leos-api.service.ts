@@ -58,27 +58,101 @@ export class LeosApiService {
       venueName?: string | null;
       menuBrandEnabled?: boolean;
       brandColour?: string | null;
+      logoUrl?: string | null;
+      menuCoverUrl?: string | null;
+      location?: string | null;
       guestDesign?: Record<string, unknown> | null;
+      paymentsActive?: boolean;
       currency?: string;
       joinedParticipantId?: string | null;
       participantSecret?: string;
     }>(`${this.api}/entry/resolve`, body);
   }
 
-  /** Studio Identity → Venue menu brand (Guest Continuity). */
+  /** Studio Identity → Venue menu brand (Guest Continuity). Prefer patchWorkspace. */
   saveVenueBrand(body: {
     venueId: string;
     menuBrandEnabled: boolean;
     brandColour?: string;
     venueName?: string;
+    logoUrl?: string;
+    menuCoverUrl?: string;
+    location?: string;
     guestDesignJson?: Record<string, unknown>;
   }) {
     return this.http.put<{
-      id: string;
-      name: string;
+      venueId?: string;
+      venueName?: string;
       menuBrandEnabled: boolean;
       brandColour: string;
+      logoUrl?: string;
+      menuCoverUrl?: string;
+      location?: string;
     }>(`${this.api}/setup/brand`, body, { headers: this.staffAuthHeaders() });
+  }
+
+  getWorkspace(venueId: string) {
+    return this.http.get<{
+      venueId: string;
+      venueName: string;
+      organisationId: string;
+      brandColour: string;
+      menuBrandEnabled: boolean;
+      logoUrl: string;
+      menuCoverUrl: string;
+      location: string;
+      guestDesign: Record<string, unknown> | null;
+      timezone: string;
+      currency: string;
+      paymentsActive?: boolean;
+    }>(`${this.api}/studio/workspace/${venueId}`, {
+      headers: this.staffAuthHeaders(),
+    });
+  }
+
+  patchWorkspace(
+    venueId: string,
+    body: {
+      venueName?: string;
+      brandColour?: string;
+      menuBrandEnabled?: boolean;
+      logoUrl?: string;
+      menuCoverUrl?: string;
+      location?: string;
+      guestDesign?: Record<string, unknown>;
+    },
+  ) {
+    return this.http.patch<{
+      venueId: string;
+      venueName: string;
+      organisationId: string;
+      brandColour: string;
+      menuBrandEnabled: boolean;
+      logoUrl: string;
+      menuCoverUrl: string;
+      location: string;
+      guestDesign: Record<string, unknown> | null;
+      timezone: string;
+      currency: string;
+      paymentsActive?: boolean;
+    }>(`${this.api}/studio/workspace/${venueId}`, body, {
+      headers: this.staffAuthHeaders(),
+    });
+  }
+
+  uploadVenueAsset(venueId: string, kind: 'logo' | 'cover', file: File) {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    form.append('kind', kind);
+    return this.http.post<{
+      assetId: string;
+      kind: string;
+      url: string;
+      byteSize: number;
+      contentType: string;
+    }>(`${this.api}/studio/venue/${venueId}/assets`, form, {
+      headers: this.staffAuthHeaders(),
+    });
   }
 
   mintEntryToken(body: {
@@ -259,7 +333,11 @@ export class LeosApiService {
       venueName?: string | null;
       menuBrandEnabled?: boolean;
       brandColour?: string | null;
+      logoUrl?: string | null;
+      menuCoverUrl?: string | null;
+      location?: string | null;
       guestDesign?: Record<string, unknown> | null;
+      paymentsActive?: boolean;
       participants?: Array<{
         id: string;
         displayName?: string;
@@ -838,12 +916,17 @@ export class SessionStateService {
   /** Menu half-moon from Venue / Entry (Guest Continuity). */
   menuBrandEnabled = false;
   brandColour = '#d7a14a';
+  logoUrl = '';
+  menuCoverUrl = '';
+  location = '';
   /** Continuity — this guest’s SessionParticipant id (mine vs visit). */
   participantId = '';
   /** Server-issued secret — resume this phone only, never by display name. */
   participantSecret = '';
   /** Venue guest experience design from entry resolve (not Studio localStorage). */
   guestDesign: Record<string, unknown> | null = null;
+  /** Connector install is active for this venue — never grant Pay without it. */
+  paymentsActive = false;
   currency = 'ZAR';
 
   persist() {
@@ -874,6 +957,9 @@ export class SessionStateService {
       this.clear();
       return;
     }
+    // Purge legacy Base64 brand blobs — durable URLs only.
+    if (this.logoUrl?.toLowerCase().startsWith('data:')) this.logoUrl = '';
+    if (this.menuCoverUrl?.toLowerCase().startsWith('data:')) this.menuCoverUrl = '';
     const designRaw = localStorage.getItem('leos.guestDesign');
     if (designRaw) {
       try {
@@ -898,9 +984,13 @@ export class SessionStateService {
     this.venueName = '';
     this.menuBrandEnabled = false;
     this.brandColour = '#d7a14a';
+    this.logoUrl = '';
+    this.menuCoverUrl = '';
+    this.location = '';
     this.participantId = '';
     this.participantSecret = '';
     this.guestDesign = null;
+    this.paymentsActive = false;
     this.currency = 'ZAR';
     localStorage.removeItem('leos.guestDesign');
     localStorage.removeItem('leos.session');

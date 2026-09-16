@@ -43,25 +43,49 @@ import { StudioContextService } from '../services/studio-context.service';
         </label>
         <label class="pf__field">
           <span class="pf__label">Merchant key</span>
-          <input
-            class="leos-field__input"
-            type="password"
-            autocomplete="new-password"
-            [(ngModel)]="merchantKey"
-            [disabled]="busy"
-            [placeholder]="keySet ? 'Leave blank to keep saved key' : ''"
-          />
+          <span class="pf__secret">
+            <input
+              class="leos-field__input"
+              [type]="showMerchantKey ? 'text' : 'password'"
+              autocomplete="new-password"
+              name="merchantKey"
+              [(ngModel)]="merchantKey"
+              [disabled]="busy"
+              [placeholder]="keySet ? 'Leave blank to keep saved key' : ''"
+            />
+            <button
+              type="button"
+              class="pf__reveal"
+              [attr.aria-pressed]="showMerchantKey"
+              [attr.aria-label]="showMerchantKey ? 'Hide merchant key' : 'Show merchant key'"
+              (click)="showMerchantKey = !showMerchantKey"
+            >
+              {{ showMerchantKey ? 'Hide' : 'Show' }}
+            </button>
+          </span>
         </label>
         <label class="pf__field">
           <span class="pf__label">Passphrase <em>(required)</em></span>
-          <input
-            class="leos-field__input"
-            type="password"
-            autocomplete="new-password"
-            [(ngModel)]="passphrase"
-            [disabled]="busy"
-            [placeholder]="passphraseSet ? 'Leave blank to keep saved passphrase' : ''"
-          />
+          <span class="pf__secret">
+            <input
+              class="leos-field__input"
+              [type]="showPassphrase ? 'text' : 'password'"
+              autocomplete="new-password"
+              name="passphrase"
+              [(ngModel)]="passphrase"
+              [disabled]="busy"
+              [placeholder]="passphraseSet ? 'Leave blank to keep saved passphrase' : ''"
+            />
+            <button
+              type="button"
+              class="pf__reveal"
+              [attr.aria-pressed]="showPassphrase"
+              [attr.aria-label]="showPassphrase ? 'Hide passphrase' : 'Show passphrase'"
+              (click)="showPassphrase = !showPassphrase"
+            >
+              {{ showPassphrase ? 'Hide' : 'Show' }}
+            </button>
+          </span>
         </label>
 
         @if (error) {
@@ -87,7 +111,7 @@ import { StudioContextService } from '../services/studio-context.service';
         waiting="Test connection to verify Merchant & Passphrase"
       />
 
-      <a escape class="leos-btn leos-btn--secondary" routerLink="/studio/integrations">Back</a>
+      <a escape class="leos-btn leos-btn--secondary" [routerLink]="backLink">Back</a>
       <button
         primary
         type="button"
@@ -105,6 +129,33 @@ import { StudioContextService } from '../services/studio-context.service';
         display: grid;
         gap: 0.35rem;
         margin-bottom: 0.7rem;
+      }
+      .pf__secret {
+        position: relative;
+        display: block;
+      }
+      .pf__secret .leos-field__input {
+        padding-right: 4.5rem;
+      }
+      .pf__reveal {
+        position: absolute;
+        top: 50%;
+        right: 0.65rem;
+        transform: translateY(-50%);
+        min-height: 2.75rem;
+        padding: 0 0.35rem;
+        border: 0;
+        background: transparent;
+        font: inherit;
+        font-size: 0.8125rem;
+        font-weight: 650;
+        color: var(--studio-ink-secondary, #6b7280);
+        cursor: pointer;
+      }
+      .pf__reveal:hover,
+      .pf__reveal:focus-visible {
+        color: var(--studio-ink, #1b2230);
+        outline: none;
       }
       .pf__label {
         font-size: 0.8125rem;
@@ -149,9 +200,19 @@ export class SetupPayfastPageComponent implements OnInit {
   status: 'none' | 'verified' | 'active' = 'none';
   keySet = false;
   passphraseSet = false;
+  showMerchantKey = false;
+  showPassphrase = false;
   busy = false;
   error = '';
   message = '';
+
+  get inSetupFlow() {
+    return this.router.url.includes('/studio/setup/');
+  }
+
+  get backLink() {
+    return this.inSetupFlow ? '/studio/setup/payments' : '/studio/integrations';
+  }
 
   get canSubmit() {
     if (!this.merchantId.trim()) return false;
@@ -171,7 +232,7 @@ export class SetupPayfastPageComponent implements OnInit {
           this.environment = install.environment;
         }
         this.passphraseSet = !!install.passphraseSet;
-        this.keySet = !!install.passphraseSet; // key vaulted with same flow
+        this.keySet = !!install.merchantKeyMasked || !!install.passphraseSet;
         if (install.status === 'active') this.status = 'active';
         else if (install.status === 'verified') this.status = 'verified';
       },
@@ -212,6 +273,11 @@ export class SetupPayfastPageComponent implements OnInit {
             this.busy = false;
             this.status = 'active';
             this.ctx.upsertActive({ paymentsDone: true });
+            this.ctx.touchLive();
+            if (this.inSetupFlow) {
+              void this.router.navigate(['/studio/setup/payments']);
+              return;
+            }
             void this.router.navigate(['/studio/integrations'], {
               queryParams: { payfast: 'verified' },
             });

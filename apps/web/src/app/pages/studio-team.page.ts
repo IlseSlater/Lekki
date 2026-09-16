@@ -227,7 +227,7 @@ type TeamMember = {
             <p class="studio-team__label">Experience</p>
             <div class="studio-team__experiences" role="radiogroup" aria-label="Experience">
               @for (exp of experiences; track exp.id) {
-                <label class="studio-team__exp-card">
+                <label class="studio-team__exp-card" [attr.data-role]="exp.id">
                   <input
                     type="radio"
                     name="experience"
@@ -678,22 +678,90 @@ type TeamMember = {
       }
       .studio-team__experiences {
         display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 0.45rem;
       }
       .studio-team__exp-card {
-        display: grid;
-        grid-template-columns: auto 1fr;
-        grid-template-rows: auto auto;
-        column-gap: 0.65rem;
-        align-items: start;
-        padding: 0.65rem 0.75rem;
-        border-radius: 0.75rem;
-        border: 1px solid var(--studio-line, #e7e2db);
+        --exp-ink: #6b3a2e;
+        --studio-exp-angle: 0deg;
+        position: relative;
+        isolation: isolate;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.2rem;
+        min-width: 0;
+        padding: 0.5rem 0.45rem;
+        border-radius: 1rem;
+        border: 1.5px solid color-mix(in srgb, var(--exp-ink) 38%, transparent);
+        background: transparent;
         cursor: pointer;
       }
+      .studio-team__exp-card[data-role='kitchen'] {
+        --exp-ink: #6b3a2e;
+      }
+      .studio-team__exp-card[data-role='bar'] {
+        --exp-ink: #c48f38;
+      }
+      .studio-team__exp-card[data-role='waiter'] {
+        --exp-ink: #0d3a2f;
+      }
+      .studio-team__exp-card[data-role='counter'] {
+        --exp-ink: #1b2230;
+      }
+      .studio-team__exp-card[data-role='staff'] {
+        --exp-ink: #5a4630;
+      }
+      .studio-team__exp-card::before {
+        content: '';
+        position: absolute;
+        inset: -2px;
+        border-radius: inherit;
+        padding: 2px;
+        pointer-events: none;
+        opacity: 0;
+        background: conic-gradient(
+          from var(--studio-exp-angle),
+          transparent 0%,
+          var(--exp-ink) 10%,
+          transparent 28%
+        );
+        mask:
+          linear-gradient(#000 0 0) content-box,
+          linear-gradient(#000 0 0);
+        mask-composite: exclude;
+        -webkit-mask:
+          linear-gradient(#000 0 0) content-box,
+          linear-gradient(#000 0 0);
+        -webkit-mask-composite: xor;
+        filter: drop-shadow(0 0 4px color-mix(in srgb, var(--exp-ink) 45%, transparent));
+        z-index: 0;
+      }
+      .studio-team__exp-card:has(input:checked) {
+        border-color: color-mix(in srgb, var(--exp-ink) 78%, transparent);
+        box-shadow: 0 0 0 1px color-mix(in srgb, var(--exp-ink) 22%, transparent);
+      }
+      .studio-team__exp-card:has(input:checked)::before {
+        opacity: 1;
+        animation: studio-exp-glow 2.4s linear infinite;
+      }
+      .studio-team__exp-card > * {
+        position: relative;
+        z-index: 1;
+      }
+      @keyframes studio-exp-glow {
+        to {
+          --studio-exp-angle: 360deg;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .studio-team__exp-card:has(input:checked)::before {
+          animation: none;
+          opacity: 0;
+        }
+      }
       .studio-team__exp-card input {
-        grid-row: 1 / span 2;
-        margin-top: 0.2rem;
+        margin: 0;
       }
       .studio-team__exp-label {
         font-weight: 650;

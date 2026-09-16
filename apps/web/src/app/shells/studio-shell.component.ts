@@ -17,7 +17,7 @@ const NAV_COLLAPSED_KEY = 'leos-studio-nav-collapsed';
   imports: [RouterOutlet, RouterLink],
   template: `
     <div
-      class="leos-studio-shell"
+      class="leos-studio-shell leos-register--ash"
       [attr.data-mode]="mode"
       [attr.data-setup-engine]="setupEngine ? 'true' : null"
       [attr.data-pre-engine]="preEngine ? 'true' : null"
@@ -127,7 +127,10 @@ const NAV_COLLAPSED_KEY = 'leos-studio-nav-collapsed';
         </div>
       </aside>
 
-      <main class="leos-studio-shell__main">
+      <main
+        class="leos-studio-shell__main"
+        [class.leos-register-halo]="!setupEngine && !preEngine"
+      >
         <router-outlet />
       </main>
     </div>
@@ -153,6 +156,7 @@ export class StudioShellComponent implements OnInit {
       this.navCollapsed = false;
     }
     this.refresh();
+    this.ctx.ensureWorkspaceHydrated();
     this.router.events.pipe(filter((e) => e instanceof NavigationEnd)).subscribe(() => this.refresh());
   }
 

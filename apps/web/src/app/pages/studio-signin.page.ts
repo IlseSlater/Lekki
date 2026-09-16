@@ -27,7 +27,7 @@ type GoogleGsi = {
   imports: [FormsModule, RouterLink],
   selector: 'leos-studio-signin',
   template: `
-    <div class="si">
+    <div class="si leos-register leos-register--cinematic leos-register-halo">
       <a class="si-back" routerLink="/">← Lekki</a>
 
       <section class="si-card">
@@ -234,16 +234,16 @@ type GoogleGsi = {
         min-height: 3rem;
         border: 0;
         border-radius: 999px;
-        background: rgba(255, 255, 255, 0.1);
-        color: #fff;
+        background: var(--leos-register-action, #f4f4f5);
+        color: var(--leos-register-on-action, #00070d);
         font: inherit;
         font-size: 0.9rem;
         font-weight: 550;
         cursor: pointer;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        box-shadow: none;
       }
       .si-btn:hover:not(:disabled) {
-        background: rgba(255, 255, 255, 0.2);
+        background: var(--leos-register-action-hover, #fff);
       }
       .si-btn:disabled {
         opacity: 0.45;

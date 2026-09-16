@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Post, Put, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Put,
+  Req,
+  UnauthorizedException,
+  UseGuards,
+} from '@nestjs/common';
 import { SetupPaymentsService, type DraftPayload } from '../leos/setup-payments.service';
 import { RequireStaffPermission, StaffAuthGuard } from '../staff-auth/staff-auth.guard';
 import type { StaffTokenClaims } from '../staff-auth/staff-token.service';
@@ -8,6 +17,12 @@ import type { StaffTokenClaims } from '../staff-auth/staff-token.service';
 export class SetupPaymentsController {
   constructor(private readonly setup: SetupPaymentsService) {}
 
+  private requireOrg(req: { staff?: StaffTokenClaims }): string {
+    const org = req.staff?.org?.trim();
+    if (!org) throw new UnauthorizedException('Staff organisation is required');
+    return org;
+  }
+
   @Get('providers')
   providers() {
     return this.setup.listProviders();
@@ -16,7 +31,7 @@ export class SetupPaymentsController {
   @Get('install')
   @RequireStaffPermission('organisation.manage')
   install(@Req() req: { staff?: StaffTokenClaims }) {
-    return this.setup.getInstall(req.staff?.org);
+    return this.setup.getInstall(this.requireOrg(req));
   }
 
   @Post('test-connection')
@@ -25,7 +40,6 @@ export class SetupPaymentsController {
     @Req() req: { staff?: StaffTokenClaims },
     @Body()
     body: {
-      organisationId?: string;
       venueId?: string;
       connectorId: string;
       environment?: 'sandbox' | 'production';
@@ -34,21 +48,29 @@ export class SetupPaymentsController {
       passphrase?: string;
     },
   ) {
+    // organisationId from the staff token only — body org is ignored.
     return this.setup.testConnection({
       ...body,
-      organisationId: body.organisationId ?? req.staff?.org,
+      organisationId: this.requireOrg(req),
     });
   }
 
   @Put('draft')
   @RequireStaffPermission('organisation.manage')
-  saveDraft(@Req() req: { staff?: StaffTokenClaims }, @Body() body: DraftPayload) {
-    return this.setup.saveDraft({ ...body, organisationId: body.organisationId ?? req.staff?.org });
+  saveDraft(
+    @Req() req: { staff?: StaffTokenClaims },
+    @Body() body: Omit<DraftPayload, 'organisationId'> & { organisationId?: string },
+  ) {
+    const { organisationId: _ignored, ...rest } = body;
+    return this.setup.saveDraft({
+      ...rest,
+      organisationId: this.requireOrg(req),
+    });
   }
 
   @Post('activate')
   @RequireStaffPermission('organisation.manage')
   activate(@Req() req: { staff?: StaffTokenClaims }) {
-    return this.setup.activate(req.staff?.org);
+    return this.setup.activate(this.requireOrg(req));
   }
 }

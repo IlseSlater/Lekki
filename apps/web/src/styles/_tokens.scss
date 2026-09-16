@@ -80,10 +80,10 @@
   --leos-shadow-soft: 0 2px 8px rgba(15, 23, 42, 0.04);
   --leos-shadow-hover: 0 16px 40px rgba(15, 23, 42, 0.07), 0 4px 12px rgba(15, 23, 42, 0.03);
   --leos-shadow-cta:
-    0 14px 28px rgba(184, 131, 57, 0.35), 0 4px 10px rgba(184, 131, 57, 0.2);
+    0 8px 18px rgba(184, 131, 57, 0.22), 0 2px 6px rgba(184, 131, 57, 0.12);
   --leos-shadow-cta-hover:
-    0 18px 34px rgba(184, 131, 57, 0.42), 0 6px 14px rgba(184, 131, 57, 0.25);
-  --leos-shadow-cta-active: 0 8px 18px rgba(184, 131, 57, 0.3);
+    0 10px 22px rgba(184, 131, 57, 0.28), 0 3px 8px rgba(184, 131, 57, 0.16);
+  --leos-shadow-cta-active: 0 4px 12px rgba(184, 131, 57, 0.22);
   --leos-shadow-focus:
     0 0 0 3.5px rgba(212, 160, 75, 0.18), 0 4px 16px rgba(196, 143, 56, 0.12);
 
@@ -97,6 +97,43 @@
   --leos-duration: 220ms;
   --leos-duration-fast: 160ms;
   --leos-duration-enter: 280ms;
+  --leos-duration-press: 120ms;
+  --leos-duration-ring: 420ms;
+  --leos-duration-sheet: 200ms;
+  --leos-duration-halo: 600ms;
+  --leos-stagger: 60ms;
+
+  /* Ground behind every product shell — atmosphere, never a control */
+  --leos-ground: #00070d;
+
+  /* Ash (workstation) — light glass on dark ground */
+  --leos-ash-ground: #00070d;
+  --leos-ash-halo: radial-gradient(ellipse 90% 55% at 50% 8%, rgba(215, 161, 74, 0.22), transparent 68%);
+  --leos-ash-card: rgba(255, 255, 255, 0.9);
+  --leos-ash-card-composite: #e6e6e7;
+  --leos-ash-card-blur: 8px;
+  --leos-ash-ink: #0f172a;
+  --leos-ash-ink-body: #475569;
+  --leos-ash-row-edge: #57575a;
+  --leos-ash-field-border: #d8d2c9;
+  --leos-ash-action: #0a0a0a;
+  --leos-ash-action-hover: #1a1a1a;
+  --leos-ash-on-action: #ffffff;
+
+  /* Obsidian (cinematic frame) — auth + go-live peak only. Not a dark-mode toggle. */
+  --leos-obsidian-ground: #00070d;
+  --leos-obsidian-halo: radial-gradient(ellipse 80% 45% at 50% 0%, rgba(215, 161, 74, 0.16), transparent 62%);
+  --leos-obsidian-card: rgba(12, 16, 22, 0.92);
+  --leos-obsidian-hairline: rgba(255, 255, 255, 0.08);
+  --leos-obsidian-ink: #f4f4f5;
+  --leos-obsidian-ink-muted: rgba(244, 244, 245, 0.58);
+  --leos-obsidian-action: #f4f4f5;
+  --leos-obsidian-on-action: #00070d;
+
+  /* Peak gold — Open for guests only. Never a standard Studio fill. */
+  --leos-action-peak: var(--leos-gold);
+  --leos-on-peak: #1b2230;
+
 
   /* Typography */
   --leos-font-sans: 'Sora', system-ui, -apple-system, sans-serif;

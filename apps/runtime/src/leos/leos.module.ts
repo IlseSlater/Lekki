@@ -14,6 +14,9 @@ import { SetupPaymentsService } from './setup-payments.service';
 import { SecretsVaultService } from './secrets-vault.service';
 import { SessionAccessService } from './session-access.service';
 import { PaymentExpiryService } from './payment-expiry.service';
+import { WorkspaceService } from './workspace.service';
+import { ASSET_STORE } from './assets/asset-store';
+import { LocalDiskAssetStore } from './assets/local-disk-asset-store';
 
 @Module({
   imports: [forwardRef(() => EventsModule), StaffAuthModule],
@@ -29,6 +32,11 @@ import { PaymentExpiryService } from './payment-expiry.service';
     SecretsVaultService,
     SessionAccessService,
     PaymentExpiryService,
+    WorkspaceService,
+    {
+      provide: ASSET_STORE,
+      useFactory: () => new LocalDiskAssetStore(),
+    },
   ],
   exports: [
     LeosService,
@@ -38,6 +46,8 @@ import { PaymentExpiryService } from './payment-expiry.service';
     SecretsVaultService,
     SessionAccessService,
     PaymentExpiryService,
+    WorkspaceService,
+    ASSET_STORE,
   ],
 })
 export class LeosModule {}

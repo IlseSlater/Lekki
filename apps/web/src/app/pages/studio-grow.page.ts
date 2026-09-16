@@ -15,53 +15,60 @@ import { composeGrowBreath } from '../studio/grow-breath';
   imports: [RouterLink],
   template: `
     <div class="studio-grow studio-motion-appear">
-      <div class="studio-grow__tray">
-        <header class="studio-grow__hero">
-          <p class="studio-grow__greeting">{{ greeting }}</p>
-          @if (!live) {
-            <p class="studio-grow__story">Go live first. Memory fills in after you welcome guests.</p>
-          } @else if (loading) {
-            <p class="studio-grow__story">Gathering today’s story…</p>
-          } @else if (error) {
-            <p class="studio-grow__story" role="alert">{{ error }}</p>
-          } @else {
-            <p class="studio-grow__story">{{ welcomeLine }}</p>
-            @if (tradingLine) {
-              <p class="studio-grow__story studio-grow__story--trade">{{ tradingLine }}</p>
-            }
-            @if (favouriteLine) {
-              <p class="studio-grow__story studio-grow__story--soft">{{ favouriteLine }}</p>
-            }
-            @if (showWait) {
-              <p class="studio-grow__wait-label">Average wait</p>
-              <p class="studio-grow__wait">{{ waitLine }}</p>
-            }
-            @if (healthLine) {
-              <p class="studio-grow__health">{{ healthLine }}</p>
-            }
-            <p
-              class="studio-grow__delight"
-              [class.studio-grow__delight--soft]="!delighted"
-            >
-              {{ delightLine }}
+      <header class="studio-grow__hero">
+        <p class="studio-grow__eyebrow">Grow</p>
+        <h1 class="studio-grow__title">{{ venue }}</h1>
+        @if (!live) {
+          <p class="studio-grow__calm">Go live first. Memory fills in after you welcome guests.</p>
+        } @else if (loading) {
+          <p class="studio-grow__calm">Gathering today’s story…</p>
+        } @else if (error) {
+          <div class="studio-grow__empty" role="alert">
+            <p class="studio-grow__calm">{{ error }}</p>
+            <p class="studio-grow__empty-hint">
+              Grow needs the API. Start the runtime, then come back — or return to Operate.
             </p>
+          </div>
+        } @else {
+          <p class="studio-grow__calm">{{ greeting }}</p>
+          <p class="studio-grow__story">{{ welcomeLine }}</p>
+          @if (tradingLine) {
+            <p class="studio-grow__story studio-grow__story--trade">{{ tradingLine }}</p>
           }
-        </header>
-
-        @if (live && !loading && !error) {
-          <section class="studio-grow__suggest studio-motion-appear-delay" aria-label="One suggestion">
-            <p class="studio-grow__suggest-label">One suggestion</p>
-            <p class="studio-grow__suggest-body">{{ suggestion }}</p>
-          </section>
+          @if (favouriteLine) {
+            <p class="studio-grow__story studio-grow__story--soft">{{ favouriteLine }}</p>
+          }
+          @if (showWait) {
+            <p class="studio-grow__wait-label">Average wait</p>
+            <p class="studio-grow__wait">{{ waitLine }}</p>
+          }
+          @if (healthLine) {
+            <p class="studio-grow__health">{{ healthLine }}</p>
+          }
+          <p
+            class="studio-grow__delight"
+            [class.studio-grow__delight--soft]="!delighted"
+          >
+            {{ delightLine }}
+          </p>
         }
+      </header>
 
-        <div class="studio-grow__doors studio-motion-appear-delay-2">
-          @if (live) {
-            <a class="leos-btn leos-btn--primary" routerLink="/studio/operate">Back to Operate</a>
-          } @else {
-            <a class="leos-btn leos-btn--primary" routerLink="/studio">Continue setup</a>
-          }
-        </div>
+      @if (live && !loading && !error) {
+        <section class="studio-grow__suggest studio-motion-appear-delay" aria-label="One suggestion">
+          <p class="studio-grow__suggest-label">One suggestion</p>
+          <p class="studio-grow__suggest-body">{{ suggestion }}</p>
+        </section>
+      }
+
+      <div class="studio-grow__doors studio-motion-appear-delay-2">
+        @if (live) {
+          <a class="leos-btn leos-btn--primary studio-grow__cta" routerLink="/studio/operate">
+            Back to Operate
+          </a>
+        } @else {
+          <a class="leos-btn leos-btn--primary studio-grow__cta" routerLink="/studio">Continue setup</a>
+        }
       </div>
     </div>
   `,

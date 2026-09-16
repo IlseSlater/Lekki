@@ -6,7 +6,7 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "node --import tsx --test src/self-check.ts src/probe.test.ts"
+    "test": "node --import tsx --test src/self-check.ts src/probe.test.ts src/itn-hardening.test.ts src/validate.test.ts src/notify-url.test.ts src/definition.test.ts"
   },
   "dependencies": {
     "@lekki/contracts": "workspace:*",

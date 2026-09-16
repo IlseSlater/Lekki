@@ -1,6 +1,6 @@
 /**
  * Pay Continuity — Studio Pay (`payAtTable`) must match Guest Bill / dock.
- * Live Experience already reads guestDesign; Guest must not hardcode Pay on.
+ * allowPay is design-intent ∧ install-active. Fail closed if install is unknown.
  */
 
 import { experienceTypeIdForToken } from './experience-registry';
@@ -15,11 +15,18 @@ export type PayContinuityExperience = {
   guestDesign?: Partial<GuestExperienceDesign> | null;
 };
 
-/**
- * Resolve whether Guest may open Bill / show Pay primary.
- * Prefer workspace design for the entry token; else pack default for that token.
- */
-export function resolveAllowPay(
+export function paymentsActiveFromStatus(status: string | null | undefined): boolean {
+  return (status ?? '').trim().toLowerCase() === 'active';
+}
+
+export function paymentsCardState(paymentsActive: boolean): { value: string; ok: boolean } {
+  return paymentsActive
+    ? { value: 'Connected', ok: true }
+    : { value: 'Guests can pay in person', ok: false };
+}
+
+/** Design intent only — never grant Guest Pay by itself. */
+export function resolvePayIntent(
   token: string | null | undefined,
   experiences: PayContinuityExperience[] = [],
   sessionDesign?: Partial<GuestExperienceDesign> | null,
@@ -42,4 +49,18 @@ export function resolveAllowPay(
 
   const typeId = experienceTypeIdForToken(t) ?? 'restaurant';
   return !!defaultDesignForType(typeId).payAtTable;
+}
+
+/**
+ * Resolve whether Guest may open Bill / show Pay primary.
+ * Prefer workspace design for the entry token; else pack default for that token.
+ * paymentsActive must be true (connector install status === active).
+ */
+export function resolveAllowPay(
+  token: string | null | undefined,
+  experiences: PayContinuityExperience[] = [],
+  sessionDesign?: Partial<GuestExperienceDesign> | null,
+  paymentsActive = false,
+): boolean {
+  return resolvePayIntent(token, experiences, sessionDesign) && paymentsActive === true;
 }

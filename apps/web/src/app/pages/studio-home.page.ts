@@ -5,6 +5,9 @@ import { StudioContextService } from '../services/studio-context.service';
 import { StudioAuthService } from '../services/studio-auth.service';
 import { LeosApiService } from '../services/leos-api.service';
 import { SETUP_STEPS, experienceLabel, getExperience } from '../studio/experience-registry';
+import { spokenArea } from '../studio/golive-confirm';
+import { recessedGateLine } from '../studio/hub-recession';
+import { stationGlanceLine } from '../studio/operate-glance';
 import { enabledPlaces } from '../studio/place-sections';
 
 type TodayRow = { label: string; value: string; ok?: boolean };
@@ -20,7 +23,7 @@ type TodayRow = { label: string; value: string; ok?: boolean };
     <div class="studio-home studio-motion-appear">
       @if (empty) {
         <header class="studio-home__hero">
-          <p class="studio-home__greeting">{{ greeting }}</p>
+          <p class="studio-home__eyebrow">Setup</p>
           <h1 class="studio-home__venue">Your Studio</h1>
           <p class="studio-home__readiness">Let’s create your first experience.</p>
         </header>
@@ -29,12 +32,20 @@ type TodayRow = { label: string; value: string; ok?: boolean };
         </div>
       } @else {
         <header class="studio-home__hero">
-          <p class="studio-home__greeting">{{ greeting }}</p>
+          <p class="studio-home__eyebrow">{{ live ? 'Open' : 'Setup' }}</p>
           <h1 class="studio-home__venue">{{ venue }}</h1>
           <p class="studio-home__readiness" [class.studio-home__readiness--ok]="live && readinessOk">
             {{ readiness }}
           </p>
         </header>
+
+        @if (live && recessedLine) {
+          <p class="studio-home__recess">
+            <span class="studio-home__recess-mark" aria-hidden="true">✓</span>
+            <span>{{ recessedLine }}</span>
+            <a class="studio-home__recess-review" routerLink="/studio/setup/golive">Review setup</a>
+          </p>
+        }
 
         <section class="studio-home__today" aria-label="Today’s Experience">
           <p class="studio-home__today-label">Today’s Experience</p>
@@ -50,26 +61,17 @@ type TodayRow = { label: string; value: string; ok?: boolean };
 
         <div class="studio-home__doors">
           @if (live) {
-            <a class="leos-btn leos-btn--primary" routerLink="/studio/setup/golive">Open Experience</a>
-            <div class="studio-home__door-row">
-              <a class="studio-home__door" routerLink="/studio/menu">Menu</a>
-              <span class="studio-home__door-sep" aria-hidden="true">·</span>
-              <a class="studio-home__door" routerLink="/studio/integrations">Integrations</a>
-              <span class="studio-home__door-sep" aria-hidden="true">·</span>
-              <a class="studio-home__door" routerLink="/studio/operate">Operate</a>
-              <span class="studio-home__door-sep" aria-hidden="true">·</span>
-              <a class="studio-home__door" routerLink="/studio/grow">Grow</a>
+            <a class="leos-btn leos-btn--primary" routerLink="/studio/operate">Open Operate</a>
+            <div class="studio-home__actions" aria-label="When you have a minute">
+              <a class="leos-btn leos-btn--secondary" routerLink="/studio/setup/payments">Payments</a>
+              <a class="leos-btn leos-btn--secondary" routerLink="/studio/menu">Menu</a>
+              <a class="leos-btn leos-btn--secondary" routerLink="/studio/setup/golive">Guest QR</a>
             </div>
           } @else {
             <a class="leos-btn leos-btn--primary" [routerLink]="resumeLink">{{ primaryCta }}</a>
-            <div class="studio-home__door-row">
-              <a class="studio-home__door" routerLink="/studio/menu">Menu</a>
-              <span class="studio-home__door-sep" aria-hidden="true">·</span>
-              <a class="studio-home__door" routerLink="/studio/integrations">Integrations</a>
-              <span class="studio-home__door-sep" aria-hidden="true">·</span>
-              <a class="studio-home__door" routerLink="/studio/operate">Operate</a>
-              <span class="studio-home__door-sep" aria-hidden="true">·</span>
-              <a class="studio-home__door" routerLink="/studio/grow">Grow</a>
+            <div class="studio-home__actions" aria-label="Optional">
+              <a class="leos-btn leos-btn--secondary" routerLink="/studio/menu">Menu</a>
+              <a class="leos-btn leos-btn--secondary" routerLink="/studio/integrations">Integrations</a>
             </div>
           }
         </div>
@@ -91,6 +93,7 @@ export class StudioHomePageComponent implements OnInit {
   primaryCta = 'Continue setup';
   resumeLink = '/studio/setup/identity';
   todayRows: TodayRow[] = [];
+  recessedLine = '';
 
   ngOnInit() {
     this.ctx.touchLastSeen();
@@ -138,14 +141,18 @@ export class StudioHomePageComponent implements OnInit {
     if (c.live) {
       this.readiness = 'Everything is ready.';
       this.readinessOk = true;
+      const floorPlaces = enabledPlaces(active?.placeSections ?? []);
+      const area = spokenArea(floorPlaces[0]?.section || '');
+      this.recessedLine =
+        recessedGateLine({
+          area,
+          placeCount: floorPlaces.length || (active?.placeCodes?.length ?? 0),
+          placeNoun,
+          station,
+        }) ?? '';
       this.todayRows = [
         { label: 'Guests', value: 'Ready for the next guest', ok: true },
-        { label: station, value: 'Ready', ok: true },
-        {
-          label: 'Payments',
-          value: c.paymentsDone ? 'Healthy' : 'Still to finish',
-          ok: c.paymentsDone,
-        },
+        { label: station, value: `${station} is calm`, ok: true },
       ];
       this.api
         .listFloorTables()
@@ -166,19 +173,15 @@ export class StudioHomePageComponent implements OnInit {
                 ? `1 ${placeNoun.toLowerCase()} open`
                 : `${open} ${placePlural.toLowerCase()} open`;
 
-          let stationValue = 'Ready';
-          if (help > 0) stationValue = help === 1 ? '1 needs help' : `${help} need help`;
-          else if (ready > 0) stationValue = ready === 1 ? '1 ready' : `${ready} ready`;
-          else if (prep > 0) stationValue = prep === 1 ? '1 in progress' : `${prep} in progress`;
+          const glance = stationGlanceLine(station, {
+            waiting: help,
+            preparing: prep,
+            ready,
+          });
 
           this.todayRows = [
             { label: 'Guests', value: guestValue, ok: help === 0 },
-            { label: station, value: stationValue, ok: help === 0 && prep === 0 },
-            {
-              label: 'Payments',
-              value: c.paymentsDone ? 'Healthy' : 'Still to finish',
-              ok: c.paymentsDone,
-            },
+            { label: station, value: glance.line, ok: glance.tone === 'calm' },
           ];
 
           if (help > 0) {

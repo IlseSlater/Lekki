@@ -9,9 +9,9 @@ type InstallRow = Record<string, unknown> & {
   connectorId: string;
   status: string;
   environment: string;
-  merchantId?: string | null;
-  merchantKeySecretRef?: string | null;
-  passphraseSecretRef?: string | null;
+  verifiedEnvironment?: string | null;
+  configJson?: Record<string, string>;
+  vaultRefsJson?: Record<string, string>;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -20,6 +20,48 @@ function createFakePrisma() {
   const entries: Array<Record<string, unknown>> = [];
   const audits: Array<Record<string, unknown>> = [];
   const installs: InstallRow[] = [];
+
+  const paymentConnectorInstall = {
+    async findFirst(args?: { where?: Record<string, unknown> }) {
+      const where = args?.where ?? {};
+      const matched = installs.filter((row) =>
+        Object.entries(where).every(([k, value]) => {
+          if (k === 'status' && value && typeof value === 'object' && 'in' in value) {
+            return (value as { in: string[] }).in.includes(String(row.status));
+          }
+          return (row as Record<string, unknown>)[k] === value;
+        }),
+      );
+      return matched.at(-1) ?? null;
+    },
+    async create(args: { data: Record<string, unknown> }) {
+      const created: InstallRow = {
+        ...args.data,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as InstallRow;
+      installs.push(created);
+      return created;
+    },
+    async update(args: { where: { id: string }; data: Record<string, unknown> }) {
+      const row = installs.find((install) => install.id === args.where.id);
+      if (!row) throw new Error('Install not found');
+      Object.assign(row, args.data, { updatedAt: new Date() });
+      return row;
+    },
+    async updateMany(args: {
+      where: { status?: string; organisationId?: string };
+      data: Record<string, unknown>;
+    }) {
+      for (const row of installs) {
+        if (args.where.status && row.status !== args.where.status) continue;
+        if (args.where.organisationId && row.organisationId !== args.where.organisationId) {
+          continue;
+        }
+        Object.assign(row, args.data, { updatedAt: new Date() });
+      }
+    },
+  };
 
   return {
     entries,
@@ -57,7 +99,7 @@ function createFakePrisma() {
       async findFirst(args: { where: Record<string, unknown> }) {
         return (
           entries.find((row) =>
-            Object.entries(args.where).every(([key, value]) => row[key] === value),
+            Object.entries(args.where).every(([k, value]) => row[k] === value),
           ) ?? null
         );
       },
@@ -67,37 +109,19 @@ function createFakePrisma() {
         audits.push({ ...args.data, createdAt: new Date() });
       },
     },
-    paymentConnectorInstall: {
-      async findFirst() {
-        return installs.at(-1) ?? null;
-      },
-      async create(args: { data: Record<string, unknown> }) {
-        const created: InstallRow = {
-          ...args.data,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        } as InstallRow;
-        installs.push(created);
-        return created;
-      },
-      async update(args: { where: { id: string }; data: Record<string, unknown> }) {
-        const row = installs.find((install) => install.id === args.where.id);
-        if (!row) throw new Error('Install not found');
-        Object.assign(row, args.data, { updatedAt: new Date() });
-        return row;
-      },
-      async updateMany(args: { where: { status?: string }; data: Record<string, unknown> }) {
-        for (const row of installs) {
-          if (!args.where.status || row.status === args.where.status) {
-            Object.assign(row, args.data, { updatedAt: new Date() });
-          }
-        }
-      },
-    },
+    paymentConnectorInstall,
     venue: {
-      async findFirst() {
+      async findFirst(args?: { where?: { id?: string; organisationId?: string } }) {
+        const where = args?.where ?? {};
+        if (where.organisationId && where.organisationId !== 'org_demo') return null;
+        if (where.id && where.id !== 'ven_demo') return null;
         return { id: 'ven_demo', organisationId: 'org_demo' };
       },
+    },
+    async $transaction(
+      fn: (tx: { paymentConnectorInstall: typeof paymentConnectorInstall }) => Promise<unknown>,
+    ) {
+      return fn({ paymentConnectorInstall });
     },
   };
 }
@@ -106,6 +130,9 @@ async function run() {
   const prisma = createFakePrisma();
   const bootstrapCalls: Array<Record<string, unknown>> = [];
   const bootstrap = {
+    async provePaymentBinding() {
+      return { connectorId: 'connector-payfast' };
+    },
     async activatePaymentConnector(input: Record<string, unknown>) {
       bootstrapCalls.push(input);
       return 'connector-payfast';
@@ -141,6 +168,8 @@ async function run() {
 
   const setup = new SetupPaymentsService(prisma as never, bootstrap as never, vault);
   const install = await setup.saveDraft({
+    organisationId: 'org_demo',
+    venueId: 'ven_demo',
     connectorId: 'payfast',
     environment: 'sandbox',
     merchantId: '10000100',
@@ -149,18 +178,24 @@ async function run() {
   });
 
   assert.equal(prisma.installs.length, 1);
-  assert.equal(prisma.installs[0].merchantKey, null);
-  assert.equal(prisma.installs[0].passphrase, null);
-  assert.ok(prisma.installs[0].merchantKeySecretRef);
-  assert.ok(prisma.installs[0].passphraseSecretRef);
+  assert.equal((prisma.installs[0].configJson as { merchantId?: string })?.merchantId, '10000100');
+  assert.ok((prisma.installs[0].vaultRefsJson as { merchantKey?: string })?.merchantKey);
+  assert.ok((prisma.installs[0].vaultRefsJson as { passphrase?: string })?.passphrase);
   assert.equal(install.merchantKeyMasked, '••••stored');
   assert.equal(install.passphraseSet, true);
+  assert.equal(install.merchantId, '10000100');
 
-  await setup.activate();
+  // Simulate successful verify before activate (P1-5).
+  prisma.installs[0].status = 'verified';
+  prisma.installs[0].verifiedEnvironment = 'sandbox';
+
+  process.env.PUBLIC_RUNTIME_ORIGIN = 'https://runtime.example.test';
+  await setup.activate('org_demo');
   assert.equal(bootstrapCalls.length, 1);
   assert.equal('merchantKey' in bootstrapCalls[0], false);
   assert.equal('passphrase' in bootstrapCalls[0], false);
-  assert.ok(bootstrapCalls[0].merchantKeySecretRef);
+  assert.ok((bootstrapCalls[0].vaultRefs as Record<string, string>)?.merchantKey);
+  assert.ok((bootstrapCalls[0].config as Record<string, string>)?.merchantId);
 
   console.log('Payment vault checks passed.');
 }
