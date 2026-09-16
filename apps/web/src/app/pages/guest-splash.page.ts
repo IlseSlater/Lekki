@@ -229,8 +229,11 @@ export class GuestSplashPageComponent implements OnInit, OnDestroy {
         this.state.profileId = res.session.profileId ?? res.context.profile.id ?? '';
         this.state.physicalContextCode = res.context.physicalContextCode ?? '';
         this.state.venueName = res.venueName ?? '';
-        this.state.menuBrandEnabled = !!res.menuBrandEnabled;
+        this.state.menuBrandEnabled = false;
         this.state.brandColour = res.brandColour || '#d7a14a';
+        this.state.logoUrl = res.logoUrl || '';
+        this.state.menuCoverUrl = '';
+        this.state.location = res.location || '';
         this.state.participantId = res.joinedParticipantId ?? '';
         if (res.participantSecret) this.state.participantSecret = res.participantSecret;
         if (res.guestDesign && typeof res.guestDesign === 'object') {

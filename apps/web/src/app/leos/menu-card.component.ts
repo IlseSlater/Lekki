@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { QuantityStepperComponent } from './quantity-stepper.component';
 import { LeosMoneyPipe } from './leos-money.pipe';
 import { safeGuestImageUrl } from './catalogue-parity';
+import { formatCataloguePriceMajor } from '../studio/guest-experience-design';
 
 type FoodIcon =
   | 'burger'
@@ -109,7 +110,7 @@ type FoodIcon =
         @if (dietaryLine) {
           <p class="leos-muted leos-menu-card__meta">{{ dietaryLine }}</p>
         }
-        <p class="leos-menu-card__price">{{ unitPrice | leosMoney: currency }}</p>
+        <p class="leos-menu-card__price">{{ priceLabel }}</p>
         @if (requiresChoices) {
           <p class="leos-menu-card__choices-cue">Choose options</p>
         }
@@ -173,6 +174,11 @@ export class MenuCardComponent {
 
   get safeImageUrl(): string | null {
     return this.showFoodImages ? safeGuestImageUrl(this.imageUrl) : null;
+  }
+
+  get priceLabel(): string {
+    if (this.unitPrice <= 0) return formatCataloguePriceMajor(this.unitPrice);
+    return new LeosMoneyPipe().transform(this.unitPrice, this.currency);
   }
 
   get foodIcon(): FoodIcon {

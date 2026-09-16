@@ -3,7 +3,7 @@ import { NavigationEnd, Router } from '@angular/router';
 import { filter, Subscription } from 'rxjs';
 import {
   defaultDesignForType,
-  projectionCatalogueForType,
+  formatCataloguePriceMinor,
   projectionItemsFromVenueCatalogue,
   type GuestExperienceDesign,
   type ProjectionItem,
@@ -12,9 +12,10 @@ import { getExperience, type SetupStepSlug } from '../studio/experience-registry
 import { StudioContextService } from '../services/studio-context.service';
 import { LeosApiService } from '../services/leos-api.service';
 import { GuestShellProjectionComponent } from './guest-shell-projection.component';
-import { safeGuestImageUrl } from './catalogue-parity';
+import { safeBrandImageUrl } from './catalogue-parity';
 import { CatalogueLiveService } from '../services/catalogue-live.service';
-import { guestPlaceSpoken } from '../studio/place-continuity';
+import { missingFactCopy, resolveLiveFacts, spokenPlaceLine } from '../studio/live-facts';
+import { resolveCatalogueLock } from '../studio/catalogue-lock';
 
 /**
  * Live Experience — phone on the desk (Design System v1).
@@ -94,8 +95,6 @@ import { guestPlaceSpoken } from '../studio/place-continuity';
                 [greeting]="greeting"
                 [brandColour]="brandColour"
                 [logoUrl]="logoUrl"
-                [menuBrandEnabled]="menuBrandEnabled"
-                [menuCoverUrl]="menuCoverUrl"
                 [catalogueLabel]="catalogueLabel"
                 [paymentLabel]="paymentLabel"
                 [placeNoun]="placeNoun"
@@ -103,6 +102,8 @@ import { guestPlaceSpoken } from '../studio/place-continuity';
                 [leaveLabel]="leaveLabel"
                 [sampleItemLabel]="sampleItemLabel"
                 [venueCatalogue]="venueCatalogue"
+                [lockCatalogue]="lockCatalogue"
+                [allowExampleCatalogue]="allowExampleCatalogue"
                 [experienceTypeId]="experienceTypeId"
                 [payMethods]="payMethods"
               />
@@ -110,6 +111,9 @@ import { guestPlaceSpoken } from '../studio/place-continuity';
           }
         </div>
       </div>
+      @if (factsGap) {
+        <p class="phone-desk__gap">{{ factsGap }}</p>
+      }
       @if (publicLive) {
         <p class="phone-desk__live" role="status">Live · guests can join</p>
       }
@@ -183,8 +187,6 @@ import { guestPlaceSpoken } from '../studio/place-continuity';
                   [greeting]="greeting"
                   [brandColour]="brandColour"
                   [logoUrl]="logoUrl"
-                  [menuBrandEnabled]="menuBrandEnabled"
-                  [menuCoverUrl]="menuCoverUrl"
                   [fillFrame]="true"
                   [catalogueLabel]="catalogueLabel"
                   [paymentLabel]="paymentLabel"
@@ -193,6 +195,8 @@ import { guestPlaceSpoken } from '../studio/place-continuity';
                   [leaveLabel]="leaveLabel"
                   [sampleItemLabel]="sampleItemLabel"
                   [venueCatalogue]="venueCatalogue"
+                  [lockCatalogue]="lockCatalogue"
+                  [allowExampleCatalogue]="allowExampleCatalogue"
                   [experienceTypeId]="experienceTypeId"
                   [payMethods]="payMethods"
                 />
@@ -217,7 +221,7 @@ import { guestPlaceSpoken } from '../studio/place-continuity';
         gap: 1rem;
         width: 100%;
         max-width: var(--studio-live-width, 420px);
-        padding: 1.5rem 1rem 0;
+        padding: 0.65rem 0.5rem 0;
         box-sizing: border-box;
       }
       .phone-desk__label {
@@ -228,6 +232,14 @@ import { guestPlaceSpoken } from '../studio/place-continuity';
         text-transform: uppercase;
         color: var(--studio-ink-tertiary, #8f96a3);
       }
+      .phone-desk__gap {
+        margin: 0;
+        font-size: 0.75rem;
+        font-weight: 550;
+        text-align: center;
+        max-width: 16rem;
+        color: var(--studio-ink-secondary);
+      }
       .phone-desk__live {
         margin: 0;
         font-size: 0.75rem;
@@ -236,7 +248,7 @@ import { guestPlaceSpoken } from '../studio/place-continuity';
         color: #4f8a6b;
       }
       .phone {
-        /* Fixed frame across Setup steps — never shrink with short pay/shell copy */
+        /* True device size. Never scale the desk preview down. */
         width: 20.5rem;
         max-width: 100%;
         flex-shrink: 0;
@@ -509,11 +521,9 @@ export class LiveExperiencePanelComponent implements OnInit, OnDestroy {
   mode: 'shell' | 'arrival' | 'pay' = 'shell';
   /** Go Live — same shell, now public (never a different preview). */
   publicLive = false;
-  venueName = 'Your place';
+  venueName = '';
   logoUrl = '';
   brandColour = '#d7a14a';
-  menuBrandEnabled = false;
-  menuCoverUrl = '';
   location = '';
   placeLabel = '';
   /** Guest-spoken place — never “Table Table 1”. */
@@ -528,9 +538,12 @@ export class LiveExperiencePanelComponent implements OnInit, OnDestroy {
   paymentLabel = 'Bill';
   placeNoun = 'Table';
   transactionLabel = 'Order';
-  sampleItemLabel = 'Classic Burger';
+  sampleItemLabel = '';
   sampleVisitTotal = '—';
   venueCatalogue: ProjectionItem[] | null = null;
+  lockCatalogue = true;
+  allowExampleCatalogue = false;
+  factsGap = '';
   leaveLabel = 'Leave';
   experienceTypeId = 'restaurant';
   private lastFingerprint = '';
@@ -538,8 +551,10 @@ export class LiveExperiencePanelComponent implements OnInit, OnDestroy {
   constructor() {
     effect(() => {
       this.ctx.liveRevision();
+      this.ctx.liveSession();
       this.ctx.liveFocusPlace();
       this.ctx.livePayMethods();
+      this.ctx.livePaymentsActive();
       this.catalogueLive.revision();
       this.hydrate(true);
     });
@@ -572,18 +587,11 @@ export class LiveExperiencePanelComponent implements OnInit, OnDestroy {
     const slug = (match?.[1] ?? (onCreate ? 'experience' : 'identity')) as SetupStepSlug;
 
     // Identity + Places → arrival · Payments → pay · Go Live → public shell · else browse shell
-    // When menu half-moon is on, show the shell on Identity so owners see brand immediately.
     if (slug === 'payments') {
       this.mode = 'pay';
       this.publicLive = false;
-    } else if (
-      (slug === 'identity' || slug === 'places') &&
-      !this.ctx.activeExperience()?.menuBrandEnabled
-    ) {
-      this.mode = 'arrival';
-      this.publicLive = false;
     } else if (slug === 'identity' || slug === 'places') {
-      this.mode = 'shell';
+      this.mode = 'arrival';
       this.publicLive = false;
     } else {
       this.mode = 'shell';
@@ -591,40 +599,75 @@ export class LiveExperiencePanelComponent implements OnInit, OnDestroy {
     }
 
     const active = this.ctx.activeExperience();
+    // typeId defaults to restaurant for pack terminology and design mode only — never for venue/place/catalogue facts.
     const typeId = active?.typeId ?? 'restaurant';
     const def = getExperience(typeId);
-    this.venueName = active?.venueName?.trim() || def?.defaults.venueName || 'Your place';
-    this.logoUrl = safeGuestImageUrl(active?.logoUrl) ?? '';
+    const facts = resolveLiveFacts({
+      session: this.ctx.liveSession(),
+      workspace: active
+        ? {
+            venueName: active.venueName,
+            placeCode: active.placeCode,
+            placeCodes: active.placeCodes,
+          }
+        : null,
+    });
+    const factVenue = facts.resolved ? facts.facts.venueName : facts.partial.venueName || '';
+    const factPlace = facts.resolved ? facts.facts.placeCode : facts.partial.placeCode || '';
+    const factCatalogue = facts.resolved ? facts.facts.catalogue : facts.partial.catalogue;
+    this.venueName = factVenue;
+    this.logoUrl = safeBrandImageUrl(active?.logoUrl) ?? '';
     this.brandColour = active?.brandColour || '#d7a14a';
-    this.menuBrandEnabled = !!active?.menuBrandEnabled;
-    this.menuCoverUrl = safeGuestImageUrl(active?.menuCoverUrl) ?? '';
     this.location = active?.location?.trim() || '';
     this.design = active?.guestDesign
       ? { ...defaultDesignForType(typeId), ...active.guestDesign }
       : defaultDesignForType(typeId);
-    this.payMethods = this.ctx.livePayMethods();
     this.catalogueLabel = def?.terminology.catalogue ?? 'Menu';
     this.paymentLabel = def?.terminology.payment ?? 'Bill';
     this.placeNoun = def?.terminology.place ?? 'Table';
     this.transactionLabel = def?.terminology.transaction ?? 'Order';
     this.leaveLabel = this.leaveLabelFor(typeId, this.placeNoun);
-    this.loadVenueCatalogue(active?.venueId?.trim() || '');
-    if (!this.venueCatalogue?.length) {
-      this.sampleItemLabel = this.sampleItemFor(typeId);
-      this.sampleVisitTotal = this.sampleTotalFor(typeId, this.sampleItemLabel);
+    const catLock = resolveCatalogueLock({
+      live: !!this.ctx.readConfig().live,
+      slug: match?.[1] ?? '',
+    });
+    this.lockCatalogue = catLock.lockCatalogue;
+    this.allowExampleCatalogue = catLock.allowExampleCatalogue;
+    const paymentsActive = this.ctx.livePaymentsActive();
+    this.payMethods = this.ctx.livePayMethods();
+    if (this.lockCatalogue && !paymentsActive) {
+      this.payMethods = { card: false, applePay: false, googlePay: false };
+      this.design = { ...this.design, payAtTable: false };
+    }
+    if (this.lockCatalogue) {
+      this.venueCatalogue = (factCatalogue ?? []).map((item, index) => ({
+        id: `live-${index}`,
+        label: item.label,
+        category: 'Food',
+        price: formatCataloguePriceMinor(item.priceMinor),
+      }));
+      this.sampleItemLabel = this.venueCatalogue[0]?.label ?? '';
+      this.sampleVisitTotal = this.venueCatalogue[0]?.price ?? '—';
+      this.factsGap = facts.resolved ? '' : missingFactCopy(facts.missing[0] ?? 'catalogue');
+    } else {
+      this.factsGap = '';
+      this.loadVenueCatalogue(active?.venueId?.trim() || '');
+    }
+    if (active?.venueId || active?.token) {
+      this.ctx.loadLiveSession({ venueId: active.venueId, placeCode: active.placeCode });
     }
     this.experienceTypeId = typeId;
-    this.greeting = this.venueName !== 'Your place' ? `Hi — welcome to ${this.venueName}` : 'Hi there';
+    this.greeting = this.venueName ? `Hi — welcome to ${this.venueName}` : 'Hi there';
 
     const focus = this.ctx.liveFocusPlace();
-    const fallbackPlace =
-      active?.placeCode || active?.placeCodes?.[0] || def?.defaults.placeCode || '';
-    this.placeLabel = focus || fallbackPlace;
-    this.placeSpoken = guestPlaceSpoken(this.placeNoun, this.placeLabel);
-    this.arrivalEyebrow =
-      this.venueName && this.venueName !== 'Your place' ? this.venueName : 'Welcome';
+    this.placeLabel = focus || factPlace;
+    this.placeSpoken = spokenPlaceLine({
+      venueName: this.venueName,
+      placeCode: this.placeLabel,
+    });
+    this.arrivalEyebrow = this.venueName || 'Welcome';
 
-    const fp = `${this.venueName}|${this.logoUrl}|${this.brandColour}|${this.menuBrandEnabled}|${this.menuCoverUrl}|${this.location}|${this.placeSpoken}|${JSON.stringify(this.design)}|${JSON.stringify(this.payMethods)}|${this.mode}|${this.publicLive}|${this.sampleVisitTotal}`;
+    const fp = `${this.venueName}|${this.logoUrl}|${this.brandColour}|${this.location}|${this.placeSpoken}|${JSON.stringify(this.design)}|${JSON.stringify(this.payMethods)}|${this.mode}|${this.publicLive}|${this.sampleVisitTotal}`;
     if (fromLive && this.lastFingerprint && this.lastFingerprint !== fp) {
       this.pulse = true;
       if (this.pulseTimer) clearTimeout(this.pulseTimer);
@@ -634,8 +677,6 @@ export class LiveExperiencePanelComponent implements OnInit, OnDestroy {
     }
     this.lastFingerprint = fp;
   }
-
-  /** Match guest tab Leave / Complete from pack close terms. */
   private leaveLabelFor(typeId: string, placeNoun: string): string {
     if (typeId === 'restaurant' || typeId === 'cafe') return 'Complete';
     if (typeId === 'hotel') return 'End stay';
@@ -648,33 +689,6 @@ export class LiveExperiencePanelComponent implements OnInit, OnDestroy {
     if (p.includes('bay')) return 'Leave bay';
     if (p.includes('gate')) return 'Leave gate';
     return 'Leave';
-  }
-
-  private sampleItemFor(typeId: string): string {
-    switch (typeId) {
-      case 'cafe':
-        return 'Flat white';
-      case 'hotel':
-        return 'In-room breakfast';
-      case 'festival':
-        return 'Loaded fries';
-      case 'airport':
-        return 'Gate latte';
-      case 'healthcare':
-        return 'Tea & biscuit';
-      default:
-        return 'Classic Burger';
-    }
-  }
-
-  private sampleTotalFor(typeId: string, label: string): string {
-    if (this.venueCatalogue?.length) {
-      const hit = this.venueCatalogue.find((i) => i.label === label);
-      return hit?.price ?? this.venueCatalogue[0]?.price ?? '—';
-    }
-    const items = projectionCatalogueForType(typeId).items;
-    const hit = items.find((i) => i.label === label);
-    return hit?.price ?? items[0]?.price ?? '—';
   }
 
   private loadVenueCatalogue(venueId: string) {

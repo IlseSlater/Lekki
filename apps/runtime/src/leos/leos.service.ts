@@ -28,6 +28,7 @@ import {
 } from './payment-session-cap';
 import { equalShareForParticipant } from './equal-share-candidates';
 import { MissingFieldError, PaymentConflictError, SessionNotActiveError } from './domain-errors';
+import { venueHasActivePaymentInstall } from './payments-active';
 import {
   assertExternalLineInput,
   externalLineBillMinorDelta,
@@ -161,6 +162,9 @@ export class LeosService {
         name: true,
         menuBrandEnabled: true,
         brandColour: true,
+        logoUrl: true,
+        menuCoverUrl: true,
+        location: true,
         guestDesignJson: true,
         currency: true,
       },
@@ -171,13 +175,19 @@ export class LeosService {
         ? venue.guestDesignJson
         : null;
 
+    const paymentsActive = await venueHasActivePaymentInstall(this.prisma, session.venueId);
+
     return {
       context: context.value,
       session,
       venueName: venue?.name ?? null,
-      menuBrandEnabled: !!venue?.menuBrandEnabled,
+      menuBrandEnabled: false,
       brandColour: venue?.brandColour || '#d7a14a',
+      logoUrl: venue?.logoUrl || '',
+      menuCoverUrl: '',
+      location: venue?.location || '',
       guestDesign,
+      paymentsActive,
       currency: venue?.currency ?? 'ZAR',
       joinedParticipantId: started.value.participantId,
       participantSecret: started.value.participantSecret,
@@ -190,6 +200,9 @@ export class LeosService {
     menuBrandEnabled?: boolean;
     brandColour?: string;
     venueName?: string;
+    logoUrl?: string;
+    menuCoverUrl?: string;
+    location?: string;
     guestDesignJson?: Record<string, unknown>;
   }) {
     const colour = (input.brandColour || '').trim();
@@ -197,6 +210,9 @@ export class LeosService {
       menuBrandEnabled?: boolean;
       brandColour?: string;
       name?: string;
+      logoUrl?: string;
+      menuCoverUrl?: string;
+      location?: string;
       guestDesignJson?: Prisma.InputJsonValue;
     } = {};
     if (typeof input.menuBrandEnabled === 'boolean') {
@@ -207,6 +223,9 @@ export class LeosService {
     }
     const name = (input.venueName || '').trim();
     if (name) data.name = name;
+    if (input.logoUrl !== undefined) data.logoUrl = input.logoUrl.trim();
+    if (input.menuCoverUrl !== undefined) data.menuCoverUrl = input.menuCoverUrl.trim();
+    if (input.location !== undefined) data.location = input.location.trim().slice(0, 200);
     if (input.guestDesignJson) {
       data.guestDesignJson = input.guestDesignJson as Prisma.InputJsonValue;
     }
@@ -218,6 +237,9 @@ export class LeosService {
         name: true,
         menuBrandEnabled: true,
         brandColour: true,
+        logoUrl: true,
+        menuCoverUrl: true,
+        location: true,
         guestDesignJson: true,
       },
     });
@@ -233,6 +255,17 @@ export class LeosService {
     profileVersion: string;
   }) {
     const token = `e_${newId('qr').replace(/^qr_/, '')}`;
+    const existing = await this.prisma.entryToken.findFirst({
+      where: {
+        organisationId: input.organisationId,
+        venueId: input.venueId,
+        physicalContextId: input.physicalContextId,
+        active: true,
+      },
+      orderBy: { token: 'asc' },
+    });
+    if (existing) return { token: existing.token };
+
     await this.prisma.entryToken.create({
       data: {
         token,
@@ -1133,8 +1166,9 @@ export class LeosService {
   }
 
   /**
-   * PayFast ITN handler — signature + validate + settle/fail.
+   * PayFast ITN handler — signature + validate + amount anti-spoof + settle/fail.
    * Idempotent: already-completed payments are acknowledged without re-emitting.
+   * Always safe to answer HTTP 200 (controller) so PayFast stops retrying.
    */
   async handlePayFastItn(posted: Record<string, string>) {
     const paymentId = posted.m_payment_id;
@@ -1154,8 +1188,10 @@ export class LeosService {
     }
     if (
       payment.status === 'completed' ||
+      payment.status === 'settled' ||
       payment.status === 'failed' ||
-      payment.status === 'needs_refund'
+      payment.status === 'needs_refund' ||
+      payment.status === 'amount_mismatch'
     ) {
       return { ok: true, status: payment.status, idempotent: true };
     }
@@ -1175,8 +1211,24 @@ export class LeosService {
     }
 
     const payfast = resolved.value as PayFastPaymentConnector;
+    this.logger.log(`PayFast ITN shield start ${paymentId}`);
     const itn = await payfast.handleItn(posted, Number(payment.amount));
+    this.logger.log(
+      `PayFast ITN shield done ${paymentId} ok=${itn.ok} settlement=${itn.settlement ?? 'n/a'} reason=${itn.reason ?? ''}`,
+    );
     if (!itn.ok) {
+      if (itn.amountRejectCode) {
+        this.logger.error(
+          `PayFast ITN amount anti-spoof for ${paymentId}: ${itn.reason}`,
+        );
+        await this.failPayFastAmountMismatch(paymentId, payment, itn.reason ?? 'amount mismatch');
+        return {
+          ok: false,
+          reason: itn.reason,
+          status: 'amount_mismatch',
+          amountRejectCode: itn.amountRejectCode,
+        };
+      }
       return { ok: false, reason: itn.reason };
     }
 
@@ -1223,6 +1275,54 @@ export class LeosService {
     }
 
     return { ok: true, status: 'pending' };
+  }
+
+  /**
+   * Form-tamper / underpay ITN — never settle claims or emit PaymentCompleted.
+   * Releases the pending reservation so the guest can retry the full amount.
+   */
+  private async failPayFastAmountMismatch(
+    paymentId: string,
+    payment: {
+      sessionId: string;
+      organisationId: string;
+      transactionId: string;
+      amount: number | { toString(): string };
+      tipAmount?: number | null | { toString(): string };
+      session: { venueId: string; correlationId: string };
+    },
+    reason: string,
+  ) {
+    const baseMinor = paymentBaseMinor(
+      toMinor(Number(payment.amount)),
+      toMinor(Number(payment.tipAmount ?? 0)),
+    );
+    await this.prisma.$transaction(async (tx) => {
+      const claimed = await tx.payment.updateMany({
+        where: { id: paymentId, status: { in: ['pending', 'expired'] } },
+        data: { status: 'amount_mismatch' },
+      });
+      if (claimed.count === 0) return;
+      if (baseMinor > 0) {
+        await this.releaseSessionPaidMinor(tx, payment.sessionId, baseMinor);
+      }
+      await this.outbox.append(
+        this.envelope(
+          'PaymentFailed',
+          payment.organisationId,
+          payment.session.venueId,
+          payment.session.correlationId,
+          {
+            paymentId,
+            transactionId: payment.transactionId,
+            sessionId: payment.sessionId,
+            reason,
+            code: 'amount_mismatch',
+          },
+        ),
+        tx,
+      );
+    });
   }
 
   private async markPaymentSettled(

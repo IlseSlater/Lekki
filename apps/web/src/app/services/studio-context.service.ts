@@ -1,4 +1,5 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
+import { LeosApiService } from './leos-api.service';
 import {
   SETUP_STEPS,
   experienceLabel,
@@ -11,6 +12,7 @@ import {
   defaultDesignForType,
   type GuestExperienceDesign,
 } from '../studio/guest-experience-design';
+import type { LiveFactsInput } from '../studio/live-facts';
 import {
   defaultPlaceSections,
   placeCodesFromSections,
@@ -28,13 +30,13 @@ export type WorkspaceExperience = {
   organisationId?: string;
   /** Runtime physical context for entry token minting. */
   physicalContextId?: string;
-  /** Optional brand mark shown on Live Experience splash / arrival */
+  /** Durable /assets or https URL — never Base64 */
   logoUrl: string;
   /** Brand accent (#hex) — Live Experience morph */
   brandColour: string;
   /** Guest menu half-moon brand band (above filters) */
   menuBrandEnabled: boolean;
-  /** Optional cover image for menu half-moon (data URL) */
+  /** Durable cover URL — never Base64 */
   menuCoverUrl: string;
   /** Where guests find you (city / suburb / address line) */
   location: string;
@@ -60,23 +62,45 @@ const LEGACY_PACK = 'leos.studio.pack';
 const LEGACY_CONFIG = 'leos.studio.config';
 const LEGACY_PAYMENTS = 'leos.studio.payments';
 
-/** Shared Studio context — Never Ask a Human to Remember (lite). */
+const SERVER_BRAND_KEYS: Array<keyof WorkspaceExperience> = [
+  'venueName',
+  'logoUrl',
+  'brandColour',
+  'menuBrandEnabled',
+  'menuCoverUrl',
+  'location',
+  'guestDesign',
+];
+
+function stripDataUrl(url: string | undefined): string {
+  const u = (url ?? '').trim();
+  if (!u) return '';
+  if (u.toLowerCase().startsWith('data:')) return '';
+  return u;
+}
+
+/** Shared Studio context — Venue API is source of truth for brand presentation. */
 @Injectable({ providedIn: 'root' })
 export class StudioContextService {
-  readonly mode = signal<StudioMode>('setup');
+  private readonly api = inject(LeosApiService);
+  private serverPatchTimer?: ReturnType<typeof setTimeout>;
+  private hydratingVenueId: string | null = null;
 
-  /** Bumps whenever workspace mutates — Live Experience reacts. */
+  readonly mode = signal<StudioMode>('setup');
   readonly liveRevision = signal(0);
-  /** Place label currently highlighted in Live Experience (Places step). */
   readonly liveFocusPlace = signal<string | null>(null);
-  /** Guest pay methods shown in Live Experience (How guests pay). */
   readonly livePayMethods = signal<{ card: boolean; applePay: boolean; googlePay: boolean }>({
     card: true,
     applePay: true,
     googlePay: true,
   });
-  /** Studio nav / Open full → Live Experience fullscreen. */
+  /** Connector install active for the hydrated venue. */
+  readonly livePaymentsActive = signal(false);
   readonly liveFullscreenOpen = signal(false);
+  readonly workspaceHydrated = signal(false);
+  /** Server facts for the minted token — never localStorage. */
+  readonly liveSession = signal<LiveFactsInput['session']>(null);
+  private liveSessionKey = '';
 
   touchLive() {
     this.liveRevision.update((n) => n + 1);
@@ -92,6 +116,11 @@ export class StudioContextService {
     this.touchLive();
   }
 
+  setLivePaymentsActive(active: boolean) {
+    this.livePaymentsActive.set(!!active);
+    this.touchLive();
+  }
+
   openLiveExperience() {
     this.liveFullscreenOpen.set(true);
   }
@@ -100,7 +129,124 @@ export class StudioContextService {
     this.liveFullscreenOpen.set(false);
   }
 
-  /** Migrate legacy keys once into workspace model. */
+  /** Hydrate brand + guestDesign from GET /studio/workspace/:venueId. */
+  initWorkspace(venueId: string) {
+    const id = venueId?.trim();
+    if (!id) return;
+    if (this.hydratingVenueId === id && this.workspaceHydrated()) return;
+    this.hydratingVenueId = id;
+    this.api.getWorkspace(id).subscribe({
+      next: (ws) => {
+        const guestDesign =
+          ws.guestDesign && typeof ws.guestDesign === 'object'
+            ? ({
+                ...defaultDesignForType(this.activeExperience()?.typeId || 'restaurant'),
+                ...(ws.guestDesign as Partial<GuestExperienceDesign>),
+              } as GuestExperienceDesign)
+            : undefined;
+        this.upsertActive(
+          {
+            venueId: ws.venueId,
+            organisationId: ws.organisationId,
+            venueName: ws.venueName || undefined,
+            brandColour: ws.brandColour || '#d7a14a',
+            menuBrandEnabled: !!ws.menuBrandEnabled,
+            logoUrl: stripDataUrl(ws.logoUrl),
+            menuCoverUrl: stripDataUrl(ws.menuCoverUrl),
+            location: ws.location || '',
+            ...(guestDesign ? { guestDesign } : {}),
+          },
+          { syncServer: false },
+        );
+        this.workspaceHydrated.set(true);
+        this.setLivePaymentsActive(ws.paymentsActive === true);
+      },
+      error: () => {
+        this.hydratingVenueId = null;
+        this.workspaceHydrated.set(false);
+      },
+    });
+  }
+
+  setLiveSession(session: LiveFactsInput['session']) {
+    this.liveSession.set(session);
+    this.touchLive();
+  }
+
+  /**
+   * Load venue, place and catalogue from the server for this venue / minted place.
+   * Does not call /entry/resolve — that would open a guest session.
+   */
+  loadLiveSession(input: { venueId?: string; placeCode?: string } = {}) {
+    const venueId = input.venueId?.trim() || this.activeExperience()?.venueId?.trim() || '';
+    const knownPlace = input.placeCode?.trim() || this.activeExperience()?.placeCode?.trim() || '';
+    if (!venueId) return;
+    const key = `${venueId}|${knownPlace}`;
+    if (this.liveSessionKey === key && this.liveSession()) return;
+    this.liveSessionKey = key;
+
+    const apply = (
+      venueName: string,
+      placeCode: string,
+      catalogue: Array<{ label: string; priceMinor: number }> | null,
+    ) => {
+      this.liveSession.set({ venueName, placeCode, catalogue });
+      this.touchLive();
+    };
+
+    const loadCatalogue = (id: string, venueName: string, placeCode: string) => {
+      this.api.getCatalogue(id).subscribe({
+        next: (rows) =>
+          apply(
+            venueName,
+            placeCode,
+            rows
+              .filter((row) => row.available !== false)
+              .map((row) => ({
+                label: row.label,
+                priceMinor: Math.round(Number(row.unitPrice) * 100),
+              })),
+          ),
+        error: () => apply(venueName, placeCode, null),
+      });
+    };
+
+    this.api.getWorkspace(venueId).subscribe({
+      next: (ws) => {
+        if (knownPlace) {
+          loadCatalogue(venueId, ws.venueName, knownPlace);
+          return;
+        }
+        this.api.resolveSetupEntryContext().subscribe({
+          next: (ctx) => loadCatalogue(venueId, ws.venueName, ctx.placeCode),
+          error: () => loadCatalogue(venueId, ws.venueName, ''),
+        });
+      },
+      error: () => {
+        if (knownPlace) loadCatalogue(venueId, '', knownPlace);
+      },
+    });
+  }
+
+  /** Resolve venueId if needed, then hydrate. */
+  ensureWorkspaceHydrated() {
+    const active = this.activeExperience();
+    const venueId = active?.venueId?.trim();
+    if (venueId) {
+      this.initWorkspace(venueId);
+      return;
+    }
+    this.api.getGrowOverview().subscribe({
+      next: (overview) => {
+        if (overview.venueId) {
+          this.upsertActive({ venueId: overview.venueId }, { syncServer: false });
+          this.initWorkspace(overview.venueId);
+        }
+      },
+      error: () => undefined,
+    });
+  }
+
   private migrateLegacy(): void {
     if (localStorage.getItem(WS_KEY)) return;
     const typeId = (localStorage.getItem(LEGACY_PACK) ?? '') as ExperienceTypeId | '';
@@ -114,7 +260,6 @@ export class StudioContextService {
           venueName?: string;
           placeCode?: string;
           token?: string;
-          packId?: string;
         };
         venueName = cfg.venueName ?? '';
         placeCode = cfg.placeCode ?? '';
@@ -133,7 +278,7 @@ export class StudioContextService {
     const exp: WorkspaceExperience = {
       id: `exp-${Date.now()}`,
       typeId: (typeId || 'restaurant') as ExperienceTypeId,
-      venueName: venueName || def?.defaults.venueName || 'Blue Door',
+      venueName: venueName || def?.defaults.venueName || 'Your place',
       logoUrl: '',
       brandColour: '#d7a14a',
       menuBrandEnabled: false,
@@ -146,7 +291,7 @@ export class StudioContextService {
       categories: categoriesFromDesign(design, typeId || 'restaurant'),
       guestDesign: design,
       experienceUpdatedAt: null,
-      token: token || def?.defaults.token || 'qr-demo-restaurant',
+        token: token || '',
       paymentsDone,
       live,
       steps: {
@@ -180,8 +325,11 @@ export class StudioContextService {
   }
 
   saveWorkspace(ws: { experiences: WorkspaceExperience[]; activeId: string | null }) {
+    for (const e of ws.experiences) {
+      e.logoUrl = stripDataUrl(e.logoUrl);
+      e.menuCoverUrl = stripDataUrl(e.menuCoverUrl);
+    }
     localStorage.setItem(WS_KEY, JSON.stringify(ws));
-    // Keep legacy keys in sync for older pages during transition
     const active = ws.experiences.find((e) => e.id === ws.activeId) ?? ws.experiences[0];
     if (active) {
       localStorage.setItem(LEGACY_PACK, active.typeId);
@@ -209,7 +357,11 @@ export class StudioContextService {
     return this.readWorkspace().experiences.length > 0;
   }
 
-  upsertActive(patch: Partial<WorkspaceExperience>) {
+  upsertActive(
+    patch: Partial<WorkspaceExperience>,
+    opts?: { syncServer?: boolean },
+  ) {
+    const syncServer = opts?.syncServer !== false;
     const ws = this.readWorkspace();
     let active = ws.experiences.find((e) => e.id === ws.activeId) ?? ws.experiences[0];
     if (!active) {
@@ -233,7 +385,7 @@ export class StudioContextService {
         categories: categoriesFromDesign(design, typeId),
         guestDesign: design,
         experienceUpdatedAt: null,
-        token: def?.defaults.token ?? 'qr-demo-restaurant',
+        token: '',
         paymentsDone: false,
         live: false,
         steps: {},
@@ -241,11 +393,43 @@ export class StudioContextService {
       ws.experiences = [active];
       ws.activeId = active.id;
     }
+    if (patch.logoUrl !== undefined) patch.logoUrl = stripDataUrl(patch.logoUrl);
+    if (patch.menuCoverUrl !== undefined) {
+      patch.menuCoverUrl = stripDataUrl(patch.menuCoverUrl);
+    }
     Object.assign(active, patch);
     if (patch.steps) {
       active.steps = { ...active.steps, ...patch.steps };
     }
+    if (patch.guestDesign) {
+      active.categories = categoriesFromDesign(active.guestDesign, active.typeId);
+    }
     this.saveWorkspace(ws);
+    if (syncServer && SERVER_BRAND_KEYS.some((k) => k in patch)) {
+      this.scheduleServerPatch();
+    }
+  }
+
+  private scheduleServerPatch() {
+    if (this.serverPatchTimer) clearTimeout(this.serverPatchTimer);
+    this.serverPatchTimer = setTimeout(() => this.flushServerPatch(), 500);
+  }
+
+  private flushServerPatch() {
+    const active = this.activeExperience();
+    const venueId = active?.venueId?.trim();
+    if (!active || !venueId) return;
+    this.api
+      .patchWorkspace(venueId, {
+        venueName: active.venueName,
+        brandColour: active.brandColour,
+        menuBrandEnabled: active.menuBrandEnabled,
+        logoUrl: stripDataUrl(active.logoUrl),
+        menuCoverUrl: stripDataUrl(active.menuCoverUrl),
+        location: active.location,
+        guestDesign: active.guestDesign as unknown as Record<string, unknown>,
+      })
+      .subscribe({ error: () => undefined });
   }
 
   startExperience(typeId: ExperienceTypeId) {
@@ -254,7 +438,6 @@ export class StudioContextService {
     const design = defaultDesignForType(typeId);
     const sections = defaultPlaceSections(typeId);
     const ws = this.readWorkspace();
-    // Inherit identity · brand · payments from prior live (or last) experience — Never Ask a Human to Remember.
     const source =
       ws.experiences.find((e) => e.id === ws.activeId && e.live) ||
       ws.experiences.find((e) => e.live) ||
@@ -265,10 +448,10 @@ export class StudioContextService {
       id: `exp-${Date.now()}`,
       typeId,
       venueName: inherit && source?.venueName?.trim() ? source.venueName : def.defaults.venueName,
-      logoUrl: inherit ? source?.logoUrl || '' : '',
+      logoUrl: inherit ? stripDataUrl(source?.logoUrl) : '',
       brandColour: inherit && source?.brandColour ? source.brandColour : '#d7a14a',
-      menuBrandEnabled: inherit ? !!source?.menuBrandEnabled : false,
-      menuCoverUrl: inherit ? source?.menuCoverUrl || '' : '',
+      menuBrandEnabled: false,
+      menuCoverUrl: '',
       location: inherit ? source?.location || '' : '',
       placeCode: def.defaults.placeCode,
       placeCodes: placeCodesFromSections(sections),
@@ -284,15 +467,16 @@ export class StudioContextService {
         identity: inherit && !!source?.venueName?.trim(),
         payments: inherit && !!source?.paymentsDone,
       },
+      venueId: inherit ? source?.venueId : undefined,
+      organisationId: inherit ? source?.organisationId : undefined,
     };
     const live = ws.experiences.filter((e) => e.live);
-    // Replace unfinished draft(s); keep every live experience
     ws.experiences = [...live, exp];
     ws.activeId = exp.id;
     this.saveWorkspace(ws);
+    if (exp.venueId) this.initWorkspace(exp.venueId);
   }
 
-  /** Continuity — Studio remembers the owner returned. */
   touchLastSeen() {
     try {
       localStorage.setItem(LAST_SEEN_KEY, new Date().toISOString());
@@ -312,11 +496,14 @@ export class StudioContextService {
   markStep(step: SetupStepSlug, done = true) {
     const active = this.activeExperience();
     if (!active) return;
-    this.upsertActive({
-      steps: { ...active.steps, [step]: done },
-      ...(step === 'payments' ? { paymentsDone: done } : {}),
-      ...(step === 'golive' && done ? { live: true } : {}),
-    });
+    this.upsertActive(
+      {
+        steps: { ...active.steps, [step]: done },
+        ...(step === 'payments' ? { paymentsDone: done } : {}),
+        ...(step === 'golive' && done ? { live: true } : {}),
+      },
+      { syncServer: false },
+    );
   }
 
   nextIncompleteStep(): SetupStepSlug | 'done' {
@@ -336,7 +523,6 @@ export class StudioContextService {
     return { done, total, current: this.nextIncompleteStep() };
   }
 
-  /** Compatibility for older pages */
   readConfig(): {
     packId: string;
     typeId: string;
@@ -391,7 +577,6 @@ export class StudioContextService {
     return `/studio/setup/${slug}`;
   }
 
-  /** First incomplete Setup step — for Live Experience entry from Studio Home. */
   nextIncompleteSetupPath(): string {
     const active = this.activeExperience();
     if (!active) return '/studio/create';
@@ -448,10 +633,10 @@ function normalizeExperience(
           : [...(def?.defaults.experienceCategories ?? [])];
   return {
     ...e,
-    logoUrl: e.logoUrl ?? '',
+    logoUrl: stripDataUrl(e.logoUrl),
     brandColour: e.brandColour || '#d7a14a',
     menuBrandEnabled: !!e.menuBrandEnabled,
-    menuCoverUrl: e.menuCoverUrl ?? '',
+    menuCoverUrl: stripDataUrl(e.menuCoverUrl),
     location: e.location ?? '',
     guestDesign,
     placeSections,

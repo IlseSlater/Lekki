@@ -80,7 +80,7 @@ export const EXPERIENCE_REGISTRY: ExperienceDefinition[] = [
       payment: 'Bill',
     },
     defaults: {
-      venueName: 'Blue Door',
+      venueName: 'Your place',
       placeLabel: 'Tables',
       placeCode: 'Table 12',
       placeSuggestions: ['Table 10', 'Table 11', 'Table 12', 'Table 14'],

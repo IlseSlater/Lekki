@@ -24,6 +24,12 @@ model Venue {
   menuBrandEnabled Boolean @default(false)
   /** Brand accent for menu moon / Live Experience */
   brandColour    String   @default("#d7a14a")
+  /** Public URL (/assets/... or https) for brand mark — never Base64 */
+  logoUrl        String   @default("")
+  /** Public URL for menu half-moon cover — never Base64 */
+  menuCoverUrl   String   @default("")
+  /** City / suburb / address line */
+  location       String   @default("")
   /** IANA timezone for trading-day bounds */
   timezone       String   @default("Africa/Johannesburg")
   /** ISO 4217 default currency */
@@ -34,6 +40,28 @@ model Venue {
   organisation   Organisation @relation(fields: [organisationId], references: [id])
   physicalContexts PhysicalContext[]
   entryTokens    EntryToken[]
+  assets         VenueAsset[]
+}
+
+/// Upload ledger for venue brand assets (logo / cover). URLs live on Venue too.
+model VenueAsset {
+  id             String   @id
+  organisationId String
+  venueId        String
+  /// logo | cover | other
+  kind           String
+  /// Durable public URL returned to clients
+  url            String
+  /// Relative key under asset root (venueId/filename)
+  storageKey     String
+  contentType    String
+  byteSize       Int
+  originalName   String?
+  createdAt      DateTime @default(now())
+  venue          Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  @@index([venueId, kind])
+  @@index([organisationId, venueId])
 }
 
 model PhysicalContext {
@@ -388,21 +416,23 @@ model AssistanceRequest {
   session        ExperienceSession @relation(fields: [sessionId], references: [id])
 }
 
-/// Setup Studio payment connector install (LEK-022). At most one active row.
+/// Setup Studio payment connector install (LEK-022). At most one active row per venue.
+/// Connector-specific credentials live in configJson / vaultRefsJson — not typed columns.
 model PaymentConnectorInstall {
   id               String   @id
-  organisationId   String?
-  venueId          String?
+  organisationId   String
+  venueId          String
   connectorId      String
   /// draft | verified | active
   status           String   @default("draft")
   /// sandbox | production
   environment      String   @default("sandbox")
-  merchantId       String?
-  merchantKey      String?
-  passphrase       String?
-  merchantKeySecretRef String?
-  passphraseSecretRef  String?
+  /// Environment last proven by verify(). activate requires this === environment.
+  verifiedEnvironment String?
+  /// Public connector config (e.g. merchantId). Never secrets.
+  configJson       Json     @default("{}")
+  /// Map of credential field id → vault secretRef (e.g. merchantKey, passphrase).
+  vaultRefsJson    Json     @default("{}")
   businessName     String?
   merchantStatus   String?
   country          String?
@@ -414,5 +444,6 @@ model PaymentConnectorInstall {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
+  @@unique([organisationId, venueId])
   @@index([organisationId, venueId, status, updatedAt])
 }

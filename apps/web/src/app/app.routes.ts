@@ -133,6 +133,11 @@ export const routes: Routes = [
               import('./pages/setup-places.page').then((m) => m.SetupPlacesPageComponent),
           },
           {
+            path: 'payments/connect',
+            loadComponent: () =>
+              import('./pages/setup-payfast.page').then((m) => m.SetupPayfastPageComponent),
+          },
+          {
             path: 'payments',
             loadComponent: () =>
               import('./pages/setup-payments.page').then((m) => m.SetupPaymentsPageComponent),

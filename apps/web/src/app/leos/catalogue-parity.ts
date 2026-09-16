@@ -5,6 +5,7 @@
  */
 
 import { guestStatusLabel } from '../studio/operate-status';
+import { resolveApiBaseUrl } from '../services/public-origin';
 import { progressGuidance, progressLabelsForProfile } from './progress-timeline';
 
 export type ParityChoiceOption = {
@@ -56,7 +57,7 @@ export function projectionChoiceSignals(item: {
 
 /**
  * Guest-safe image src. Blocks mixed content and script URLs.
- * Allows https, same-origin paths, and curated data:image samples.
+ * Allows https, same-origin paths, /assets (rewritten to API host), and curated data:image samples.
  */
 export function safeGuestImageUrl(url: string | undefined | null): string | null {
   if (!url || typeof url !== 'string') return null;
@@ -65,9 +66,20 @@ export function safeGuestImageUrl(url: string | undefined | null): string | null
   const lower = u.toLowerCase();
   if (lower.startsWith('javascript:') || lower.startsWith('vbscript:')) return null;
   if (u.startsWith('https://')) return u;
+  // Venue assets live on the runtime host — rewrite for Angular :4200 / phone LAN.
+  if (u.startsWith('/assets/')) {
+    return `${resolveApiBaseUrl()}${u}`;
+  }
   if (u.startsWith('/') && !u.startsWith('//')) return u;
   if (lower.startsWith('data:image/')) return u;
   return null;
+}
+
+/** Brand marks — never Base64; durable URLs only. */
+export function safeBrandImageUrl(url: string | undefined | null): string | null {
+  if (!url || typeof url !== 'string') return null;
+  if (url.trim().toLowerCase().startsWith('data:')) return null;
+  return safeGuestImageUrl(url);
 }
 
 export function profileIdForExperienceType(typeId: string): string {

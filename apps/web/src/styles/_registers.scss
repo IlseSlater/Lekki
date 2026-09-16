@@ -1,0 +1,149 @@
+/* Studio registers — Ash (labor) and Obsidian (cinematic frame).
+   Thesis: soft where nothing is decided; hard where something is.
+   Neumorphism on surfaces only. Controls are solid. Gold is the peak.
+   Not a dark-mode toggle. Guest / Operate keep :root gold action.
+*/
+
+.leos-register--ash {
+  --leos-register-ground: var(--leos-ash-ground);
+  --leos-register-halo: var(--leos-ash-halo);
+  --leos-register-card: var(--leos-ash-card);
+  --leos-register-card-composite: var(--leos-ash-card-composite);
+  --leos-register-blur: var(--leos-ash-card-blur);
+  --leos-register-ink: var(--leos-ash-ink);
+  --leos-register-row-edge: var(--leos-ash-row-edge);
+  --leos-register-field: var(--leos-ash-field-border);
+  --leos-register-action: var(--leos-ash-action);
+  --leos-register-action-hover: var(--leos-ash-action-hover);
+  --leos-register-on-action: var(--leos-ash-on-action);
+}
+
+.leos-register--cinematic {
+  --leos-register-ground: var(--leos-obsidian-ground);
+  --leos-register-halo: var(--leos-obsidian-halo);
+  --leos-register-card: var(--leos-obsidian-card);
+  --leos-register-card-composite: #0c1016;
+  --leos-register-blur: 8px;
+  --leos-register-ink: var(--leos-obsidian-ink);
+  --leos-register-row-edge: var(--leos-obsidian-hairline);
+  --leos-register-field: var(--leos-obsidian-hairline);
+  --leos-register-action: var(--leos-obsidian-action);
+  --leos-register-action-hover: #ffffff;
+  --leos-register-on-action: var(--leos-obsidian-on-action);
+}
+
+/* Halo lives behind the card. Opacity + transform only (GPU). */
+@keyframes leos-halo-bloom {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -42%) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -42%) scale(1);
+  }
+}
+
+.leos-register-halo {
+  position: relative;
+  isolation: isolate;
+}
+
+.leos-register-halo::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  left: 50%;
+  top: 0;
+  width: min(52rem, 140%);
+  height: 70%;
+  pointer-events: none;
+  background: var(--leos-register-halo);
+  transform: translate(-50%, -42%);
+  will-change: opacity, transform;
+  animation: leos-halo-bloom var(--leos-duration-halo) var(--leos-ease) both;
+}
+
+.leos-register-halo > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Emboss on surfaces — press inverts via opacity/transform, never box-shadow. */
+.leos-emboss {
+  position: relative;
+  isolation: isolate;
+}
+
+.leos-emboss::after {
+  content: '';
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.42) 0%,
+    transparent 42%,
+    rgba(15, 23, 42, 0.06) 100%
+  );
+  opacity: 0.5;
+  transform: translateZ(0);
+  transition:
+    opacity var(--leos-duration-press) var(--leos-ease),
+    transform var(--leos-duration-press) var(--leos-ease);
+}
+
+.leos-emboss:active::after {
+  opacity: 0.18;
+  transform: scale(0.992);
+}
+
+/* Peak fill — Open for guests. One per setup journey. */
+.leos-btn--peak {
+  background: var(--leos-action-peak);
+  color: var(--leos-on-peak);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: none;
+  font-weight: 600;
+}
+
+.leos-btn--peak:hover:not(:disabled) {
+  filter: brightness(1.04);
+  transform: translateY(-1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .leos-register-halo::before {
+    animation: none;
+    opacity: 1;
+    transform: translate(-50%, -42%);
+  }
+
+  .leos-emboss::after,
+  .leos-emboss:active::after {
+    transition: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .leos-register-halo::before {
+    display: none;
+  }
+
+  .leos-studio-shell:not([data-setup-engine='true']) .leos-studio-shell__main {
+    background: var(--leos-ash-card-composite);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: 1px solid var(--leos-ash-field-border);
+    box-shadow: none;
+  }
+
+  .leos-register--cinematic .si-card,
+  .leos-register--cinematic.si .si-card {
+    background: #0c1016;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: 1px solid #d8d2c9;
+  }
+}

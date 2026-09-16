@@ -62,6 +62,7 @@ const SETTLED_STATUSES = new Set([
   'settled',
   'needs_refund',
   'refunded',
+  'amount_mismatch',
 ]);
 
 /**

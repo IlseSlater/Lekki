@@ -1,12 +1,12 @@
-import { Component, Input, OnChanges, OnDestroy, SimpleChanges } from '@angular/core';
+import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   type GuestExperienceDesign,
   type ProjectionItem,
   categoriesFromDesign,
-  visibleProjectionItems,
+  resolveProjectionItems,
 } from '../studio/guest-experience-design';
-import { choiceGroupHint, projectionOrderCopy, safeGuestImageUrl } from './catalogue-parity';
+import { choiceGroupHint, projectionOrderCopy, safeBrandImageUrl, safeGuestImageUrl } from './catalogue-parity';
 
 type PreviewTab = 'specials' | 'menu' | 'orders' | 'bill';
 
@@ -32,6 +32,9 @@ type PreviewTab = 'specials' | 'menu' | 'orders' | 'bill';
       </header>
 
       <div class="gsp__body" (scroll)="onBodyScroll($event)">
+        @if (showingExampleCatalogue) {
+          <p class="gsp__muted" data-example-catalogue="true">Example menu — not your live list</p>
+        }
         @if (tab === 'specials' && design.specials) {
           <p class="gsp__hi">Specials</p>
           @if (specialsToday.length) {
@@ -103,24 +106,6 @@ type PreviewTab = 'specials' | 'menu' | 'orders' | 'bill';
           @if (!canBrowse) {
             <p class="gsp__empty">Nothing to browse yet.</p>
           } @else {
-            @if (menuBrandEnabled) {
-              <div
-                class="gsp__menu-brand"
-                [style.--menu-brand-progress]="menuBrandProgress"
-                [style.--menu-brand-colour]="brandColour"
-                aria-hidden="true"
-              >
-                <div class="gsp__menu-brand-fill">
-                  @if (coverSrc) {
-                    <img class="gsp__menu-brand-cover" [src]="coverSrc" alt="" />
-                  }
-                  <span class="gsp__menu-brand-shade"></span>
-                  @if (logoSrc) {
-                    <img class="gsp__menu-brand-logo" [src]="logoSrc" alt="" />
-                  }
-                </div>
-              </div>
-            }
             <p class="gsp__hi">{{ greeting }}</p>
             <div class="gsp__chips" role="toolbar" aria-label="Categories">
               <button
@@ -215,10 +200,12 @@ type PreviewTab = 'specials' | 'menu' | 'orders' | 'bill';
           <h3 class="gsp__panel-title">Your {{ transactionPlural }}</h3>
           @if (design.orderFood || design.drinks || design.specialRequests || design.book) {
             <p class="gsp__reassure" role="status">{{ orderCopy.placed }}</p>
-            <div class="gsp__sample-line">
-              <span>{{ sampleItemLabel }}</span>
-              <span>{{ orderCopy.statusLabel }}</span>
-            </div>
+            @if (sampleItemLabel) {
+              <div class="gsp__sample-line">
+                <span>{{ sampleItemLabel }}</span>
+                <span>{{ orderCopy.statusLabel }}</span>
+              </div>
+            }
             <p class="gsp__muted">{{ orderCopy.current }}</p>
           } @else {
             <p class="gsp__empty">Nothing placed yet.</p>
@@ -335,58 +322,6 @@ type PreviewTab = 'specials' | 'menu' | 'orders' | 'bill';
         flex: 1;
         overflow: auto;
         padding: 0.5rem 1.1rem 1rem;
-      }
-      .gsp__menu-brand {
-        --menu-brand-progress: 0;
-        --menu-brand-colour: #d7a14a;
-        --menu-brand-height: 7.75rem;
-        position: relative;
-        width: calc(100% + 0.4rem);
-        margin: 0 -0.2rem 0.55rem;
-        height: calc(var(--menu-brand-height) * (1 - (var(--menu-brand-progress) * 0.88)));
-        min-height: 0;
-        opacity: calc(1 - (var(--menu-brand-progress) * 0.95));
-        pointer-events: none;
-        overflow: hidden;
-      }
-      .gsp__menu-brand-fill {
-        position: absolute;
-        inset: 0;
-        display: grid;
-        place-items: center;
-        border-radius: 0 0 50% 50% / 0 0 42% 42%;
-        background-color: #0b0f16;
-        overflow: hidden;
-        box-shadow: inset 0 -14px 22px rgba(11, 15, 22, 0.28);
-      }
-      .gsp__menu-brand-cover {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-      }
-      .gsp__menu-brand-shade {
-        position: absolute;
-        inset: 0;
-        background: linear-gradient(
-          180deg,
-          color-mix(in srgb, #0b0f16 28%, transparent) 0%,
-          color-mix(in srgb, color-mix(in srgb, var(--menu-brand-colour) 40%, #0b0f16) 78%, transparent)
-            100%
-        );
-      }
-      .gsp__menu-brand-logo {
-        position: relative;
-        z-index: 1;
-        width: 2.75rem;
-        height: 2.75rem;
-        border-radius: 12px;
-        object-fit: cover;
-        border: 2px solid rgba(255, 255, 255, 0.55);
-        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
-        transform: scale(calc(1 - (var(--menu-brand-progress) * 0.35)));
-        opacity: calc(1 - (var(--menu-brand-progress) * 0.85));
       }
       .gsp__hi {
         margin: 0 0 0.75rem;
@@ -684,15 +619,13 @@ type PreviewTab = 'specials' | 'menu' | 'orders' | 'bill';
     `,
   ],
 })
-export class GuestShellProjectionComponent implements OnChanges, OnDestroy {
+export class GuestShellProjectionComponent implements OnChanges {
   @Input({ required: true }) design!: GuestExperienceDesign;
-  @Input() venueName = 'Blue Door';
+  @Input() venueName = 'Your place';
   @Input() placeCode = '';
   @Input() greeting = 'Hi there';
   @Input() brandColour = '#d7a14a';
   @Input() logoUrl = '';
-  @Input() menuBrandEnabled = false;
-  @Input() menuCoverUrl = '';
   /** Fill parent phone screen — never escape the desk frame. */
   @Input() fillFrame = false;
   /** @deprecated use fillFrame — kept so callers compile during migrate */
@@ -704,9 +637,12 @@ export class GuestShellProjectionComponent implements OnChanges, OnDestroy {
   @Input() placeNoun = 'Table';
   @Input() transactionLabel = 'Order';
   @Input() leaveLabel = 'Leave';
-  @Input() sampleItemLabel = 'Classic Burger';
+  @Input() sampleItemLabel = '';
   /** When set, Live Experience shows the venue’s real menu instead of pack defaults. */
   @Input() venueCatalogue: ProjectionItem[] | null = null;
+  /** Fail closed — never substitute projectionCatalogueForType unless opted in. */
+  @Input() lockCatalogue = true;
+  @Input() allowExampleCatalogue = false;
   @Input() experienceTypeId = 'restaurant';
   @Input() payMethods: { card: boolean; applePay: boolean; googlePay: boolean } = {
     card: false,
@@ -719,50 +655,24 @@ export class GuestShellProjectionComponent implements OnChanges, OnDestroy {
   categoryFilter = '';
   openChoiceId = '';
   previewQty: Record<string, number> = {};
-  menuBrandProgress = 0;
   readonly choiceGroupHint = choiceGroupHint;
 
   ngOnChanges(changes: SimpleChanges) {
-    if (changes['menuBrandEnabled'] && !this.menuBrandEnabled) {
-      this.menuBrandProgress = 0;
-    }
-    if (changes['menuBrandEnabled']?.currentValue) {
-      this.tab = 'menu';
-      this.menuBrandProgress = 0;
-    }
-    if (!changes['design'] && !changes['menuBrandEnabled']) return;
-    if (this.menuBrandEnabled) {
-      this.tab = 'menu';
-    } else if (this.design?.specials) {
+    if (!changes['design']) return;
+    if (this.design?.specials) {
       if (this.tab === 'menu' || !this.tab) this.tab = 'specials';
     } else if (this.tab === 'specials') {
       this.tab = 'menu';
     }
     if (!this.design?.payAtTable && this.tab === 'bill') {
-      this.tab = this.design?.specials && !this.menuBrandEnabled ? 'specials' : 'menu';
+      this.tab = this.design?.specials ? 'specials' : 'menu';
     }
   }
 
-  ngOnDestroy() {
-    this.menuBrandProgress = 0;
-  }
-
-  onBodyScroll(ev: Event) {
-    if (!this.menuBrandEnabled || this.tab !== 'menu') {
-      this.menuBrandProgress = 0;
-      return;
-    }
-    const el = ev.target as HTMLElement | null;
-    const y = el?.scrollTop ?? 0;
-    this.menuBrandProgress = Math.min(1, Math.max(0, y / 120));
-  }
+  onBodyScroll(_ev: Event) {}
 
   get logoSrc(): string | null {
-    return safeGuestImageUrl(this.logoUrl);
-  }
-
-  get coverSrc(): string | null {
-    return safeGuestImageUrl(this.menuCoverUrl);
+    return safeBrandImageUrl(this.logoUrl);
   }
 
   itemImage(url: string | undefined): string | null {
@@ -809,8 +719,21 @@ export class GuestShellProjectionComponent implements OnChanges, OnDestroy {
   }
 
   get items() {
-    if (this.venueCatalogue?.length) return this.venueCatalogue;
-    return visibleProjectionItems(this.design, this.experienceTypeId);
+    return this.projection.items;
+  }
+
+  get showingExampleCatalogue(): boolean {
+    return this.projection.example;
+  }
+
+  private get projection() {
+    return resolveProjectionItems({
+      lockCatalogue: this.lockCatalogue,
+      allowExampleCatalogue: this.allowExampleCatalogue,
+      venueCatalogue: this.venueCatalogue,
+      design: this.design,
+      typeId: this.experienceTypeId,
+    });
   }
 
   get specialsToday(): ProjectionItem[] {

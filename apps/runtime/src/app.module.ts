@@ -19,6 +19,10 @@ import { SetupPaymentsController } from './http/setup-payments.controller';
 import { SetupBrandController } from './http/setup-brand.controller';
 import { SetupEntryController } from './http/setup-entry.controller';
 import { SetupPosController } from './http/setup-pos.controller';
+import {
+  StudioVenueAssetsController,
+  StudioWorkspaceController,
+} from './http/studio-workspace.controller';
 import { GrowController } from './http/grow.controller';
 import { OperateController } from './http/operate.controller';
 import { EventsModule } from './events/events.module';
@@ -57,6 +61,8 @@ import { StaffAuthModule } from './staff-auth/staff-auth.module';
     SetupBrandController,
     SetupEntryController,
     SetupPosController,
+    StudioWorkspaceController,
+    StudioVenueAssetsController,
     GrowController,
     OperateController,
   ],

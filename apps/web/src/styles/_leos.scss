@@ -15,7 +15,7 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
-  background: #00070d;
+  background: var(--leos-ground, #00070d);
   color: var(--leos-neutral-dark);
 }
 
@@ -372,6 +372,16 @@ a:hover {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--leos-ink-tertiary, var(--leos-ink-muted));
+}
+
+.leos-field__need {
+  font-style: normal;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--studio-ink-secondary, var(--leos-ink-secondary));
+  margin-left: 0.35rem;
+  font-size: 0.75rem;
 }
 
 .leos-field__input {

@@ -35,7 +35,7 @@ import { StudioContextService } from '../services/studio-context.service';
               [(ngModel)]="venueName"
               (ngModelChange)="updatePreview()"
               name="venue"
-              placeholder="e.g., The Blue Door"
+              placeholder="e.g., Rusty Oak"
             />
           </div>
 
@@ -123,7 +123,7 @@ export class StudioConfigurePageComponent {
   private readonly router = inject(Router);
   private readonly ctx = inject(StudioContextService);
 
-  venueName = this.ctx.activeExperience()?.venueName || 'The Blue Door';
+  venueName = this.ctx.activeExperience()?.venueName || 'Your place';
   placeCode = this.ctx.activeExperience()?.placeCode || 'Table 12';
 
   get previewFact() {

@@ -5,6 +5,7 @@ import {
   pfEncode,
   verifyItnSignature,
   PayFastPaymentConnector,
+  createPayFastPaymentBinding,
   formatPayFastAmount,
 } from './index';
 
@@ -94,6 +95,67 @@ async function run() {
 
   const bad = await connector.handleItn({ ...itn, signature: 'deadbeef' }, 99.5);
   assert.equal(bad.ok, false);
+
+  const underpay: Record<string, string> = {
+    m_payment_id: attempt.paymentId,
+    pf_payment_id: 'pf_under',
+    payment_status: 'COMPLETE',
+    amount_gross: '1.00',
+    merchant_id: '10000100',
+  };
+  underpay.signature = generateSignature(underpay, passphrase);
+  const spoof = await connector.handleItn(underpay, 99.5);
+  assert.equal(spoof.ok, false);
+  assert.equal(spoof.amountRejectCode, 'underpay');
+
+  // Vault-backed bindings must not fall back to env merchant keys.
+  const vaultOnly = new PayFastPaymentConnector({
+    merchantId: '10000100',
+    merchantKey: 'should-not-use-static-key',
+    baseUrl: 'https://sandbox.payfast.co.za/eng/process',
+    validateUrl: 'https://sandbox.payfast.co.za/eng/query/validate',
+    returnUrl: 'http://localhost:4200/guest?payment=return',
+    cancelUrl: 'http://localhost:4200/guest?payment=cancel',
+    notifyUrl: 'http://localhost:3000/payments/payfast/notify',
+    confirmWithServer: false,
+    resolveSecret: async () => undefined,
+  });
+  await assert.rejects(
+    () =>
+      vaultOnly.createPayment({
+        transactionId: 'tx_vault' as never,
+        amount: 1,
+        currency: 'ZAR',
+        organisationId: 'org_demo',
+        sessionId: 'ses_demo',
+      }),
+    /merchant key not available from vault/i,
+  );
+
+  // createPayFastPaymentBinding must preserve resolveSecret (Studio vault path).
+  const binding = createPayFastPaymentBinding({
+    merchantId: '10000100',
+    merchantKey: 'should-not-use-static-key',
+    notifyUrl: 'http://localhost:3000/payments/payfast/notify',
+    confirmWithServer: false,
+    resolveSecret: async (secretKey) =>
+      secretKey === 'merchantKey' ? '46f0cd694581a' : passphrase,
+  });
+  const bound = await binding.capability.createPayment({
+    transactionId: 'tx_bound' as never,
+    amount: 57,
+    currency: 'ZAR',
+    organisationId: 'org_demo',
+    sessionId: 'ses_demo',
+  });
+  const boundFields = Object.fromEntries(
+    Object.entries(bound.checkout!.fields).filter(([k]) => k !== 'signature'),
+  );
+  assert.equal(
+    bound.checkout?.fields.signature,
+    generateSignature(boundFields, passphrase),
+    'binding must salt checkout signature with vault passphrase',
+  );
 
   console.log('PayFast connector checks passed.');
 }

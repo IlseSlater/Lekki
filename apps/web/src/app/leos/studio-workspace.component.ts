@@ -2,8 +2,7 @@ import { Component, Input } from '@angular/core';
 import { LiveExperiencePanelComponent } from './live-experience-panel.component';
 
 /**
- * Studio workspace — Setup story | expanding craft | Live phone far right.
- * Mid widths stack story above; craft still fills between and phone stays right.
+ * Studio workspace — one paper (story + craft) · Live phone on the ground.
  */
 @Component({
   selector: 'leos-studio-workspace',
@@ -12,13 +11,15 @@ import { LiveExperiencePanelComponent } from './live-experience-panel.component'
   template: `
     <div class="studio-ws" [class.studio-ws--with-story]="withStory">
       <div class="studio-ws__body">
-        @if (withStory) {
-          <aside class="studio-ws__story studio-motion-appear" aria-label="Setup progress">
-            <ng-content select="[story]" />
-          </aside>
-        }
-        <div class="studio-ws__studio studio-motion-appear">
-          <ng-content />
+        <div class="studio-ws__paper" [class.studio-ws__paper--solo]="!withStory">
+          @if (withStory) {
+            <aside class="studio-ws__story" aria-label="Setup progress">
+              <ng-content select="[story]" />
+            </aside>
+          }
+          <div class="studio-ws__studio studio-motion-appear">
+            <ng-content />
+          </div>
         </div>
         <div class="studio-ws__live studio-motion-appear-delay">
           <leos-live-experience-panel />
@@ -32,6 +33,8 @@ import { LiveExperiencePanelComponent } from './live-experience-panel.component'
         display: block;
         width: 100%;
         min-width: 0;
+        container-type: inline-size;
+        container-name: studio-setup;
       }
       .studio-ws {
         width: 100%;
@@ -42,11 +45,11 @@ import { LiveExperiencePanelComponent } from './live-experience-panel.component'
         min-width: 0;
       }
       .studio-ws--with-story {
-        --studio-story-width: 14rem;
+        --studio-story-width: 12rem;
+        --studio-live-width: 21.5rem;
         max-width: none;
         width: 100%;
-        padding-left: clamp(1rem, 2vw, 1.75rem);
-        padding-right: clamp(1rem, 2vw, 1.75rem);
+        padding: 1rem clamp(0.85rem, 1.5vw, 1.5rem) 1.5rem;
       }
       .studio-ws__body {
         display: grid;
@@ -73,11 +76,32 @@ import { LiveExperiencePanelComponent } from './live-experience-panel.component'
       .studio-ws--with-story .studio-ws__studio {
         max-width: none;
       }
+      .studio-ws__paper {
+        min-width: 0;
+        display: grid;
+        gap: 0;
+      }
+      .studio-ws__paper--solo {
+        display: contents;
+      }
       .studio-ws__live {
         min-width: 0;
         display: flex;
         justify-content: center;
         padding-top: 0.5rem;
+      }
+
+      /* Paper first. Phone sits underneath at full size until there is room beside. */
+      .studio-ws--with-story .studio-ws__body {
+        grid-template-columns: minmax(0, 1fr);
+        row-gap: 2rem;
+      }
+      .studio-ws--with-story .studio-ws__live {
+        order: 2;
+        position: static;
+        justify-content: center;
+        width: 100%;
+        padding: 0 0 1.5rem;
       }
 
       /* Dual-pane without story — craft left, phone right */
@@ -99,64 +123,25 @@ import { LiveExperiencePanelComponent } from './live-experience-panel.component'
         }
       }
 
-      /* Mid: story above; craft fills · phone far right */
-      @media (min-width: 1024px) and (max-width: 1399px) {
+      /* Phone at true size, to the right of the paper — only when both fit */
+      @container studio-setup (min-width: 58rem) {
         .studio-ws--with-story .studio-ws__body {
-          grid-template-columns: minmax(0, 1fr) var(--studio-live-width, 420px);
-          grid-template-areas:
-            'story story'
-            'studio live';
-          column-gap: 2rem;
-          row-gap: 1.5rem;
-        }
-        .studio-ws--with-story .studio-ws__story {
-          grid-area: story;
-          position: static;
-          border-right: none;
-          border-bottom: 1px solid var(--leos-border, #eae6e1);
-          padding: 0.25rem 0 1rem;
-          overflow: hidden;
-        }
-        .studio-ws--with-story .studio-ws__studio {
-          grid-area: studio;
-          max-width: none;
-        }
-        .studio-ws--with-story .studio-ws__live {
-          grid-area: live;
-          position: sticky;
-          top: 1.25rem;
-          justify-self: end;
-          width: var(--studio-live-width, 420px);
-          min-width: var(--studio-live-width, 420px);
-        }
-      }
-
-      /* Wide: Setup engine | expanding article | phone far right */
-      @media (min-width: 1400px) {
-        .studio-ws--with-story {
-          --studio-story-width: 14rem;
-        }
-        .studio-ws--with-story .studio-ws__body {
-          grid-template-columns:
-            var(--studio-story-width)
-            minmax(0, 1fr)
-            var(--studio-live-width, 420px);
-          grid-template-areas: none;
-          column-gap: 2rem;
-          row-gap: 1.75rem;
+          grid-template-columns: minmax(0, 1fr) var(--studio-live-width, 21.5rem);
+          align-items: start;
+          column-gap: 1.25rem;
+          row-gap: 0;
           width: 100%;
         }
+        .studio-ws--with-story .studio-ws__paper {
+          grid-template-columns: var(--studio-story-width) minmax(0, 1fr);
+          align-items: stretch;
+          min-height: min(70vh, 42rem);
+        }
         .studio-ws--with-story .studio-ws__story {
-          grid-column: 1;
-          grid-area: auto;
-          position: sticky;
-          top: 1.25rem;
-          width: var(--studio-story-width);
-          max-width: var(--studio-story-width);
-          justify-self: start;
+          width: auto;
+          max-width: none;
           border-bottom: none;
-          border-right: 1px solid var(--studio-line, var(--leos-border, #eae6e1));
-          padding: 0.25rem 1rem 0.5rem 0;
+          padding: 1.15rem 1.1rem 1.35rem 1.15rem;
           overflow: hidden;
         }
         .studio-ws--with-story .studio-ws__story > * {
@@ -164,28 +149,22 @@ import { LiveExperiencePanelComponent } from './live-experience-panel.component'
           max-width: 100%;
         }
         .studio-ws--with-story .studio-ws__studio {
-          grid-column: 2;
-          grid-area: auto;
           max-width: none;
           width: 100%;
-          justify-self: stretch;
+          min-width: 0;
+          border-left: 1px solid var(--studio-line, var(--leos-border, #eae6e1));
         }
         .studio-ws--with-story .studio-ws__live {
-          grid-column: 3;
-          grid-area: auto;
           position: sticky;
-          top: 1.25rem;
+          top: 1rem;
           justify-self: end;
-          width: var(--studio-live-width, 420px);
-          min-width: var(--studio-live-width, 420px);
+          width: var(--studio-live-width, 21.5rem);
+          max-width: var(--studio-live-width, 21.5rem);
+          padding: 0;
         }
       }
 
       @media (max-width: 1023px) {
-        .studio-ws__live {
-          order: -1;
-          position: static;
-        }
         .studio-ws {
           padding: 1.5rem 1.25rem 2.5rem;
         }

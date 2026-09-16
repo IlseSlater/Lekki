@@ -3,11 +3,12 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { ConfidenceIndicatorComponent } from '../leos/confidence-indicator.component';
 import { ExperienceScreenComponent } from '../leos/experience-screen.component';
+import { safeBrandImageUrl } from '../leos/catalogue-parity';
 import { SETUP_STEPS, experienceLabel, getExperience } from '../studio/experience-registry';
 import { StudioContextService } from '../services/studio-context.service';
 import { LeosApiService } from '../services/leos-api.service';
 
-/** Setup — Who you are. Name · Logo · Colour · Location (conversation). */
+/** Setup — Who you are. Name · Location · Logo · Colour (conversation). */
 @Component({
   standalone: true,
   imports: [FormsModule, ExperienceScreenComponent, RouterLink, ConfidenceIndicatorComponent],
@@ -15,7 +16,7 @@ import { LeosApiService } from '../services/leos-api.service';
     <leos-experience-screen [purpose]="purpose" [lead]="lead" help="" [showFooter]="true">
       <div config class="id-config">
         <div class="leos-field">
-          <span class="leos-field__label">{{ nameLabel }}</span>
+          <span class="leos-field__label">{{ nameLabel }} <em class="leos-field__need">required</em></span>
           <input
             class="leos-field__input"
             name="venue"
@@ -26,81 +27,7 @@ import { LeosApiService } from '../services/leos-api.service';
         </div>
 
         <div class="leos-field">
-          <span class="leos-field__label">Logo</span>
-          <div class="id-logo">
-            @if (logoUrl) {
-              <img class="id-logo__preview" [src]="logoUrl" alt="" width="56" height="56" />
-            } @else {
-              <span class="id-logo__placeholder" aria-hidden="true">{{ initial }}</span>
-            }
-            <div class="id-logo__actions">
-              <label class="id-logo__pick">
-                <input type="file" accept="image/*" (change)="onLogoPick($event)" />
-                {{ logoUrl ? 'Change logo' : 'Add logo' }}
-              </label>
-              @if (logoUrl) {
-                <button type="button" class="id-logo__clear" (click)="clearLogo()">Remove</button>
-              }
-            </div>
-          </div>
-        </div>
-
-        <div class="leos-field">
-          <span class="leos-field__label">Colour</span>
-          <div class="id-colour">
-            <input
-              class="id-colour__swatch"
-              type="color"
-              [ngModel]="brandColour"
-              (ngModelChange)="onColour($event)"
-              [attr.aria-label]="'Brand colour'"
-            />
-            <input
-              class="leos-field__input id-colour__hex"
-              name="colour"
-              [(ngModel)]="brandColour"
-              (ngModelChange)="onColour($event)"
-              maxlength="7"
-              placeholder="#d7a14a"
-            />
-          </div>
-          <p class="id-hint">Tints the menu half-moon when you show it.</p>
-        </div>
-
-        <div class="leos-field">
-          <span class="leos-field__label">Menu brand</span>
-          <label class="id-toggle">
-            <input
-              type="checkbox"
-              [(ngModel)]="menuBrandEnabled"
-              (ngModelChange)="onMenuBrandToggle()"
-            />
-            <span>Show half-moon on menu</span>
-          </label>
-          <p class="id-hint">Sits above filters. Fades as guests scroll into the menu.</p>
-          @if (menuBrandEnabled) {
-            <div class="id-cover">
-              @if (menuCoverUrl) {
-                <img class="id-cover__preview" [src]="menuCoverUrl" alt="" />
-              } @else {
-                <span class="id-cover__placeholder" aria-hidden="true">Cover</span>
-              }
-              <div class="id-logo__actions">
-                <label class="id-logo__pick">
-                  <input type="file" accept="image/*" (change)="onCoverPick($event)" />
-                  {{ menuCoverUrl ? 'Change cover' : 'Add cover image' }}
-                </label>
-                @if (menuCoverUrl) {
-                  <button type="button" class="id-logo__clear" (click)="clearCover()">Remove</button>
-                }
-              </div>
-            </div>
-            <p class="id-hint">Logo (above) centres on the moon. Colour tints the dark overlay.</p>
-          }
-        </div>
-
-        <div class="leos-field">
-          <span class="leos-field__label">Location</span>
+          <span class="leos-field__label">Location <em class="leos-field__need">optional</em></span>
           <input
             class="leos-field__input"
             name="location"
@@ -109,6 +36,50 @@ import { LeosApiService } from '../services/leos-api.service';
             autocomplete="address-level2"
             placeholder="City or suburb guests recognise"
           />
+        </div>
+
+        <div class="id-marks">
+          <div class="leos-field">
+            <span class="leos-field__label">Logo <em class="leos-field__need">optional</em></span>
+            <div class="id-logo">
+              @if (logoSrc) {
+                <img class="id-logo__preview" [src]="logoSrc" alt="" width="56" height="56" />
+              } @else {
+                <span class="id-logo__placeholder" aria-hidden="true">{{ initial }}</span>
+              }
+              <div class="id-logo__actions">
+                <label class="id-logo__pick">
+                  <input type="file" accept="image/*" (change)="onLogoPick($event)" />
+                  {{ logoUrl ? 'Change logo' : 'Add logo' }}
+                </label>
+                @if (logoUrl) {
+                  <button type="button" class="id-logo__clear" (click)="clearLogo()">Remove</button>
+                }
+              </div>
+            </div>
+          </div>
+
+          <div class="leos-field">
+            <span class="leos-field__label">Colour <em class="leos-field__need">optional</em></span>
+            <div class="id-colour">
+              <input
+                class="id-colour__swatch"
+                type="color"
+                [ngModel]="brandColour"
+                (ngModelChange)="onColour($event)"
+                [attr.aria-label]="'Brand colour'"
+              />
+              <input
+                class="leos-field__input id-colour__hex"
+                name="colour"
+                [(ngModel)]="brandColour"
+                (ngModelChange)="onColour($event)"
+                maxlength="7"
+                placeholder="#d7a14a"
+              />
+            </div>
+            <p class="id-hint">Used on the guest phone and pay screens.</p>
+          </div>
         </div>
 
         @if (savedFlash) {
@@ -151,6 +122,15 @@ import { LeosApiService } from '../services/leos-api.service';
         flex-direction: column;
         gap: 0.5rem;
         margin-bottom: 0;
+      }
+      .id-marks {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(12rem, 1fr);
+        gap: 1.25rem 1.5rem;
+        align-items: start;
+      }
+      .id-marks .leos-field + .leos-field {
+        margin-top: 0;
       }
       .id-config .leos-field__label {
         font-size: 0.7rem;
@@ -262,46 +242,6 @@ import { LeosApiService } from '../services/leos-api.service';
         color: var(--leos-ink-secondary, #64748b);
         line-height: 1.35;
       }
-      .id-toggle {
-        display: flex;
-        align-items: center;
-        gap: 0.65rem;
-        min-height: 2.75rem;
-        font-size: 0.9375rem;
-        font-weight: 600;
-        color: var(--leos-ink, #0f172a);
-        cursor: pointer;
-      }
-      .id-toggle input {
-        width: 1.15rem;
-        height: 1.15rem;
-        accent-color: var(--leos-gold, #d7a14a);
-      }
-      .id-cover {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        margin-top: 0.65rem;
-      }
-      .id-cover__preview {
-        width: 5.5rem;
-        height: 3.25rem;
-        border-radius: 12px 12px 999px 999px;
-        object-fit: cover;
-        border: 1px solid var(--leos-border, #eae6e1);
-      }
-      .id-cover__placeholder {
-        display: grid;
-        place-items: center;
-        width: 5.5rem;
-        height: 3.25rem;
-        border-radius: 12px 12px 999px 999px;
-        background: #1b2230;
-        color: #94a3b8;
-        font-size: 0.75rem;
-        font-weight: 650;
-        border: 1px solid var(--leos-border, #eae6e1);
-      }
     `,
   ],
 })
@@ -318,8 +258,6 @@ export class SetupIdentityPageComponent implements OnInit, OnDestroy {
   venueName = '';
   logoUrl = '';
   brandColour = '#d7a14a';
-  menuBrandEnabled = false;
-  menuCoverUrl = '';
   location = '';
   typeLabel = 'Restaurant';
   savedFlash = false;
@@ -337,6 +275,10 @@ export class SetupIdentityPageComponent implements OnInit, OnDestroy {
     return bits.join(' · ');
   }
 
+  get logoSrc() {
+    return safeBrandImageUrl(this.logoUrl);
+  }
+
   ngOnInit() {
     const active = this.ctx.activeExperience();
     if (!active) {
@@ -349,17 +291,8 @@ export class SetupIdentityPageComponent implements OnInit, OnDestroy {
     this.venueName = active.venueName || def?.defaults.venueName || '';
     this.logoUrl = active.logoUrl || '';
     this.brandColour = active.brandColour || '#d7a14a';
-    this.menuBrandEnabled = !!active.menuBrandEnabled;
-    this.menuCoverUrl = active.menuCoverUrl || '';
     this.location = active.location || '';
-    this.api.getGrowOverview().subscribe({
-      next: (overview) => {
-        if (overview.venueId) {
-          this.ctx.upsertActive({ venueId: overview.venueId });
-        }
-      },
-      error: () => undefined,
-    });
+    this.ensureVenueAndHydrate();
   }
 
   ngOnDestroy() {
@@ -376,49 +309,19 @@ export class SetupIdentityPageComponent implements OnInit, OnDestroy {
   onLogoPick(ev: Event) {
     const input = ev.target as HTMLInputElement;
     const file = input.files?.[0];
-    if (!file) return;
-    if (file.size > 1_200_000) {
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      this.logoUrl = String(reader.result || '');
-      this.scheduleSave();
-    };
-    reader.readAsDataURL(file);
     input.value = '';
+    if (!file) return;
+    if (file.size > 2_000_000) return;
+    this.uploadAsset('logo', file, (url) => {
+      this.logoUrl = url;
+      this.ctx.upsertActive({ logoUrl: url });
+      this.flashSaved();
+    });
   }
 
   clearLogo() {
     this.logoUrl = '';
     this.scheduleSave();
-  }
-
-  onCoverPick(ev: Event) {
-    const input = ev.target as HTMLInputElement;
-    const file = input.files?.[0];
-    if (!file) return;
-    if (file.size > 1_800_000) {
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      this.menuCoverUrl = String(reader.result || '');
-      this.scheduleSave();
-    };
-    reader.readAsDataURL(file);
-    input.value = '';
-  }
-
-  clearCover() {
-    this.menuCoverUrl = '';
-    this.scheduleSave();
-  }
-
-  onMenuBrandToggle() {
-    // Save immediately so Live Experience switches to the menu shell with the moon.
-    if (this.saveTimer) clearTimeout(this.saveTimer);
-    this.persist(false);
   }
 
   scheduleSave() {
@@ -432,6 +335,57 @@ export class SetupIdentityPageComponent implements OnInit, OnDestroy {
     void this.router.navigate(['/studio/setup/experience']);
   }
 
+  private ensureVenueAndHydrate(then?: (venueId: string) => void) {
+    const active = this.ctx.activeExperience();
+    const existing = active?.venueId?.trim();
+    if (existing) {
+      this.ctx.initWorkspace(existing);
+      then?.(existing);
+      return;
+    }
+    this.api.resolveSetupEntryContext(active?.placeCode || undefined).subscribe({
+      next: (ctx) => {
+        this.ctx.upsertActive(
+          { venueId: ctx.venueId, organisationId: ctx.organisationId },
+          { syncServer: false },
+        );
+        this.ctx.initWorkspace(ctx.venueId);
+        const hydrated = this.ctx.activeExperience();
+        if (hydrated) {
+          this.logoUrl = hydrated.logoUrl || this.logoUrl;
+          this.brandColour = hydrated.brandColour || this.brandColour;
+          this.location = hydrated.location || this.location;
+          if (hydrated.venueName) this.venueName = hydrated.venueName;
+        }
+        then?.(ctx.venueId);
+      },
+      error: () => {
+        this.api.getGrowOverview().subscribe({
+          next: (overview) => {
+            if (!overview.venueId) return;
+            this.ctx.upsertActive({ venueId: overview.venueId }, { syncServer: false });
+            this.ctx.initWorkspace(overview.venueId);
+            then?.(overview.venueId);
+          },
+          error: () => undefined,
+        });
+      },
+    });
+  }
+
+  private uploadAsset(
+    kind: 'logo',
+    file: File,
+    onOk: (url: string) => void,
+  ) {
+    this.ensureVenueAndHydrate((venueId) => {
+      this.api.uploadVenueAsset(venueId, kind, file).subscribe({
+        next: (res) => onOk(res.url),
+        error: () => undefined,
+      });
+    });
+  }
+
   private persist(markDone: boolean) {
     const name =
       this.venueName.trim() || this.ctx.activeExperience()?.venueName?.trim() || '';
@@ -440,44 +394,19 @@ export class SetupIdentityPageComponent implements OnInit, OnDestroy {
       venueName: name || this.venueName,
       logoUrl: this.logoUrl,
       brandColour: this.brandColour || '#d7a14a',
-      menuBrandEnabled: this.menuBrandEnabled,
-      menuCoverUrl: this.menuCoverUrl,
+      menuBrandEnabled: false,
+      menuCoverUrl: '',
       location: this.location.trim(),
     });
-    this.publishBrandToRuntime(name || this.venueName);
     if (markDone) this.ctx.markStep('identity');
+    this.flashSaved();
+  }
+
+  private flashSaved() {
     this.savedFlash = true;
     if (this.flashTimer) clearTimeout(this.flashTimer);
     this.flashTimer = setTimeout(() => {
       this.savedFlash = false;
     }, 1800);
-  }
-
-  /** Publish brand + guestDesign to runtime for guest entry resolve. */
-  private publishBrandToRuntime(venueName: string) {
-    const active = this.ctx.activeExperience();
-    const send = (venueId: string) => {
-      this.api
-        .saveVenueBrand({
-          venueId,
-          menuBrandEnabled: this.menuBrandEnabled,
-          brandColour: this.brandColour || '#d7a14a',
-          venueName: venueName.trim() || undefined,
-          guestDesignJson: active?.guestDesign as Record<string, unknown> | undefined,
-        })
-        .subscribe({ error: () => undefined });
-    };
-    const venueId = active?.venueId?.trim();
-    if (venueId) {
-      send(venueId);
-      return;
-    }
-    this.api.resolveSetupEntryContext(active?.placeCode || undefined).subscribe({
-      next: (ctx) => {
-        this.ctx.upsertActive({ venueId: ctx.venueId, organisationId: ctx.organisationId });
-        send(ctx.venueId);
-      },
-      error: () => undefined,
-    });
   }
 }

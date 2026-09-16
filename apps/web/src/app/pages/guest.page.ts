@@ -1,12 +1,10 @@
-import { Component, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { ExperienceScreenComponent } from '../leos/experience-screen.component';
-import { LineItemRowComponent } from '../leos/line-item-row.component';
-import { OrderTotalComponent } from '../leos/order-total.component';
-import { MenuCardComponent } from '../leos/menu-card.component';
 import { CartSummaryComponent } from '../leos/cart-summary.component';
+import { MenuCardComponent } from '../leos/menu-card.component';
 import { GuestBillComponent } from '../leos/guest-bill.component';
 import { GuestOrdersComponent } from '../leos/guest-orders.component';
 import { GuestTabBarComponent, type GuestTabId } from '../leos/guest-tab-bar.component';
@@ -19,7 +17,6 @@ import {
   type ChoiceSheetResult,
 } from '../leos/guest-choices-sheet.component';
 import { guestReadyBanner } from '../studio/operate-status';
-import { safeBrandImageUrl } from '../leos/catalogue-parity';
 import { SessionStateService } from '../services/leos-api.service';
 import { TerminologyService } from '../services/terminology.service';
 import {
@@ -28,6 +25,8 @@ import {
   type CartLine,
   type GuestPhase,
 } from '../services/guest-session.service';
+import { GuestMenuListComponent } from './guest-menu-list.component';
+import { GuestCartDrawerComponent } from './guest-cart-drawer.component';
 import { livePayCtaLabel, liveReadyLead } from '../studio/ready-pay-continuity';
 import { composeLeaveOpenCopy } from '../studio/leave-open-continuity';
 import { hasOpenBalance, isCleared, isGreaterMinor } from '../leos/money';
@@ -37,7 +36,6 @@ import {
   menuWithoutSpecialsSurface,
   specialsCarouselItems,
 } from '../studio/specials-continuity';
-import { resolveMenuBrand } from '../studio/menu-brand-continuity';
 import { LeosMoneyPipe } from '../leos/leos-money.pipe';
 
 /**
@@ -53,15 +51,14 @@ import { LeosMoneyPipe } from '../leos/leos-money.pipe';
     CommonModule,
     FormsModule,
     ExperienceScreenComponent,
-    LineItemRowComponent,
-    OrderTotalComponent,
     CartSummaryComponent,
     MenuCardComponent,
-    GuestBillComponent,
     GuestOrdersComponent,
     GuestTabBarComponent,
     GuestHelpSheetComponent,
     GuestChoicesSheetComponent,
+    GuestMenuListComponent,
+    GuestCartDrawerComponent,
     LeosMoneyPipe,
   ],
   template: `
@@ -111,24 +108,6 @@ import { LeosMoneyPipe } from '../leos/leos-money.pipe';
 
         @if (phase === 'browse') {
           <div class="leos-browse-tools">
-            @if (showMenuBrand) {
-              <div
-                class="leos-menu-brand"
-                [style.--menu-brand-progress]="menuBrandProgress"
-                [style.--menu-brand-colour]="menuBrandColour"
-                aria-hidden="true"
-              >
-                <div class="leos-menu-brand__fill">
-                  @if (menuBrandCover) {
-                    <img class="leos-menu-brand__cover" [src]="menuBrandCover" alt="" />
-                  }
-                  <span class="leos-menu-brand__shade"></span>
-                  @if (menuBrandLogo) {
-                    <img class="leos-menu-brand__logo" [src]="menuBrandLogo" alt="" />
-                  }
-                </div>
-              </div>
-            }
             @if (categories.length > 1) {
               <div
                 class="leos-chip-row leos-chip-row--scroll leos-chip-row--calm leos-browse-tools__chips"
@@ -187,73 +166,22 @@ import { LeosMoneyPipe } from '../leos/leos-money.pipe';
             }
           </div>
 
-          @for (section of browseSections; track section.category) {
-            <section class="leos-menu-section" [attr.aria-label]="section.category">
-              @if (showSectionTitles) {
-                <h2 class="leos-menu-section__title">{{ section.category }}</h2>
-              }
-              <div class="leos-menu-grid leos-menu-grid--hero" role="list">
-                @for (item of section.items; track item.id) {
-                  <leos-menu-card
-                    [label]="item.label"
-                    [category]="showSectionTitles ? '' : item.category"
-                    [unitPrice]="item.unitPrice"
-                    [description]="item.description || ''"
-                    [allergenLine]="allergenLine(item)"
-                    [dietaryLine]="dietaryLine(item)"
-                    [imageUrl]="item.imageUrl || null"
-                    [showFoodImages]="showFoodImages"
-                    [quantity]="lineQty(item.id)"
-                    [requiresChoices]="hasChoices(item)"
-                    (add)="addFromMenu(item)"
-                    (quantityChange)="setMenuQty(item, $event)"
-                    (remove)="removeFromMenu(item)"
-                  />
-                }
-              </div>
-            </section>
-          } @empty {
-            @if (!catalogueLoading) {
-              <div class="leos-empty">
-                @if (!catalogue.length) {
-                  <p class="leos-muted">Nothing is on the {{ terms.term('catalogue', 'menu') }} yet.</p>
-                  <p class="leos-muted">Ask a team member if this experience should already be live.</p>
-                } @else {
-                  <p class="leos-muted">Nothing matches that.</p>
-                  <p class="leos-muted">Try another category or clear search.</p>
-                  <button
-                    type="button"
-                    class="leos-btn leos-btn--secondary"
-                    style="margin-top:0.75rem;"
-                    (click)="clearBrowseFilters()"
-                  >
-                    Show everything
-                  </button>
-                }
-              </div>
-            }
-          }
+          <lekki-guest-menu-list
+            [sections]="browseSections"
+            [cartQuantities]="session.cartItemCounts"
+            [showSectionTitles]="showSectionTitles"
+            [showFoodImages]="showFoodImages"
+            [catalogueLoading]="catalogueLoading"
+            [catalogueEmpty]="!catalogue.length"
+            [catalogueNoun]="terms.term('catalogue', 'menu')"
+            (selectItem)="addFromMenu($event)"
+            (quantityChange)="setMenuQty($event.item, $event.quantity)"
+            (removeItem)="removeFromMenu($event)"
+            (clearFilters)="clearBrowseFilters()"
+          />
         }
 
         @if (phase === 'specials') {
-          @if (showMenuBrand) {
-            <div
-              class="leos-menu-brand"
-              [style.--menu-brand-progress]="menuBrandProgress"
-              [style.--menu-brand-colour]="menuBrandColour"
-              aria-hidden="true"
-            >
-              <div class="leos-menu-brand__fill">
-                @if (menuBrandCover) {
-                  <img class="leos-menu-brand__cover" [src]="menuBrandCover" alt="" />
-                }
-                <span class="leos-menu-brand__shade"></span>
-                @if (menuBrandLogo) {
-                  <img class="leos-menu-brand__logo" [src]="menuBrandLogo" alt="" />
-                }
-              </div>
-            </div>
-          }
           @if (catalogueLoading) {
             <p class="leos-muted" aria-live="polite">Getting today’s specials ready…</p>
           } @else {
@@ -287,7 +215,7 @@ import { LeosMoneyPipe } from '../leos/leos-money.pipe';
                           <p class="leos-muted leos-menu-card__meta">{{ dietaryLine(item) }}</p>
                         }
                         <p class="leos-specials-card__price">
-                          {{ item.unitPrice | leosMoney }}
+                          {{ item.unitPrice <= 0 ? 'Free' : (item.unitPrice | leosMoney) }}
                         </p>
                       </div>
                       <button
@@ -335,37 +263,16 @@ import { LeosMoneyPipe } from '../leos/leos-money.pipe';
         }
 
         @if (phase === 'cart') {
-          @if (!cart.length) {
-            <div class="leos-empty">
-              <p class="leos-muted">Your {{ terms.term('transaction', 'order').toLowerCase() }} is empty.</p>
-              <p class="leos-muted">
-                Pick something from the {{ terms.term('catalogue', 'menu') }} — it only takes a tap.
-              </p>
-            </div>
-          } @else {
-            <h2 class="leos-cart-heading">Your {{ terms.term('transaction', 'order').toLowerCase() }}</h2>
-            <div
-              class="leos-cart-lines"
-              role="list"
-              [attr.aria-label]="'Your ' + terms.term('transaction', 'order').toLowerCase()"
-            >
-              @for (line of cart; track $index) {
-                <leos-line-item-row
-                  [label]="line.label"
-                  [choiceSummary]="line.choiceSummary || null"
-                  [imageUrl]="line.imageUrl || null"
-                  [quantity]="line.quantity"
-                  [unitPrice]="line.unitPrice"
-                  [editable]="true"
-                  [showEdit]="!!line.selections"
-                  (quantityChange)="setLineQty($index, $event)"
-                  (remove)="removeLine($index)"
-                  (edit)="editCartLine($index)"
-                />
-              }
-            </div>
-            <leos-order-total [total]="cartTotal" label="Total" />
-          }
+          <lekki-guest-cart-drawer
+            cartPhase="draft"
+            [cartLines]="cart"
+            [cartTotal]="cartTotal"
+            [orderNoun]="terms.term('transaction', 'order').toLowerCase()"
+            [catalogueNoun]="terms.term('catalogue', 'menu')"
+            (updateCartQty)="setLineQty($event.index, $event.quantity)"
+            (removeCartLine)="removeLine($event)"
+            (editCartLine)="editCartLine($event)"
+          />
         }
 
         @if (phase === 'live') {
@@ -395,62 +302,38 @@ import { LeosMoneyPipe } from '../leos/leos-money.pipe';
         }
 
         @if (phase === 'payment' && allowPay) {
-          @if (offline) {
-            <div class="leos-offline-banner" role="status">You’re offline — pay when you’re back online.</div>
-          }
-          @if (shareSettledMoment) {
-            <div class="leos-leave-moment" role="status">
-              <p class="leos-leave-moment__title">Equal share is paid</p>
-              <p class="leos-leave-moment__thanks">
-                Thanks — you’re settled for your part.
-                @if (visitHasOpenBalance) {
-                  The rest of the visit can stay open for others, or you can cover it if you like.
-                }
-              </p>
-              @if (visitHasOpenBalance) {
-                <p class="leos-muted" style="margin-top:0.75rem;">
-                  Visit still open: {{ visitRemaining | leosMoney: 'ZAR' }}
-                </p>
-              }
-            </div>
-          } @else {
-            <leos-guest-bill
-              #bill
-              [lines]="billLines"
-              [mineLines]="mineBillLines"
-              [detailLines]="billDetailLines"
-              [claimingLineId]="claimingLineId"
-              [recentlyClaimedIds]="recentlyClaimedIds"
-              [mineScopePulse]="mineScopePulse"
-              [visitRemaining]="visitRemaining"
-              [mineRemaining]="mineRemaining"
-              [equalRemaining]="equalRemaining"
-              [visitLabel]="billVisitLabel"
-              [showScope]="true"
-              [allowTip]="allowTip"
-              [allowHelp]="allowHelp"
-              [trustLine]="paymentTrustLine"
-              [savedPaymentMethodStatus]="savedPaymentMethodStatus"
-              [paymentMethodLabel]="paymentMethodLabel"
-              [serviceHelpLabel]="serviceAssist.label"
-              [managerHelpLabel]="managerAssist.label"
-              [busy]="paying"
-              [offline]="offline"
-              [error]="paymentError"
-              (pay)="pay()"
-              (serviceHelp)="requestHelp('service')"
-              (managerHelp)="requestHelp('manager')"
-              (claimLine)="claimOneLine($event)"
-            />
-
-            @if (claimUndo) {
-              <div class="leos-claim-undo" role="status" aria-live="polite">
-                <span>{{ claimUndo.label }} added to your share.</span>
-                <button type="button" class="leos-claim-undo__action" (click)="undoClaim()">Undo</button>
-              </div>
-            }
-
-          }
+          <lekki-guest-cart-drawer
+            cartPhase="paying"
+            [billLines]="billLines"
+            [mineBillLines]="mineBillLines"
+            [detailLines]="billDetailLines"
+            [claimingLineId]="claimingLineId"
+            [recentlyClaimedIds]="recentlyClaimedIds"
+            [mineScopePulse]="mineScopePulse"
+            [visitRemaining]="visitRemaining"
+            [mineRemaining]="mineRemaining"
+            [equalRemaining]="equalRemaining"
+            [visitLabel]="billVisitLabel"
+            [allowTip]="allowTip"
+            [allowHelp]="allowHelp"
+            [trustLine]="paymentTrustLine"
+            [savedPaymentMethodStatus]="savedPaymentMethodStatus"
+            [paymentMethodLabel]="paymentMethodLabel"
+            [serviceHelpLabel]="serviceAssist.label"
+            [managerHelpLabel]="managerAssist.label"
+            [paying]="paying"
+            [offline]="offline"
+            [paymentError]="paymentError"
+            [claimUndo]="claimUndo"
+            [shareSettledMoment]="shareSettledMoment"
+            [visitHasOpenBalance]="visitHasOpenBalance"
+            (initiatePayment)="pay()"
+            (serviceHelp)="requestHelp('service')"
+            (managerHelp)="requestHelp('manager')"
+            (claimLine)="claimOneLine($event)"
+            (unclaimLine)="undoClaim()"
+            (billAttached)="onBillAttached($event)"
+          />
         }
 
         @if (phase === 'receipt') {
@@ -623,15 +506,9 @@ export class GuestPageComponent implements OnInit, OnDestroy {
   readonly terms = inject(TerminologyService);
   private readonly route = inject(ActivatedRoute);
 
-  @ViewChild('bill')
-  set billRef(bill: GuestBillComponent | undefined) {
+  onBillAttached(bill: GuestBillComponent | undefined) {
     this.session.attachBill(bill);
   }
-
-  /** Menu half-moon brand — Identity toggle (presentation). */
-  menuBrandProgress = 0;
-  private menuBrandScrollBound = false;
-  private readonly onMenuBrandScroll = () => this.updateMenuBrandProgress();
 
   // --- Domain field forwarding (zero template churn) ---
   get phase() { return this.session.phase; }
@@ -971,32 +848,6 @@ export class GuestPageComponent implements OnInit, OnDestroy {
     return `Hi ${name}!`;
   }
 
-  get showMenuBrand(): boolean {
-    return !!(this.menuBrand.enabled && this.state.sessionId);
-  }
-
-  get menuBrandColour(): string {
-    return this.menuBrand.brandColour || '#d7a14a';
-  }
-
-  get menuBrandCover(): string | null {
-    return safeBrandImageUrl(this.menuBrand.coverUrl);
-  }
-
-  get menuBrandLogo(): string | null {
-    return safeBrandImageUrl(this.menuBrand.logoUrl);
-  }
-
-  private get menuBrand() {
-    // Session / Venue only — never Studio localStorage Base64.
-    return resolveMenuBrand(this.state.token, [], {
-      enabled: this.state.menuBrandEnabled,
-      brandColour: this.state.brandColour,
-      logoUrl: this.state.logoUrl,
-      coverUrl: this.state.menuCoverUrl,
-    });
-  }
-
   get paymentTrustLine(): string {
     const mine = this.mineRemaining;
     const visit = this.visitRemaining;
@@ -1069,34 +920,10 @@ export class GuestPageComponent implements OnInit, OnDestroy {
     const welcomeStill = this.route.snapshot.queryParamMap.get('welcome') === 'still';
     const justJoined = this.route.snapshot.queryParamMap.get('joined') === '1';
     this.session.bootstrap({ paymentResult, welcomeBack, welcomeStill, justJoined });
-    this.bindMenuBrandScroll();
   }
 
   ngOnDestroy() {
-    this.unbindMenuBrandScroll();
     this.session.tearDown();
-  }
-
-  private bindMenuBrandScroll() {
-    if (this.menuBrandScrollBound || typeof window === 'undefined') return;
-    window.addEventListener('scroll', this.onMenuBrandScroll, { passive: true });
-    this.menuBrandScrollBound = true;
-    this.updateMenuBrandProgress();
-  }
-
-  private unbindMenuBrandScroll() {
-    if (!this.menuBrandScrollBound || typeof window === 'undefined') return;
-    window.removeEventListener('scroll', this.onMenuBrandScroll);
-    this.menuBrandScrollBound = false;
-  }
-
-  private updateMenuBrandProgress() {
-    if (!this.showMenuBrand || (this.phase !== 'browse' && this.phase !== 'specials')) {
-      this.menuBrandProgress = 0;
-      return;
-    }
-    const y = window.scrollY || document.documentElement.scrollTop || 0;
-    this.menuBrandProgress = Math.min(1, Math.max(0, y / 140));
   }
 }
 

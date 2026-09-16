@@ -334,8 +334,11 @@ export class EntryPageComponent {
           this.state.profileId = res.session.profileId ?? res.context.profile.id ?? '';
           this.state.physicalContextCode = res.context.physicalContextCode ?? '';
           this.state.venueName = res.venueName ?? '';
-          this.state.menuBrandEnabled = !!res.menuBrandEnabled;
+          this.state.menuBrandEnabled = false;
           this.state.brandColour = res.brandColour || '#d7a14a';
+          this.state.logoUrl = res.logoUrl || '';
+          this.state.menuCoverUrl = '';
+          this.state.location = res.location || '';
           this.state.token = token.trim();
           this.state.displayName = displayName;
           this.state.participantId = res.joinedParticipantId ?? '';
@@ -345,6 +348,7 @@ export class EntryPageComponent {
         } else {
           this.state.guestDesign = null;
         }
+          this.state.paymentsActive = res.paymentsActive === true;
           if (res.currency) this.state.currency = res.currency;
           this.state.persist();
           this.api.connectSocket(this.state.organisationId, this.state.sessionId);
@@ -375,8 +379,7 @@ export class EntryPageComponent {
         error: (err) => {
           this.resolving = false;
           this.step = 'missing';
-          this.error =
-            err?.error?.message ?? err?.message ?? 'Could not join — check the QR and try again.';
+          this.error = joinEntryError(err);
         },
       });
   }
@@ -389,4 +392,13 @@ export class EntryPageComponent {
       queryParams: this.stillIn || this.returning ? {} : { joined: '1' },
     });
   }
+}
+
+function joinEntryError(err: unknown): string {
+  const e = err as { status?: number; message?: string; error?: { message?: string } };
+  const msg = String(e?.error?.message || e?.message || '');
+  if (e?.status === 0 || /failed to fetch|unknown error/i.test(msg)) {
+    return 'Can’t reach Lekki — open this QR on the same Wi‑Fi as Studio.';
+  }
+  return e?.error?.message || e?.message || 'Could not join — check the QR and try again.';
 }

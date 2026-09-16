@@ -80,3 +80,27 @@ test('Pilot POS: requirePilotPosWebhookSecret fails closed when unset/short', ()
     'long-enough-pilot-hook-secret',
   );
 });
+
+test('Production: NODE_TLS_REJECT_UNAUTHORIZED=0 refuses boot', () => {
+  assert.throws(
+    () =>
+      assertRuntimeSecrets({
+        ...ok,
+        NODE_ENV: 'production',
+        NODE_TLS_REJECT_UNAUTHORIZED: '0',
+      }),
+    /NODE_TLS_REJECT_UNAUTHORIZED/,
+  );
+});
+
+test('Production: PAYFAST_CONFIRM_WITH_SERVER=0 refuses boot', () => {
+  assert.throws(
+    () =>
+      assertRuntimeSecrets({
+        ...ok,
+        NODE_ENV: 'production',
+        PAYFAST_CONFIRM_WITH_SERVER: '0',
+      }),
+    /PAYFAST_CONFIRM_WITH_SERVER/,
+  );
+});

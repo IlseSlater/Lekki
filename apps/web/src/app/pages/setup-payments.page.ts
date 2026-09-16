@@ -15,8 +15,8 @@ import { LeosApiService } from '../services/leos-api.service';
 type PayOption = { key: GuestDesignKey | 'card' | 'applePay' | 'googlePay'; label: string };
 
 /**
- * Setup — How guests pay (thin gateway).
- * Guest checkout toggles here; PayFast credentials live under Integrations.
+ * Setup — How guests pay.
+ * Checkout methods live here. Connecting PayFast is the next step when Pay at table is on.
  */
 @Component({
   standalone: true,
@@ -37,9 +37,11 @@ type PayOption = { key: GuestDesignKey | 'card' | 'applePay' | 'googlePay'; labe
           >
             {{ payfastStatusLabel }}
           </p>
-          <a class="pay-section__link" routerLink="/studio/integrations/payfast"
-            >Manage PayFast integration</a
-          >
+          @if (payfastStatus === 'active') {
+            <a class="pay-section__link" routerLink="/studio/setup/payments/connect"
+              >Manage PayFast</a
+            >
+          }
         </section>
 
         <section class="pay-section">
@@ -66,9 +68,9 @@ type PayOption = { key: GuestDesignKey | 'card' | 'applePay' | 'googlePay'; labe
         eyebrow="Guests will pay"
         [fact]="confidenceFact"
         [detail]="venueName"
-        [ready]="canContinue"
+        [ready]="readyForGolive"
         okLabel="Looks good"
-        waiting="Connect PayFast, then turn on at least one checkout method"
+        [waiting]="waitingHint"
       />
 
       <a escape class="leos-btn leos-btn--secondary" routerLink="/studio/setup/places">Back</a>
@@ -79,7 +81,7 @@ type PayOption = { key: GuestDesignKey | 'card' | 'applePay' | 'googlePay'; labe
         [disabled]="!canContinue"
         (click)="continue()"
       >
-        Continue
+        {{ primaryLabel }}
       </button>
     </leos-experience-screen>
   `,
@@ -180,16 +182,35 @@ export class SetupPaymentsPageComponent implements OnInit, OnDestroy {
         ? `PayFast: Active · ${this.payfastMerchantId}`
         : 'PayFast: Active';
     }
-    if (this.payfastStatus === 'verified') return 'PayFast: Verified — activate in Integrations';
-    return 'PayFast: Not configured';
+    if (this.payfastStatus === 'verified') return 'PayFast: Verified — finish connecting';
+    if (this.design.payAtTable) return 'PayFast: Continue to connect so guests can pay';
+    return 'PayFast: Not needed unless Pay at table is on';
+  }
+
+  get methodsOk() {
+    return this.card || this.applePay || this.googlePay;
+  }
+
+  get needsPayFast() {
+    return this.design.payAtTable && this.payfastStatus !== 'active';
   }
 
   get canContinue() {
-    const methodsOk = this.card || this.applePay || this.googlePay;
-    if (this.design.payAtTable) {
-      return this.payfastStatus === 'active' && methodsOk;
-    }
-    return methodsOk;
+    return this.methodsOk;
+  }
+
+  get readyForGolive() {
+    return this.methodsOk && !this.needsPayFast;
+  }
+
+  get primaryLabel() {
+    return this.needsPayFast ? 'Connect PayFast' : 'Continue';
+  }
+
+  get waitingHint() {
+    if (!this.methodsOk) return 'Turn on at least one checkout method';
+    if (this.needsPayFast) return 'Continue will connect PayFast';
+    return 'Connect PayFast, then turn on at least one checkout method';
   }
 
   get confidenceFact() {
@@ -239,7 +260,11 @@ export class SetupPaymentsPageComponent implements OnInit, OnDestroy {
   }
 
   continue() {
-    this.persistPayMethods(true);
+    this.persistPayMethods(this.readyForGolive);
+    if (this.needsPayFast) {
+      void this.router.navigate(['/studio/setup/payments/connect']);
+      return;
+    }
     void this.router.navigate(['/studio/setup/golive']);
   }
 
@@ -248,9 +273,11 @@ export class SetupPaymentsPageComponent implements OnInit, OnDestroy {
       next: (install) => {
         if (!install) {
           this.payfastStatus = 'none';
+          this.ctx.setLivePaymentsActive(false);
           return;
         }
         this.payfastMerchantId = install.merchantId?.trim() || '';
+        this.ctx.setLivePaymentsActive(install.status === 'active');
         if (install.status === 'active') {
           this.payfastStatus = 'active';
           this.card = true;
@@ -260,7 +287,9 @@ export class SetupPaymentsPageComponent implements OnInit, OnDestroy {
           this.payfastStatus = 'verified';
         }
       },
-      error: () => undefined,
+      error: () => {
+        this.ctx.setLivePaymentsActive(false);
+      },
     });
   }
 
@@ -277,7 +306,7 @@ export class SetupPaymentsPageComponent implements OnInit, OnDestroy {
     ].filter(Boolean);
     this.ctx.upsertActive({
       guestDesign: { ...this.design },
-      paymentsDone: this.canContinue,
+      paymentsDone: this.readyForGolive,
       experienceNotes: methods.length
         ? `${methods.join(' · ')}${this.design.tipStaff ? ' · Tips' : ''}${this.design.splitBill ? ' · Split' : ''}`
         : this.ctx.activeExperience()?.experienceNotes ?? '',
@@ -287,7 +316,7 @@ export class SetupPaymentsPageComponent implements OnInit, OnDestroy {
       applePay: this.applePay,
       googlePay: this.googlePay,
     });
-    if (markDone && this.canContinue) this.ctx.markStep('payments');
+    if (markDone && this.readyForGolive) this.ctx.markStep('payments');
     this.savedFlash = true;
     if (this.flashTimer) clearTimeout(this.flashTimer);
     this.flashTimer = setTimeout(() => {

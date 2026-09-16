@@ -10,6 +10,9 @@ export type RuntimeSecretEnv = {
   STAFF_TOKEN_SECRET?: string;
   LEKKI_VAULT_KEY?: string;
   PILOT_POS_WEBHOOK_SECRET?: string;
+  NODE_ENV?: string;
+  NODE_TLS_REJECT_UNAUTHORIZED?: string;
+  PAYFAST_CONFIRM_WITH_SERVER?: string;
 };
 
 function readStaff(env: RuntimeSecretEnv): string {
@@ -23,6 +26,32 @@ function readVault(env: RuntimeSecretEnv): string {
 export function assertRuntimeSecrets(env: RuntimeSecretEnv): void {
   requireStaffTokenSecret(env);
   requireVaultKey(env);
+  assertProductionTlsNotDisabled(env);
+  assertProductionPayFastConfirmEnabled(env);
+}
+
+/** Production must never disable TLS verification process-wide. */
+export function assertProductionTlsNotDisabled(
+  env: RuntimeSecretEnv = process.env,
+): void {
+  if (env.NODE_ENV !== 'production') return;
+  if (env.NODE_TLS_REJECT_UNAUTHORIZED === '0') {
+    throw new Error(
+      'NODE_TLS_REJECT_UNAUTHORIZED=0 is forbidden when NODE_ENV=production — use NODE_EXTRA_CA_CERTS',
+    );
+  }
+}
+
+/** Production must never skip PayFast server-side ITN validate. */
+export function assertProductionPayFastConfirmEnabled(
+  env: RuntimeSecretEnv = process.env,
+): void {
+  if (env.NODE_ENV !== 'production') return;
+  if (env.PAYFAST_CONFIRM_WITH_SERVER === '0') {
+    throw new Error(
+      'PAYFAST_CONFIRM_WITH_SERVER=0 is forbidden when NODE_ENV=production',
+    );
+  }
 }
 
 export function requireStaffTokenSecret(

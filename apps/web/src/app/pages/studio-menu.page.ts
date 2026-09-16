@@ -1,16 +1,20 @@
 import {
   Component,
+  ElementRef,
   OnDestroy,
   OnInit,
+  ViewChild,
   inject,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import { ExperienceScreenComponent } from '../leos/experience-screen.component';
 import { StudioWorkspaceComponent } from '../leos/studio-workspace.component';
 import { CatalogueLiveService } from '../services/catalogue-live.service';
 import { LeosApiService } from '../services/leos-api.service';
 import { StudioContextService } from '../services/studio-context.service';
+import { parseMenuList } from '../studio/menu-list-import';
 
 type MenuItem = {
   id: string;
@@ -61,12 +65,27 @@ type EditorMode = 'list' | 'edit';
                 </li>
               }
             </ul>
-            <button type="button" class="leos-btn leos-btn--primary" (click)="startAdd()">
-              {{ items.length ? 'Add a dish' : 'Add the first dish' }}
-            </button>
+            <div class="menu-editor__doors">
+              <button type="button" class="leos-btn leos-btn--primary" (click)="startAdd()">
+                {{ items.length ? 'Add a dish' : 'Add the first dish' }}
+              </button>
+              <button type="button" class="leos-btn leos-btn--secondary" (click)="pickImport()">
+                Import a list
+              </button>
+              <input
+                #listFile
+                type="file"
+                accept=".csv,text/csv,text/plain"
+                hidden
+                (change)="onImportFile($event)"
+              />
+            </div>
+            @if (importStatus) {
+              <p class="menu-editor__status" role="status">{{ importStatus }}</p>
+            }
           } @else {
             <div class="leos-field">
-              <span class="leos-field__label">Name</span>
+              <span class="leos-field__label">Name <em class="leos-field__need">required</em></span>
               <input
                 class="leos-field__input"
                 name="label"
@@ -76,7 +95,7 @@ type EditorMode = 'list' | 'edit';
               />
             </div>
             <div class="leos-field">
-              <span class="leos-field__label">Price (R)</span>
+              <span class="leos-field__label">Price (R) <em class="leos-field__need">required</em></span>
               <input
                 class="leos-field__input"
                 name="price"
@@ -88,7 +107,7 @@ type EditorMode = 'list' | 'edit';
               />
             </div>
             <div class="leos-field">
-              <span class="leos-field__label">Category</span>
+              <span class="leos-field__label">Category <em class="leos-field__need">optional</em></span>
               <input
                 class="leos-field__input"
                 name="category"
@@ -98,7 +117,7 @@ type EditorMode = 'list' | 'edit';
               />
             </div>
             <div class="leos-field">
-              <span class="leos-field__label">Short description</span>
+              <span class="leos-field__label">Short description <em class="leos-field__need">optional</em></span>
               <textarea
                 class="leos-field__input"
                 name="description"
@@ -108,7 +127,7 @@ type EditorMode = 'list' | 'edit';
               ></textarea>
             </div>
             <div class="leos-field">
-              <span class="leos-field__label">Photo URL</span>
+              <span class="leos-field__label">Photo URL <em class="leos-field__need">optional</em></span>
               <input
                 class="leos-field__input"
                 name="imageUrl"
@@ -119,7 +138,7 @@ type EditorMode = 'list' | 'edit';
               />
             </div>
             <div class="leos-field">
-              <span class="leos-field__label">Station</span>
+              <span class="leos-field__label">Station <em class="leos-field__need">required</em></span>
               <select
                 class="leos-field__input"
                 name="station"
@@ -132,7 +151,7 @@ type EditorMode = 'list' | 'edit';
               </select>
             </div>
             <div class="leos-field">
-              <span class="leos-field__label">Allergens</span>
+              <span class="leos-field__label">Allergens <em class="leos-field__need">optional</em></span>
               <input
                 class="leos-field__input"
                 name="allergens"
@@ -142,7 +161,7 @@ type EditorMode = 'list' | 'edit';
               />
             </div>
             <div class="leos-field">
-              <span class="leos-field__label">Dietary tags</span>
+              <span class="leos-field__label">Dietary tags <em class="leos-field__need">optional</em></span>
               <input
                 class="leos-field__input"
                 name="dietary"
@@ -236,6 +255,12 @@ type EditorMode = 'list' | 'edit';
         font-size: 0.8125rem;
         color: var(--leos-ink-tertiary, #94a3b8);
       }
+      .menu-editor__doors {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.65rem;
+        align-items: center;
+      }
     `,
   ],
 })
@@ -243,6 +268,8 @@ export class StudioMenuPageComponent implements OnInit, OnDestroy {
   private readonly api = inject(LeosApiService);
   private readonly ctx = inject(StudioContextService);
   private readonly catalogueLive = inject(CatalogueLiveService);
+
+  @ViewChild('listFile') listFile?: ElementRef<HTMLInputElement>;
 
   venueId = '';
   mode: EditorMode = 'list';
@@ -262,6 +289,7 @@ export class StudioMenuPageComponent implements OnInit, OnDestroy {
   allergensText = '';
   dietaryText = '';
   saveStatus = '';
+  importStatus = '';
   private saveTimer?: ReturnType<typeof setTimeout>;
   private creating = false;
 
@@ -278,7 +306,7 @@ export class StudioMenuPageComponent implements OnInit, OnDestroy {
   get listHint(): string {
     return this.items.length
       ? 'Tap a dish to change it — or mark what’s off tonight.'
-      : 'Your guests still see the demo menu until you add yours.';
+      : 'Add a priced dish so guests can order — complimentary items can sit beside it.';
   }
 
   ngOnInit() {
@@ -322,6 +350,43 @@ export class StudioMenuPageComponent implements OnInit, OnDestroy {
     this.dietaryText = '';
     this.mode = 'edit';
     this.saveStatus = '';
+  }
+
+  pickImport() {
+    this.listFile?.nativeElement.click();
+  }
+
+  async onImportFile(ev: Event) {
+    const input = ev.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file || !this.venueId) return;
+    const text = await file.text();
+    const rows = parseMenuList(text);
+    if (!rows.length) {
+      this.importStatus = 'Nothing to import — use name, price, category.';
+      return;
+    }
+    this.importStatus = `Importing ${rows.length}…`;
+    try {
+      for (const row of rows) {
+        await firstValueFrom(
+          this.api.createCatalogueItem(this.venueId, {
+            label: row.label,
+            unitPrice: row.unitPrice,
+            category: row.category,
+            available: true,
+            routingTags: ['food'],
+          }),
+        );
+      }
+      this.catalogueLive.bump();
+      this.reload();
+      this.importStatus = `Imported ${rows.length}.`;
+      setTimeout(() => (this.importStatus = ''), 3000);
+    } catch {
+      this.importStatus = 'Couldn’t import that list — try again.';
+    }
   }
 
   backToList() {

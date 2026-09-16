@@ -13,6 +13,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { SessionAccessService } from '../leos/session-access.service';
 import { RequireStaffPermission, StaffAuthGuard } from '../staff-auth/staff-auth.guard';
 import { MissingFieldError } from '../leos/domain-errors';
+import { venueHasActivePaymentInstall } from '../leos/payments-active';
 
 @Controller('sessions')
 export class SessionController {
@@ -57,6 +58,9 @@ export class SessionController {
         name: true,
         menuBrandEnabled: true,
         brandColour: true,
+        logoUrl: true,
+        menuCoverUrl: true,
+        location: true,
         guestDesignJson: true,
       },
     });
@@ -65,6 +69,8 @@ export class SessionController {
       venue?.guestDesignJson && typeof venue.guestDesignJson === 'object'
         ? venue.guestDesignJson
         : null;
+
+    const paymentsActive = await venueHasActivePaymentInstall(this.prisma, session.venueId);
 
     const labelByTxLine = new Map(
       session.transactions.flatMap((t) =>
@@ -81,9 +87,13 @@ export class SessionController {
       ...session,
       placeCode: session.physicalContext?.code ?? null,
       venueName: venue?.name ?? null,
-      menuBrandEnabled: !!venue?.menuBrandEnabled,
+      menuBrandEnabled: false,
       brandColour: venue?.brandColour || '#d7a14a',
+      logoUrl: venue?.logoUrl || '',
+      menuCoverUrl: '',
+      location: venue?.location || '',
       guestDesign,
+      paymentsActive,
       fulfilments: session.fulfilments.map((f) => ({
         id: f.id,
         status: f.status,

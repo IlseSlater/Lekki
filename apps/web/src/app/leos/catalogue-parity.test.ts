@@ -5,6 +5,7 @@ import {
   choiceGroupHint,
   projectionChoiceSignals,
   projectionOrderCopy,
+  safeBrandImageUrl,
   safeGuestImageUrl,
 } from './catalogue-parity';
 import { PROJECTION_ITEMS } from '../studio/guest-experience-design';
@@ -13,8 +14,16 @@ test('rejects mixed-content and script image URLs', () => {
   assert.equal(safeGuestImageUrl('http://example.com/a.jpg'), null);
   assert.equal(safeGuestImageUrl('javascript:alert(1)'), null);
   assert.equal(safeGuestImageUrl('https://example.com/a.jpg'), 'https://example.com/a.jpg');
-  assert.equal(safeGuestImageUrl('/assets/dish.png'), '/assets/dish.png');
+  assert.equal(safeGuestImageUrl('/assets/dish.png'), 'http://localhost:3000/assets/dish.png');
   assert.ok(safeGuestImageUrl('data:image/svg+xml,abc')?.startsWith('data:image/'));
+});
+
+test('brand URLs reject Base64 data URIs', () => {
+  assert.equal(safeBrandImageUrl('data:image/png;base64,abc'), null);
+  assert.equal(
+    safeBrandImageUrl('/assets/ven/logo.png'),
+    'http://localhost:3000/assets/ven/logo.png',
+  );
 });
 
 test('G-04 choice hints match guest sheet language', () => {

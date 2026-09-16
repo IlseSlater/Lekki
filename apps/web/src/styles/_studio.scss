@@ -1,6 +1,12 @@
-/* LEKKI Visual Language — Studio · Surgical White & Rose-Gold Edition.
-   Design System v1 — never dark mode · never blue interactive chroma.
+/* LEKKI Visual Language — Studio · Ash workstation on cinematic ground.
+   Gold is the peak (Open for guests). Obsidian is a frame, not dark mode.
 */
+
+@property --studio-exp-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
 
 .leos-studio-shell {
   --studio-bg: var(--leos-warm-sand, #ffffff);
@@ -29,6 +35,11 @@
   --studio-duration: 220ms;
   --studio-duration-enter: 280ms;
   --studio-duration-settle: 360ms;
+  --studio-duration-press: var(--leos-duration-press, 120ms);
+  --studio-duration-ring: var(--leos-duration-ring, 420ms);
+  --studio-duration-sheet: var(--leos-duration-sheet, 200ms);
+  --studio-duration-halo: var(--leos-duration-halo, 600ms);
+  --studio-stagger: var(--leos-stagger, 60ms);
   --studio-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --studio-ease-soft: cubic-bezier(0.33, 1, 0.68, 1);
   --studio-shadow: var(--leos-shadow-card, 0 1px 3px rgba(15, 23, 42, 0.05));
@@ -50,6 +61,18 @@
   -webkit-font-smoothing: antialiased;
 }
 
+.leos-studio-shell.leos-register--ash {
+  --leos-action: var(--leos-ash-action);
+  --leos-action-hover: var(--leos-ash-action-hover);
+  --leos-on-brand: var(--leos-ash-on-action);
+  --leos-gradient-cta: var(--leos-ash-action);
+  --leos-shadow-cta: none;
+  --leos-shadow-cta-hover: none;
+  --leos-shadow-cta-active: none;
+  --studio-ink: var(--leos-ash-ink);
+  --studio-line: var(--leos-ash-field-border);
+}
+
 .leos-studio-shell[data-nav-collapsed='true'] {
   --studio-nav-width: var(--studio-nav-width-collapsed);
 }
@@ -67,14 +90,17 @@
   max-width: calc(var(--studio-studio-width) + var(--studio-pad-outer) * 2);
   margin: 1.25rem auto;
   padding: var(--studio-pad-outer);
-  background: color-mix(in srgb, var(--studio-surface) 90%, transparent);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: var(--leos-ash-card);
+  backdrop-filter: blur(var(--leos-ash-card-blur));
+  -webkit-backdrop-filter: blur(var(--leos-ash-card-blur));
   border-radius: var(--studio-radius-lg);
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
 }
 
-/* Team — fill craft surface (people + editor rail, no dead right gutter) */
+/* Mode craft surfaces — fill the main like Team (no narrow gutter card) */
+.leos-studio-shell[data-mode='setup']:not([data-setup-engine='true']):not([data-pre-engine='true']) .leos-studio-shell__main,
+.leos-studio-shell[data-mode='operate']:not([data-setup-engine='true']) .leos-studio-shell__main,
+.leos-studio-shell[data-mode='grow']:not([data-setup-engine='true']) .leos-studio-shell__main,
 .leos-studio-shell[data-mode='team']:not([data-setup-engine='true']) .leos-studio-shell__main {
   max-width: none;
   width: auto;
@@ -101,13 +127,40 @@
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
 }
 
-.leos-studio-shell[data-setup-engine='true'] .studio-ws__studio .leos-screen {
-  padding: 1.35rem 1.35rem 1.5rem;
-  color: var(--studio-ink);
+/* Setup Engine — one paper for story + form. Phone stays on the ground. */
+.leos-studio-shell[data-setup-engine='true'] .studio-ws__paper {
   background: #fff;
   border: 1px solid var(--studio-line, #eae6e1);
-  border-radius: 1.5rem;
+  border-radius: 1.15rem;
   box-shadow: 0 1px 2px rgba(27, 34, 48, 0.04);
+  overflow: hidden;
+}
+
+.leos-studio-shell[data-setup-engine='true'] .studio-ws__story {
+  padding: 1.15rem 1.1rem 1.35rem 1.15rem;
+  color: var(--studio-ink);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.leos-studio-shell[data-setup-engine='true'] .studio-ws__studio .leos-screen {
+  padding: 1.25rem 1.5rem 1.35rem;
+  color: var(--studio-ink);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  height: 100%;
+}
+
+.leos-studio-shell[data-setup-engine='true'] .leos-screen__purpose {
+  font-size: clamp(1.35rem, 2.1vw, 1.75rem);
+}
+
+.leos-studio-shell[data-setup-engine='true'] .leos-screen__lead {
+  display: none;
 }
 
 .leos-studio-shell[data-setup-engine='true'] .leos-card {
@@ -723,26 +776,35 @@
 }
 
 .leos-studio-shell .leos-btn--primary {
-  background: var(--leos-gradient-cta, linear-gradient(180deg, #d9a85b 0%, #b88339 100%));
-  color: var(--leos-on-brand, #1b2230);
-  box-shadow: var(--leos-shadow-cta);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: var(--leos-radius-button, 14px);
+  background: var(--leos-action);
+  color: var(--leos-on-brand);
+  box-shadow: none;
+  border: 1px solid transparent;
+  border-radius: var(--leos-radius-pill, 999px);
   font-weight: 600;
   letter-spacing: -0.01em;
+  transition:
+    transform var(--studio-duration-press, 120ms) var(--studio-ease),
+    filter var(--studio-duration-fast) var(--studio-ease);
 }
 
 .leos-studio-shell .leos-btn--primary:hover {
-  filter: brightness(1.04);
+  filter: none;
   transform: translateY(-1px);
-  background: var(--leos-gradient-cta, linear-gradient(180deg, #d9a85b 0%, #b88339 100%));
-  box-shadow: var(--leos-shadow-cta-hover);
+  background: var(--leos-action-hover);
+  box-shadow: none;
 }
 
 .leos-studio-shell .leos-btn--primary:active:not(:disabled) {
   filter: none;
   transform: scale(0.985) translateY(0);
-  box-shadow: var(--leos-shadow-cta-active);
+  box-shadow: none;
+}
+
+.leos-studio-shell .leos-btn--peak {
+  background: var(--leos-action-peak);
+  color: var(--leos-on-peak);
+  box-shadow: none;
 }
 
 .leos-studio-shell .leos-btn--ghost {
@@ -759,17 +821,17 @@
 
 .leos-studio-shell .leos-btn--secondary {
   background: transparent;
-  color: var(--studio-ink-secondary);
-  border: 0;
-  padding-left: 0.25rem;
-  padding-right: 0.25rem;
-  font-weight: 500;
+  color: var(--studio-ink);
+  border: 1px solid var(--studio-line);
+  padding: 0.65rem 1.1rem;
+  font-weight: 600;
   box-shadow: none;
 }
 
 .leos-studio-shell .leos-btn--secondary:hover {
   color: var(--studio-ink);
-  background: transparent;
+  background: var(--studio-surface-secondary);
+  border-color: var(--studio-ink-tertiary);
 }
 
 .leos-studio-shell .leos-visual-cards {
@@ -904,40 +966,42 @@
   display: flex;
   flex-direction: column;
   gap: var(--studio-pad-section);
-  max-width: var(--studio-studio-width);
+  max-width: 40rem;
   animation: studio-fade var(--studio-duration-enter) var(--studio-ease);
 }
 
 .studio-home__hero {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  max-width: 40rem;
 }
 
-.studio-home__greeting {
+.studio-home__eyebrow {
   margin: 0;
-  font-size: 0.9375rem;
-  font-weight: 500;
+  font-size: 0.75rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--studio-ink-secondary);
 }
 
 .studio-home__venue {
-  margin: 0;
-  font-family: 'Fraunces', Georgia, serif;
-  font-size: clamp(2.25rem, 5vw, 3.25rem);
+  margin: 0.35rem 0 0;
+  font-size: 1.75rem;
   font-weight: 650;
-  letter-spacing: -0.035em;
-  line-height: 1.08;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
   color: var(--studio-ink);
+  font-family: inherit;
 }
 
 .studio-home__readiness {
-  margin: 0.65rem 0 0;
-  font-size: 1.125rem;
+  margin: 0.5rem 0 0;
+  font-size: 1rem;
   font-weight: 500;
   color: var(--studio-ink-secondary);
-  line-height: 1.4;
-  max-width: 28rem;
+  line-height: 1.45;
+  max-width: 40rem;
 }
 
 .studio-home__readiness--ok {
@@ -993,12 +1057,51 @@
   color: var(--studio-success);
 }
 
+.studio-home__recess {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 0.75rem;
+  margin: 0;
+  padding: 0.9rem 1rem;
+  border-radius: 0.75rem;
+  background: var(--studio-surface-secondary, var(--leos-ash-card-composite));
+  border: 1px solid var(--studio-line);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--studio-ink);
+}
+
+.studio-home__recess-mark {
+  color: var(--studio-success);
+  font-weight: 700;
+}
+
+.studio-home__recess-review {
+  margin-left: auto;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--studio-ink-secondary);
+  text-decoration: none;
+}
+
+.studio-home__recess-review:hover {
+  color: var(--studio-ink);
+}
+
 .studio-home__doors {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 0.85rem;
   animation: studio-fade var(--studio-duration-enter) var(--studio-ease) 120ms both;
+}
+
+.studio-home__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: center;
 }
 
 .studio-home__door-row {
@@ -1064,42 +1167,48 @@
 }
 
 /* Operate Overview — fill craft surface for glance + staff rail */
-.leos-studio-shell[data-mode='operate']:not([data-setup-engine='true']) .leos-studio-shell__main {
-  max-width: none;
-  width: 100%;
-  margin: 0;
-  padding: var(--studio-pad-outer) clamp(1.25rem, 3vw, var(--studio-pad-outer));
-}
-
 .leos-studio-shell[data-mode='operate'] .studio-operate {
   max-width: none;
   width: 100%;
 }
 
+.studio-operate__header {
+  max-width: 40rem;
+}
+
+.studio-operate__eyebrow {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--studio-ink-secondary);
+}
+
+/* Station boards keep a soft secondary label (not mode eyebrow) */
 .studio-operate__now {
   margin: 0;
   font-size: 0.9375rem;
   font-weight: 500;
-  letter-spacing: 0;
-  text-transform: none;
   color: var(--studio-ink-secondary);
 }
 
 .studio-operate__venue {
   margin: 0.35rem 0 0;
-  font-family: 'Fraunces', Georgia, serif;
-  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  font-size: 1.75rem;
   font-weight: 650;
   letter-spacing: -0.03em;
   color: var(--studio-ink);
+  font-family: inherit;
 }
 
 .studio-operate__calm {
-  margin: 0.65rem 0 0;
-  font-size: 1.0625rem;
+  margin: 0.5rem 0 0;
+  font-size: 1rem;
+  font-weight: 500;
   color: var(--studio-ink-secondary);
   line-height: 1.45;
-  max-width: 28rem;
+  max-width: 40rem;
 }
 
 .studio-operate__board {
@@ -1253,6 +1362,29 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  gap: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+.studio-operate__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.studio-operate__status-line {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--studio-ink-tertiary);
+  max-width: 28rem;
+}
+
+.studio-operate__foot {
+  margin: 0.5rem 0 0;
+  font-size: 0.875rem;
+  color: var(--studio-ink-secondary);
+  line-height: 1.5;
 }
 
 .studio-operate__foot {
@@ -1331,64 +1463,85 @@
   color: var(--studio-ink-tertiary);
 }
 
-/* Grow — trusted manager */
+/* Grow — trusted manager (same header grammar as Team) */
 .studio-grow {
   display: flex;
   flex-direction: column;
   gap: var(--studio-pad-section);
-  max-width: 36rem;
+  max-width: 40rem;
   animation: studio-fade var(--studio-duration-enter) var(--studio-ease);
 }
 
-.studio-grow__tray {
-  display: flex;
-  flex-direction: column;
-  gap: var(--studio-pad-section);
-  width: 100%;
-  padding: 1.35rem 1.35rem 1.5rem;
-  border-radius: 1.5rem;
-  background: #fff;
-  border: 1px solid var(--studio-line, #eae6e1);
-  box-shadow: 0 1px 2px rgba(27, 34, 48, 0.04);
-  box-sizing: border-box;
+.studio-grow__hero {
+  max-width: 40rem;
 }
 
-.studio-grow__greeting {
+.studio-grow__eyebrow {
   margin: 0;
-  font-size: 0.9375rem;
-  font-weight: 500;
+  font-size: 0.75rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--studio-ink-secondary);
 }
 
-.studio-grow__venue {
+.studio-grow__title {
   margin: 0.35rem 0 0;
-  font-family: 'Fraunces', Georgia, serif;
-  font-size: 1.25rem;
+  font-size: 1.75rem;
   font-weight: 650;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
+  color: var(--studio-ink);
+  font-family: inherit;
+}
+
+.studio-grow__calm {
+  margin: 0.5rem 0 0;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--studio-ink-secondary);
+  line-height: 1.45;
+}
+
+.studio-grow__empty {
+  margin-top: 1.25rem;
+  padding: 1.25rem 1.25rem 1.35rem;
+  border-radius: 1.25rem;
+  border: 1px dashed var(--studio-line);
+  background: color-mix(in srgb, var(--studio-surface-secondary) 70%, #fff);
+  max-width: 28rem;
+}
+
+.studio-grow__empty .studio-grow__calm {
+  margin-top: 0;
   color: var(--studio-ink);
 }
 
+.studio-grow__empty-hint {
+  margin: 0.65rem 0 0;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--studio-ink-secondary);
+}
+
 .studio-grow__story {
-  margin: 1rem 0 0;
-  font-family: 'Fraunces', Georgia, serif;
-  font-size: clamp(1.5rem, 3vw, 1.85rem);
-  font-weight: 650;
-  letter-spacing: -0.025em;
-  line-height: 1.25;
+  margin: 1.25rem 0 0;
+  font-size: 1.125rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1.4;
   color: var(--studio-ink);
 }
 
 .studio-grow__story--soft {
-  margin-top: 0.75rem;
-  font-size: clamp(1.15rem, 2.5vw, 1.35rem);
+  margin-top: 0.65rem;
+  font-size: 1rem;
   font-weight: 500;
   color: var(--studio-ink-secondary);
 }
 
 .studio-grow__story--trade {
   margin-top: 0.65rem;
-  font-family: inherit;
   font-size: 1.125rem;
   font-weight: 500;
   letter-spacing: -0.01em;
@@ -1461,4 +1614,14 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+}
+
+.studio-grow__cta.leos-btn--primary,
+.leos-studio-shell .studio-grow__cta.leos-btn--primary {
+  box-shadow: none;
+}
+
+.leos-studio-shell .studio-grow__cta.leos-btn--primary:hover {
+  box-shadow: none;
+  filter: brightness(1.04);
 }

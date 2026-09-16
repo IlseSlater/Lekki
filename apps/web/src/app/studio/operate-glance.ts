@@ -69,7 +69,7 @@ export function pressureSentence(
 }
 
 export function operateHandoffLine(): string {
-  return 'Overview only — the next tap continues in Staff Experience.';
+  return 'Staff Experience runs the floor — open the board when you need it.';
 }
 
 export function nextOwnerHint(
