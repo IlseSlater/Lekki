@@ -50,8 +50,158 @@
         rel="stylesheet"
       />
     </noscript>
+    <style>
+      /* Boot splash — dusk hills only, so the first paint matches the
+         horizon canvas. Brand mark and copy live on /splash. */
+      body {
+        margin: 0;
+        background: #00070d;
+      }
+      #boot-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        overflow: hidden;
+        background: radial-gradient(190% 82% at 50% 0%, #11151a 0%, #333b42 44%, #c2a184 100%);
+        opacity: 1;
+        transition: opacity 280ms ease;
+      }
+      #boot-splash.boot-splash--out {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .boot-splash__ridge {
+        position: absolute;
+        left: -4%;
+        right: -4%;
+        bottom: 0;
+        pointer-events: none;
+      }
+      .boot-splash__ridge svg {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+      .boot-splash__ridge--1 {
+        height: 74vh;
+        z-index: 1;
+      }
+      .boot-splash__ridge--2 {
+        height: 66vh;
+        z-index: 2;
+      }
+      .boot-splash__ridge--3 {
+        height: 58vh;
+        z-index: 3;
+      }
+      .boot-splash__ridge--4 {
+        height: 50vh;
+        z-index: 4;
+      }
+      .boot-splash__fade {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 26vh;
+        z-index: 5;
+        pointer-events: none;
+        background: linear-gradient(rgba(0, 0, 0, 0), #00070d 82%);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #boot-splash {
+          transition: none;
+        }
+      }
+    </style>
   </head>
   <body>
+    <div id="boot-splash" aria-hidden="true">
+      <div class="boot-splash__ridge boot-splash__ridge--1">
+        <svg viewBox="0 0 1600 900" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="bs-r1" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#5b6068" stop-opacity=".42" />
+              <stop offset="1" stop-color="#5b6068" stop-opacity=".16" />
+            </linearGradient>
+          </defs>
+          <path
+            fill="url(#bs-r1)"
+            d="M0 486 C 140 440, 260 424, 400 452 C 540 480, 660 496, 800 468 C 940 440, 1060 414, 1200 442 C 1340 470, 1460 488, 1600 462 L1600 900 L0 900 Z"
+          />
+        </svg>
+      </div>
+      <div class="boot-splash__ridge boot-splash__ridge--2">
+        <svg viewBox="0 0 1600 900" preserveAspectRatio="none">
+          <path
+            fill="#2b3036"
+            d="M0 588 C 150 528, 270 512, 400 548 C 530 584, 670 606, 800 566 C 930 526, 1070 498, 1200 534 C 1330 570, 1470 592, 1600 556 L1600 900 L0 900 Z"
+          />
+        </svg>
+      </div>
+      <div class="boot-splash__ridge boot-splash__ridge--3">
+        <svg viewBox="0 0 1600 900" preserveAspectRatio="none">
+          <path
+            fill="#14171b"
+            d="M0 676 C 160 616, 290 596, 420 638 C 550 680, 680 704, 810 660 C 940 616, 1080 588, 1210 630 C 1340 672, 1470 694, 1600 656 L1600 900 L0 900 Z"
+          />
+        </svg>
+      </div>
+      <div class="boot-splash__ridge boot-splash__ridge--4">
+        <svg viewBox="0 0 1600 900" preserveAspectRatio="none">
+          <path
+            fill="#05070a"
+            d="M0 764 C 150 722, 280 706, 410 740 C 540 774, 680 792, 810 758 C 940 724, 1080 704, 1210 736 C 1340 768, 1470 784, 1600 754 L1600 900 L0 900 Z"
+          />
+        </svg>
+      </div>
+      <div class="boot-splash__fade"></div>
+    </div>
     <lekki-root></lekki-root>
+    <script>
+      (function () {
+        var splash = document.getElementById('boot-splash');
+        var root = document.querySelector('lekki-root');
+        if (!splash || !root) return;
+        var reduced =
+          window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        // Hold the dusk hills until the app can take over the same sky.
+        var MIN_MS = reduced ? 0 : 900;
+        var start = Date.now();
+        var removed = false;
+        var appReady = false;
+        function doRemove() {
+          if (removed) return;
+          removed = true;
+          observer.disconnect();
+          clearTimeout(fallback);
+          splash.classList.add('boot-splash--out');
+          splash.addEventListener('transitionend', function () {
+            splash.remove();
+          });
+          setTimeout(function () {
+            splash.remove();
+          }, 400);
+        }
+        function tryRemove() {
+          if (removed || !appReady) return;
+          var wait = Math.max(0, MIN_MS - (Date.now() - start));
+          setTimeout(doRemove, wait);
+        }
+        var observer = new MutationObserver(function () {
+          if (root.childNodes.length > 0) {
+            appReady = true;
+            tryRemove();
+          }
+        });
+        observer.observe(root, { childList: true });
+        var fallback = setTimeout(function () {
+          appReady = true;
+          tryRemove();
+        }, 6000);
+      })();
+    </script>
   </body>
 </html>

@@ -7,34 +7,43 @@ import { experienceLabel } from '../studio/experience-registry';
 
 /**
  * Studio Welcome — first-time create OR Welcome Back (Never Ask a Human to Remember).
+ * Studio first impression: halo + stagger from frozen motion — not a redesign.
  */
 @Component({
   standalone: true,
   imports: [ExperienceScreenComponent, RouterLink],
   template: `
-    <div class="studio-motion-appear">
-      @if (returning) {
-        <article class="welcome-back">
-          <header class="welcome-back__hero">
-            <p class="welcome-back__greeting">{{ greeting }}</p>
-            <h1 class="welcome-back__venue">{{ venue }}</h1>
-            <p class="welcome-back__ready" [class.welcome-back__ready--ok]="live">{{ readiness }}</p>
-          </header>
+    @if (returning) {
+      <article class="welcome-back leos-register-halo">
+        <header class="welcome-back__hero">
+          <p class="welcome-back__greeting studio-motion-appear">{{ greeting }}</p>
+          <h1 class="welcome-back__venue studio-motion-appear-delay">{{ venue }}</h1>
+          <p
+            class="welcome-back__ready studio-motion-appear-delay-2"
+            [class.welcome-back__ready--ok]="live"
+          >
+            {{ readiness }}
+          </p>
+        </header>
 
-          @if (remembered.length) {
-            <ul class="welcome-back__list" aria-label="What LEOS remembers">
-              @for (line of remembered; track line) {
-                <li>{{ line }}</li>
-              }
-            </ul>
-          }
+        @if (remembered.length) {
+          <ul
+            class="welcome-back__list studio-motion-appear-delay-3"
+            aria-label="What LEOS remembers"
+          >
+            @for (line of remembered; track line) {
+              <li>{{ line }}</li>
+            }
+          </ul>
+        }
 
-          <footer class="welcome-back__footer">
-            <a class="leos-btn leos-btn--secondary" routerLink="/studio/create">Create another</a>
-            <a class="leos-btn leos-btn--primary" [routerLink]="primaryLink">{{ primaryCta }}</a>
-          </footer>
-        </article>
-      } @else {
+        <footer class="welcome-back__footer studio-motion-appear-delay-3">
+          <a class="leos-btn leos-btn--secondary" routerLink="/studio/create">Create another</a>
+          <a class="leos-btn leos-btn--primary" [routerLink]="primaryLink">{{ primaryCta }}</a>
+        </footer>
+      </article>
+    } @else {
+      <div class="welcome-first leos-register-halo studio-motion-appear">
         <leos-experience-screen
           purpose="Let’s get your experience ready."
           lead="A few calm steps — then guests can scan a QR and join."
@@ -53,13 +62,18 @@ import { experienceLabel } from '../studio/experience-registry';
           <a escape class="leos-btn leos-btn--secondary" routerLink="/studio">Home</a>
           <a primary class="leos-btn leos-btn--primary" routerLink="/studio/create">Continue</a>
         </leos-experience-screen>
-      }
-    </div>
+      </div>
+    }
   `,
   styles: [
     `
-      .welcome-back {
+      .welcome-back,
+      .welcome-first {
+        position: relative;
         max-width: 32rem;
+        padding: 1.5rem 1.35rem 1.35rem;
+        border-radius: 1.5rem;
+        background: color-mix(in srgb, var(--leos-surface, #fff) 88%, transparent);
       }
       .welcome-back__hero {
         margin-bottom: 1.5rem;
@@ -111,6 +125,21 @@ import { experienceLabel } from '../studio/experience-registry';
         flex-wrap: wrap;
         gap: 0.75rem;
         align-items: center;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .welcome-back .studio-motion-appear,
+        .welcome-back .studio-motion-appear-delay,
+        .welcome-back .studio-motion-appear-delay-2,
+        .welcome-back .studio-motion-appear-delay-3,
+        .welcome-first {
+          animation: none !important;
+        }
+      }
+      @media (prefers-contrast: more) {
+        .welcome-back,
+        .welcome-first {
+          background: var(--leos-surface, #fff);
+        }
       }
     `,
   ],

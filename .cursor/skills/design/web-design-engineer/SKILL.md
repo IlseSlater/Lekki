@@ -19,7 +19,9 @@ description: >-
 3. Marketing spectacle (GSAP, cinematic scroll) is not for product shells —
    that is `build-awwwards-quality-sites`.
 4. Critique: hierarchy, contrast, hit targets, one primary action, digital calm.
-5. Verify behaviour in the browser, not a single screenshot.
+5. Verify behaviour in the browser, not a single screenshot. On a hero
+   moment, do not self-grade — hand off to `design-review` / Lekki critics
+   (`bar.md` + rendered frames, binary pass/fail).
 6. Throwaway HTML comps may live outside `apps/web`. The imported React/Tailwind
    kit is `.agents/skills/web-design-engineer` — load it only for those comps.
 

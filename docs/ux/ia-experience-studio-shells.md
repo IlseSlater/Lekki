@@ -80,10 +80,10 @@ Shared device: PIN → person → Experience.
 ## Guest Experience
 
 ```text
-Discover → Join → Experience → Complete → Return
+QR → Splash → Arrival → Menu heartbeat → Complete → Return
 ```
 
-Routes: `/entry`, `/e/:token`, `/experience` (alias `/guest`). Minimal chrome.
+Join name is on Entry; session commit is during splash. Routes: `/splash`, `/entry`, `/e/:token`, `/experience` (alias `/guest`). Minimal chrome. No Lekki name after splash.
 
 ---
 

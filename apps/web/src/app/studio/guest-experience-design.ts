@@ -83,7 +83,7 @@ export const DEFAULT_GUEST_DESIGN: GuestExperienceDesign = {
   tipStaff: true,
   loyalty: false,
   promotions: false,
-  feedback: false,
+  feedback: true,
 };
 
 export type ProjectionItem = {
@@ -299,7 +299,7 @@ export function categoriesFromDesign(d: GuestExperienceDesign, typeId = 'restaur
 }
 
 export function countEnabled(d: GuestExperienceDesign): number {
-  return (Object.keys(d) as GuestDesignKey[]).filter((k) => d[k]).length;
+  return (Object.keys(DEFAULT_GUEST_DESIGN) as GuestDesignKey[]).filter((k) => d[k]).length;
 }
 
 /** Human summary for confidence strip. */

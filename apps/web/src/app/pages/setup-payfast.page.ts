@@ -211,7 +211,7 @@ export class SetupPayfastPageComponent implements OnInit {
   }
 
   get backLink() {
-    return this.inSetupFlow ? '/studio/setup/payments' : '/studio/integrations';
+    return '/studio/setup/payments';
   }
 
   get canSubmit() {
@@ -274,12 +274,8 @@ export class SetupPayfastPageComponent implements OnInit {
             this.status = 'active';
             this.ctx.upsertActive({ paymentsDone: true });
             this.ctx.touchLive();
-            if (this.inSetupFlow) {
-              void this.router.navigate(['/studio/setup/payments']);
-              return;
-            }
-            void this.router.navigate(['/studio/integrations'], {
-              queryParams: { payfast: 'verified' },
+            void this.router.navigate(['/studio/setup/payments'], {
+              queryParams: this.inSetupFlow ? {} : { payfast: 'verified' },
             });
           },
           error: (err) => {

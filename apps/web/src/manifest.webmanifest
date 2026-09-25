@@ -3,7 +3,7 @@
   "short_name": "Lekki",
   "description": "LEOS guest experience — scan, join, order, pay.",
   "theme_color": "#d7a14a",
-  "background_color": "#faf7f2",
+  "background_color": "#00070d",
   "display": "standalone",
   "orientation": "portrait-primary",
   "scope": "/",

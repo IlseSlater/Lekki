@@ -31,7 +31,7 @@ Creating or updating anything under `.cursor/skills/` or scoping `.agents/skills
 
 - Skills that say “does architecture stuff.”
 - Duplicating North Star / constitution in every file.
-- Teaching React/Tailwind as the Lekki stack.
+- Teaching React as the Lekki stack. Tailwind v4 is utilities over LVES (`design/tailwind-expert`); never Preflight, never a second palette.
 - Letting Awwwards/GSAP skills govern Guest, Studio, or Operate.
 - Expanding LEO’s org chart because a blog described an “agentic mesh.”
 

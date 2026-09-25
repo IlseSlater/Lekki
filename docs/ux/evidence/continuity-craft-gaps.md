@@ -18,10 +18,11 @@
 
 ## Still HOLD / Never
 
-- Claim-from-table · allocation wizard  
-- PaymentCapability vault / real PSP tokens  
-- Embedding full `guest.page` in Live phone  
-- Marketplace · Neo · Setup redesign · Admin BI  
+- Embedding full `guest.page` in Live phone (GAP-10 meaning-parity stands)
+- Marketplace · Neo UI · Setup redesign · Admin BI · venue “close tonight” (GAP-07)
+- Allocation wizard · restoring deleted Studio preview pages
+
+Claim-from-table and PaymentCapability vault are **shipped** — see LEKKI-BUILD evidence.
 
 ## HCI
 

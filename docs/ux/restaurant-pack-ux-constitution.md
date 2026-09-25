@@ -213,7 +213,8 @@ Bottom navigation for a seated guest session (behaviour reference: dark-culinary
 |------|--|
 | Cart is not a tab | Floating **Your order** chip above the bar → G-05 |
 | Theme | Lekki cream / gold — never dark glass / neon |
-| Pack labels | Menu · Orders · Bill · Help · Leave (Pack may localize) |
+| Pack labels (historical) | Menu · Orders · Bill · Help · Leave |
+| **Running dock** | Specials (if on) · Menu · Orders · Bill · **More** (Help). Leave is on receipt (G-09), not the bar. |
 
 **Screens:** Guest shell chrome across G-03…G-09
 

@@ -21,6 +21,11 @@ LEDS remains useful for **CSS token names** in Experience. New visual decisions 
 
 ## 2. Colour
 
+> **Table below is historical.** Names like Deep Emerald and Electric Cyan
+> are now compatibility aliases that resolve to gold (see `tokens.css`) — they
+> are not live roles. For the current colour model, including the four-way
+> action split and the venue `--brand` override, see [LVES § Color](ux/lves.md#color--lekki-visual-language-v2).
+
 | Token | CSS variable | Role |
 |-------|--------------|------|
 | Warm Sand | `--leos-warm-sand` | Page / ambient surface |

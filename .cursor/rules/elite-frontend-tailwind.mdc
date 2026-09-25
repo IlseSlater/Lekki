@@ -1,0 +1,83 @@
+---
+description: Elite frontend — CVA + cn(), WCAG 1.4.11, LVES tokens, container queries, GPU motion. Apply when generating or editing apps/web UI.
+globs: apps/web/**
+alwaysApply: false
+---
+
+# Elite Frontend & Tailwind CSS (LEOS)
+
+You are generating **Angular standalone** UI in `apps/web`, not React. Component-driven, WCAG-compliant, tokenized. Tailwind v4 utilities overlay LVES — Preflight stays off (`apps/web/src/styles.css`).
+
+Pair with `.cursor/skills/design/tailwind-expert` and `.cursor/skills/design/accessibility-architect`.
+
+## 1. Core pattern — CVA + `cn()`
+
+- **New or converted** class-based variants use `cva` (Class Variance Authority).
+- Merge incoming/dynamic classes with `cn()` from `apps/web/src/app/leos/cn.ts` (`clsx` + `tailwind-merge`).
+- Never concatenate class strings with interpolation (`'btn ' + x`, `` `bg-${color}` ``). Complete class names only (Tailwind scans text).
+- Bind in templates as `[class]="cn(buttonVariants({ variant, size }), extra)"` or `[class]` host bindings — not React `className`.
+- Do **not** rewrite frozen `.leos-btn` / Guest cards in the same change unless the task is that conversion. Reuse `apps/web/src/app/leos/` first.
+
+```typescript
+import { cva, type VariantProps } from 'class-variance-authority';
+import { cn } from './cn';
+
+export const buttonVariants = cva(
+  'inline-flex items-center justify-center rounded-button font-medium transition-transform duration-press ease-leos active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action disabled:pointer-events-none disabled:opacity-50 motion-reduce:transition-none motion-reduce:active:scale-100',
+  {
+    variants: {
+      variant: {
+        primary:
+          'bg-register-action text-on-register-action hover:bg-register-action-hover',
+        peak: 'bg-peak text-on-peak font-semibold',
+        ghost: 'bg-transparent text-ink hover:bg-black/5',
+      },
+      size: {
+        sm: 'h-9 px-3 text-xs',
+        md: 'h-11 px-5 text-sm',
+        lg: 'h-14 px-7 text-base',
+      },
+    },
+    defaultVariants: { variant: 'primary', size: 'md' },
+  },
+);
+```
+
+**Peak** is **Open for guests** (and Guest Pay). Not a second gold on Studio Ash. Guest venue colour is `bg-brand` / `--brand`, never Lekki gold on the experience shell.
+
+## 2. Accessibility & contrast (WCAG)
+
+- **1.4.11 Non-text contrast:** controls, inputs, and clickable hits ≥ **3:1** against adjacent colour. Never use soft shadow, glass, or hairline `--color-hairline` (`#eae6e1`, ~1.24:1) as the **only** affordance. Use `--color-field` / `--leos-ash-field-border` (`#d8d2c9`) for control edges.
+- **Text:** body ≥ **4.5:1** AA. On Ash card composite `#e6e6e7`: ink **15.4:1** (AAA), ink-body **6.08:1**. `ink-secondary` fails AA there — placeholders only, not body.
+- **Surface vs action:** neumorphism, glass, blur, halo stay on **passive** containers (`.leos-register-halo`, cards). Primary actions are **solid fills** (black Ash, near-white Obsidian, gold peak).
+- Visible `focus-visible` ring. Names on icon-only controls. Touch targets on Operate/Guest. State is not colour-only.
+
+## 3. Tokens — no hex in templates
+
+Map through existing `--leos-*` / `@theme` aliases in `apps/web/src/styles.css`. Do **not** invent `--bg-canvas` / `--text-primary` / `--accent-peak`.
+
+| Intent | Use |
+|--------|-----|
+| Guest / default gold action | `bg-action` `text-on-action` → `--leos-action` |
+| Studio register action | `bg-register-action` → Ash black / Obsidian near-white |
+| Open for guests | `bg-peak` |
+| Venue white-label | `bg-brand` |
+| Ink / surfaces | `text-ink` `bg-surface` `bg-ground` |
+
+Never `bg-[#00070d]` or `bg-[#d7a14a]` in generated classes. Add a token, then an `@theme` alias.
+
+**Container queries over viewport** for reusable widgets and card lists (`@container`, Tailwind `@min-*` / `@max-*` on a named container). Match existing `studio-setup` (`studio-workspace.component.ts`). Do **not** remap Lekki’s 720 / 800 / 860 / 900 / 960 / 1023 / 1100 media to `lg` without an explicit decision.
+
+## 4. Motion — GPU only
+
+- Transition **transform, opacity, filter** only. Halo already uses opacity + scale (`registers.css`).
+- Never animate `width`, `height`, `margin`, `padding`, or `box-shadow` for micro-interactions. Mark glow = `drop-shadow` / `filter`, not box-shadow.
+- Durations: press 120–160ms, default 220, enter 280, settle 360, halo 600. Ease `ease-leos` (`cubic-bezier(0.22, 1, 0.36, 1)`). Press scale **0.98**, not 0.95 bounce.
+- Every keyframe / enter animation: `motion-reduce:` or `@media (prefers-reduced-motion: reduce)`.
+- No `animate-bounce` / `animate-ping` / `animate-spin` as brand. No `dark:` theme. Obsidian is a cinematic **frame**.
+
+## Never
+
+- Enable Tailwind Preflight or `@import "tailwindcss"` (full).
+- shadcn/React kits, CSS-in-JS, a second palette (indigo/sky).
+- Extra gold primaries. Dashboard density. New LEKs.

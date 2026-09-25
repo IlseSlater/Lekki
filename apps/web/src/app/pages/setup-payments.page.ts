@@ -41,7 +41,14 @@ type PayOption = { key: GuestDesignKey | 'card' | 'applePay' | 'googlePay'; labe
             <a class="pay-section__link" routerLink="/studio/setup/payments/connect"
               >Manage PayFast</a
             >
+          } @else if (design.payAtTable) {
+            <a class="pay-section__link" routerLink="/studio/setup/payments/connect"
+              >Connect PayFast</a
+            >
           }
+          <a class="pay-section__link pay-section__link--quiet" routerLink="/studio/integrations/pilot"
+            >Point of sale (Pilot)</a
+          >
         </section>
 
         <section class="pay-section">
@@ -118,6 +125,12 @@ type PayOption = { key: GuestDesignKey | 'card' | 'applePay' | 'googlePay'; labe
       }
       .pay-section__link:hover {
         text-decoration: underline;
+      }
+      .pay-section__link--quiet {
+        display: block;
+        margin-top: 0.45rem;
+        color: var(--studio-ink-secondary, #6b7280);
+        font-weight: 500;
       }
       .pay-list {
         list-style: none;

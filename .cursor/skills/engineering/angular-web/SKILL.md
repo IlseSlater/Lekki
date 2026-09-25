@@ -18,7 +18,7 @@ Any change under `apps/web/`.
 
 ## Do
 
-1. **Match neighbours.** Standalone components, existing `leos-*` classes, SCSS partials — no new CSS framework.
+1. **Match neighbours.** Standalone components, existing `leos-*` classes. New class variants: `cva` + `cn()` (`.cursor/rules/elite-frontend-tailwind.mdc`). Tailwind utilities alias LVES; Preflight stays off.
 2. **Tokens only.** `apps/web/src/styles/_tokens.scss` (`--leos-*`). Do not invent hex for gold/sand/ink.
 3. **OnPush** for new or touched presentational components. No default ChangeDetection unless there is a proven reason.
 4. **Lazy routes.** Do not re-enable `PreloadAllModules`. Sign-in may warm on idle; nothing else.
@@ -30,7 +30,7 @@ Any change under `apps/web/`.
 
 ## Never
 
-- React, Tailwind, shadcn, or CSS-in-JS in production web.
+- React, shadcn, or CSS-in-JS in production web. Do not enable Tailwind Preflight.
 - Dark mode.
 - GSAP / Three.js / infinite hue-rotate on Guest, Studio, Operate.
 - Admin-panel density, chart walls, multi-primary CTAs.

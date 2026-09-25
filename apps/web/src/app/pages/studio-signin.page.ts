@@ -27,10 +27,13 @@ type GoogleGsi = {
   imports: [FormsModule, RouterLink],
   selector: 'leos-studio-signin',
   template: `
-    <div class="si leos-register leos-register--cinematic leos-register-halo">
+    <div class="si leos-register leos-register--cinematic">
       <a class="si-back" routerLink="/">← Lekki</a>
 
-      <section class="si-card">
+      <section
+        class="si-card leos-register-halo"
+        [class.si-card--settling]="settling"
+      >
         <div class="si-mark">
           <img src="/brand/lekki-mark.svg" width="28" height="28" alt="" />
         </div>
@@ -151,6 +154,11 @@ type GoogleGsi = {
       .si-back:hover {
         color: #fff;
       }
+      .si-back:focus-visible {
+        outline: 2px solid var(--leos-gold, #d7a14a);
+        outline-offset: 3px;
+        border-radius: 4px;
+      }
       .si-card {
         position: relative;
         z-index: 1;
@@ -165,6 +173,21 @@ type GoogleGsi = {
         backdrop-filter: blur(8px);
         -webkit-backdrop-filter: blur(8px);
         box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+        overflow: visible;
+      }
+      .si-card--settling {
+        animation: si-settle var(--studio-duration-settle, 360ms)
+          var(--studio-ease, cubic-bezier(0.22, 1, 0.36, 1)) both;
+      }
+      @keyframes si-settle {
+        from {
+          opacity: 1;
+          transform: scale(1);
+        }
+        to {
+          opacity: 0.92;
+          transform: scale(0.985);
+        }
       }
       .si-mark {
         display: grid;
@@ -173,12 +196,16 @@ type GoogleGsi = {
         height: 3rem;
         margin-bottom: 0.15rem;
         border-radius: 999px;
-        background: rgba(255, 255, 255, 0.16);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+        background: transparent;
+        /* Halo origin — mark is the lamp; register::before blooms behind. */
+        position: relative;
       }
       .si-mark img {
         display: block;
-        border-radius: 8px;
+        width: 2rem;
+        height: 2rem;
+        filter: drop-shadow(0 0 14px rgba(215, 161, 74, 0.38))
+          drop-shadow(0 6px 16px rgba(215, 161, 74, 0.18));
       }
       .si-wordmark {
         margin: 0;
@@ -208,7 +235,7 @@ type GoogleGsi = {
         width: 100%;
         box-sizing: border-box;
         min-height: 3rem;
-        border: 0;
+        border: 1px solid rgba(255, 255, 255, 0.16);
         border-radius: 0.85rem;
         padding: 0.85rem 1.15rem;
         background: rgba(255, 255, 255, 0.1);
@@ -220,8 +247,12 @@ type GoogleGsi = {
         color: rgba(209, 213, 219, 0.9);
       }
       .si-field input:focus {
-        outline: 2px solid rgba(156, 163, 175, 0.85);
-        outline-offset: 1px;
+        outline: none;
+      }
+      .si-field input:focus-visible {
+        border-color: rgba(215, 161, 74, 0.85);
+        outline: 2px solid var(--leos-gold, #d7a14a);
+        outline-offset: 2px;
       }
       .si-rule {
         width: 100%;
@@ -241,9 +272,20 @@ type GoogleGsi = {
         font-weight: 550;
         cursor: pointer;
         box-shadow: none;
+        transition:
+          transform 160ms cubic-bezier(0.22, 1, 0.36, 1),
+          background 160ms cubic-bezier(0.22, 1, 0.36, 1);
       }
       .si-btn:hover:not(:disabled) {
         background: var(--leos-register-action-hover, #fff);
+        transform: translateY(-1px);
+      }
+      .si-btn:active:not(:disabled) {
+        transform: scale(0.98);
+      }
+      .si-btn:focus-visible {
+        outline: 2px solid var(--leos-gold, #d7a14a);
+        outline-offset: 3px;
       }
       .si-btn:disabled {
         opacity: 0.45;
@@ -284,6 +326,10 @@ type GoogleGsi = {
       .si-social:hover:not(:disabled) {
         filter: brightness(1.12);
       }
+      .si-social:focus-visible {
+        outline: 2px solid var(--leos-gold, #d7a14a);
+        outline-offset: 3px;
+      }
       .si-social:disabled {
         opacity: 0.45;
         cursor: not-allowed;
@@ -310,6 +356,27 @@ type GoogleGsi = {
       .si-legal a {
         color: #d7a14a;
       }
+      .si-legal a:focus-visible {
+        outline: 2px solid var(--leos-gold, #d7a14a);
+        outline-offset: 2px;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .si-btn {
+          transition: none;
+        }
+        .si-btn:hover:not(:disabled),
+        .si-btn:active:not(:disabled) {
+          transform: none;
+        }
+        .si-card--settling {
+          animation: none;
+        }
+      }
+      @media (prefers-contrast: more) {
+        .si-mark img {
+          filter: none;
+        }
+      }
     `,
   ],
 })
@@ -321,12 +388,14 @@ export class StudioSignInPageComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
-  email = 'staff@rustyoak.demo';
+  email = '';
   pin = '';
   busy = false;
+  settling = false;
   error = '';
   private googleClientId = '';
   private googleTokenClient?: { requestAccessToken: () => void };
+  private settleTimer?: ReturnType<typeof setTimeout>;
 
   get canSubmit() {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.email.trim()) && this.pin.trim().length >= 4;
@@ -342,6 +411,7 @@ export class StudioSignInPageComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.googleTokenClient = undefined;
+    if (this.settleTimer) clearTimeout(this.settleTimer);
   }
 
   signIn() {
@@ -462,6 +532,11 @@ export class StudioSignInPageComponent implements OnInit, OnDestroy {
     const target = safeNext ?? (this.studio.hasExperiences() ? '/studio' : '/studio/welcome');
     const here = this.router.url.split('?')[0];
     if (here === target.split('?')[0]) return;
-    void this.router.navigateByUrl(target);
+    // Frozen settle — success breath before the Studio frame (360ms).
+    this.settling = true;
+    if (this.settleTimer) clearTimeout(this.settleTimer);
+    this.settleTimer = setTimeout(() => {
+      void this.router.navigateByUrl(target);
+    }, 360);
   }
 }

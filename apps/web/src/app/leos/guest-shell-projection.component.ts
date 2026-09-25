@@ -6,6 +6,8 @@ import {
   categoriesFromDesign,
   resolveProjectionItems,
 } from '../studio/guest-experience-design';
+import { guestPlaceSpoken } from '../studio/place-continuity';
+import { livePayConfidenceSentence } from '../studio/pay-confidence';
 import { choiceGroupHint, projectionOrderCopy, safeBrandImageUrl, safeGuestImageUrl } from './catalogue-parity';
 
 type PreviewTab = 'specials' | 'menu' | 'orders' | 'bill';
@@ -21,13 +23,13 @@ type PreviewTab = 'specials' | 'menu' | 'orders' | 'bill';
   imports: [CommonModule],
   template: `
     <div class="gsp" [class.gsp--fill]="fillFrame" [style.--brand]="brandColour">
-      <header class="gsp__header">
+      <header class="gsp__header gsp__header--identity">
         @if (logoSrc) {
           <img class="gsp__logo" [src]="logoSrc" alt="" width="32" height="32" />
         }
         <h2 class="gsp__venue">{{ venueName }}</h2>
-        @if (placeCode) {
-          <p class="gsp__place">{{ placeCode }}</p>
+        @if (placeSpoken) {
+          <p class="gsp__place">{{ placeSpoken }}</p>
         }
       </header>
 
@@ -203,9 +205,9 @@ type PreviewTab = 'specials' | 'menu' | 'orders' | 'bill';
             @if (sampleItemLabel) {
               <div class="gsp__sample-line">
                 <span>{{ sampleItemLabel }}</span>
-                <span>{{ orderCopy.statusLabel }}</span>
               </div>
             }
+            <p class="gsp__status-spoken">{{ orderCopy.statusLabel }}</p>
             <p class="gsp__muted">{{ orderCopy.current }}</p>
           } @else {
             <p class="gsp__empty">Nothing placed yet.</p>
@@ -219,6 +221,7 @@ type PreviewTab = 'specials' | 'menu' | 'orders' | 'bill';
               <span>Visit total</span>
               <span>{{ sampleVisitTotal }}</span>
             </div>
+            <p class="gsp__pay-trust">{{ payConfidence }}</p>
             <div class="gsp__pay">
               @if (payMethods.card) {
                 <span>Card</span>
@@ -299,6 +302,11 @@ type PreviewTab = 'specials' | 'menu' | 'orders' | 'bill';
         padding: 1rem 1.1rem 0.75rem;
         background: #ffffff;
       }
+      .gsp__header--identity {
+        position: sticky;
+        top: 0;
+        z-index: 4;
+      }
       .gsp__logo {
         width: 2rem;
         height: 2rem;
@@ -315,7 +323,10 @@ type PreviewTab = 'specials' | 'menu' | 'orders' | 'bill';
       }
       .gsp__place {
         margin: 0.15rem 0 0;
+        font-family: 'Sora', system-ui, sans-serif;
         font-size: 0.8125rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
         color: #6b7280;
       }
       .gsp__body {
@@ -541,6 +552,14 @@ type PreviewTab = 'specials' | 'menu' | 'orders' | 'bill';
         line-height: 1.4;
         color: #1b2230;
       }
+      .gsp__status-spoken {
+        margin: 0.35rem 0 0.25rem;
+        font-family: 'Fraunces', Georgia, serif;
+        font-size: 1.15rem;
+        font-weight: 650;
+        letter-spacing: -0.02em;
+        color: #1b2230;
+      }
       .gsp__add {
         width: 2rem;
         height: 2rem;
@@ -564,6 +583,13 @@ type PreviewTab = 'specials' | 'menu' | 'orders' | 'bill';
         padding: 0.85rem 0;
         border-bottom: 1px solid #e7e2db;
         font-size: 0.9375rem;
+      }
+      .gsp__pay-trust {
+        margin: 0.55rem 0 0.35rem;
+        font-size: 0.8125rem;
+        font-weight: 550;
+        line-height: 1.4;
+        color: #6b7280;
       }
       .gsp__status {
         margin-top: 1rem;
@@ -644,6 +670,10 @@ export class GuestShellProjectionComponent implements OnChanges {
   @Input() lockCatalogue = true;
   @Input() allowExampleCatalogue = false;
   @Input() experienceTypeId = 'restaurant';
+  /** Spoken place — same form as Guest (`Table 12`), never raw code alone. */
+  get placeSpoken(): string {
+    return guestPlaceSpoken(this.placeNoun, this.placeCode);
+  }
   @Input() payMethods: { card: boolean; applePay: boolean; googlePay: boolean } = {
     card: false,
     applePay: false,
@@ -770,6 +800,10 @@ export class GuestShellProjectionComponent implements OnChanges {
       this.design.splitBill ||
       this.design.tipStaff
     );
+  }
+
+  get payConfidence(): string {
+    return livePayConfidenceSentence(this.hasBillChrome);
   }
 
   get payAtPlaceLabel(): string {

@@ -15,6 +15,8 @@ import { CatalogueLiveService } from '../services/catalogue-live.service';
 import { LeosApiService } from '../services/leos-api.service';
 import { StudioContextService } from '../services/studio-context.service';
 import { parseMenuList } from '../studio/menu-list-import';
+import { getExperience } from '../studio/experience-registry';
+import { catalogueEditorCopy } from '../studio/catalogue-lock';
 
 type MenuItem = {
   id: string;
@@ -67,7 +69,7 @@ type EditorMode = 'list' | 'edit';
             </ul>
             <div class="menu-editor__doors">
               <button type="button" class="leos-btn leos-btn--primary" (click)="startAdd()">
-                {{ items.length ? 'Add a dish' : 'Add the first dish' }}
+                {{ copy.addLabel }}
               </button>
               <button type="button" class="leos-btn leos-btn--secondary" (click)="pickImport()">
                 Import a list
@@ -293,8 +295,22 @@ export class StudioMenuPageComponent implements OnInit, OnDestroy {
   private saveTimer?: ReturnType<typeof setTimeout>;
   private creating = false;
 
+  get itemNoun(): string {
+    const typeId = this.ctx.activeExperience()?.typeId;
+    return getExperience(typeId)?.terminology.item ?? 'Item';
+  }
+
+  get copy() {
+    return catalogueEditorCopy({ itemNoun: this.itemNoun, count: this.items.length });
+  }
+
+  get defaultCategory(): string {
+    const typeId = this.ctx.activeExperience()?.typeId;
+    return getExperience(typeId)?.defaults.experienceCategories[0] ?? 'Food';
+  }
+
   get purpose(): string {
-    return this.mode === 'list' ? 'What can guests order?' : 'Tell guests about this dish';
+    return this.mode === 'list' ? this.copy.purposeList : this.copy.purposeEdit;
   }
 
   get lead(): string {
@@ -304,9 +320,7 @@ export class StudioMenuPageComponent implements OnInit, OnDestroy {
   }
 
   get listHint(): string {
-    return this.items.length
-      ? 'Tap a dish to change it — or mark what’s off tonight.'
-      : 'Add a priced dish so guests can order — complimentary items can sit beside it.';
+    return this.copy.listHint;
   }
 
   ngOnInit() {
@@ -362,7 +376,7 @@ export class StudioMenuPageComponent implements OnInit, OnDestroy {
     input.value = '';
     if (!file || !this.venueId) return;
     const text = await file.text();
-    const rows = parseMenuList(text);
+    const rows = parseMenuList(text, this.defaultCategory);
     if (!rows.length) {
       this.importStatus = 'Nothing to import — use name, price, category.';
       return;
@@ -477,7 +491,7 @@ export class StudioMenuPageComponent implements OnInit, OnDestroy {
       label: '',
       description: '',
       unitPrice: 0,
-      category: 'Food',
+      category: this.defaultCategory,
       available: true,
       ageRestricted: false,
       routingTags: ['food'],

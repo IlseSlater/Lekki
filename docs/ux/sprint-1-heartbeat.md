@@ -1,11 +1,10 @@
 # Sprint board — Experience Heartbeat
 
-**Mission:** [NORTH-STAR.md](../NORTH-STAR.md) · **Delivery OS:** [LEOS-DELIVERY-SYSTEM.md](../LEOS-DELIVERY-SYSTEM.md)  
-**Exit gate:** Guest Experience Frozen — designer · FE · BE · zero clarification  
-**Dashboard:** [platform-maturity.md](platform-maturity.md) · **Stories:** [stories/](stories/)
+**Closed as a freeze queue.** Guest heartbeat is **running**. Next work is named continuity or [lifecycle-and-screen-map.md](lifecycle-and-screen-map.md) **§11** — not `Build Story G-05` as if Cart were unbuilt.
 
-**Orchestrate:** **`Build Story G-05`** (Product freeze path) or **`Build Story G-06`** (Implementation path).  
-Executive Orchestrator decides departments; Release Manager advances L0–L6.
+Historical freeze order is kept below for archaeology only.
+
+**Mission:** [NORTH-STAR.md](../NORTH-STAR.md) · **Daily board:** [LEKKI-BUILD.md](../LEKKI-BUILD.md)
 
 ```text
 Vision ✅ · Architecture ✅ · Delivery OS ✅ · Interaction 🟡 · Implementation ⚪

@@ -10,7 +10,7 @@ Guest HCI:     9/9 complete
 Studio HCI:    7/7 complete
 Pack paths:    6 proven
 Setup Engine:  FROZEN v1
-Next Proof:    Continuity polish if named
+Next Proof:    Continuity polish if named — Studio first impression shipped
 ```
 
 This section prevents future design work from accidentally reopening already-proven journeys or expanding the product into areas that are intentionally held.
@@ -76,14 +76,16 @@ The design goal now is continuity between moments.
 
 The guest enters through QR.
 
+**Running path:** QR → Lekki splash (our name, 4s, tap skip) → venue landing (their colour, logos, place, **Get started**) → menu.
+
 The experience establishes:
 
 - venue
 - environment
 - place
-- welcome
+- welcome (venue-owned after splash)
 
-The interface should immediately establish confidence.
+The interface should immediately establish confidence. Returning / still-in skip the landing.
 
 ### Desired feeling
 
@@ -590,7 +592,9 @@ The next work should strengthen continuity rather than redesign the product.
 
 Continuity-safe areas still open:
 
-- Named Continuity polish only (Tip · Ready→Pay · Leave while open · Mid-visit resume · Help ack shipped)
+- **Named & shipped this pass:** Payment failed — what do I do? (Operate Open table + Got it) — [evidence](evidence/continuity-payment-failed-next.md)
+- Prior shipped: Tip · Ready→Pay · Leave while open · Mid-visit resume · Help ack · Entry wait · first impression · Staff shift · catalogue · payments one door · screen coverage · open-tab trio · first-impression glow · Studio first impression · Grow doors S-15–17 · S-20 visibility.
+- Name one human moment before craft. Do not invent Marketplace · Neo · Setup · Admin BI.
 
 ---
 
@@ -665,6 +669,38 @@ Primary stays **I’m finished**. Stay still returns. Do not add Cover-from-Leav
 **Status: Shipped** — Re-open open visit → **You’re still in** (not Welcome back, not Join). [evidence](evidence/continuity-mid-visit-resume.md) · [interaction](wireframes/guest/continuity-mid-visit-resume.md)
 
 After Leave → Welcome back unchanged. First join → You’re in unchanged. No CRM resume-cart.
+
+---
+
+## 3.41g Open-tab Place Identity
+
+**Status: Shipped** — Venue + spoken place sticky on Guest shell · Live phone matches Guest (`Table 12`) · no Lekki after join. [evidence](evidence/continuity-open-tab-place-identity.md) · [interaction](wireframes/guest/craft-open-tab-place-identity.md)
+
+Next named continuity (if asked): name a new moment. First-impression + open-tab trio shipped. Hold GAP-02/07 · Setup · Marketplace · Neo.
+
+---
+
+## 3.41h Open-tab Order-state calm
+
+**Status: Shipped** — Guest Orders: spoken status · no legend · no gold filters · draft whisper on browse · Live Orders parity. [evidence](evidence/continuity-open-tab-order-state-calm.md) · [interaction](wireframes/guest/craft-open-tab-order-state-calm.md)
+
+---
+
+## 3.41i Open-tab Pay confidence sentence
+
+**Status: Shipped** — Bill lead is one `payConfidenceSentence` · not duplicated under total · Live Bill/pay phone match. [evidence](evidence/continuity-open-tab-pay-confidence.md) · [interaction](wireframes/guest/craft-open-tab-pay-confidence.md)
+
+---
+
+## 3.41j First-impression craft
+
+**Status: Shipped** — Landing dusk+gold glow (no teal) · splash focus-visible · sign-in halo at mark · pill press settle. [evidence](evidence/continuity-first-impression.md) · [interaction](wireframes/guest/craft-first-impression.md)
+
+---
+
+## 3.41k Studio first impression
+
+**Status: Shipped** — Sign-in settle + empty email · Welcome halo + stagger · Create confidence settle. Frozen motion only. [evidence](evidence/continuity-studio-first-impression.md) · [interaction](wireframes/studio/craft-studio-first-impression.md)
 
 ---
 

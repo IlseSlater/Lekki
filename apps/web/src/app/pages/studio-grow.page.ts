@@ -5,14 +5,20 @@ import { StudioAuthService } from '../services/studio-auth.service';
 import { LeosApiService } from '../services/leos-api.service';
 import { getExperience, type ExperienceTypeId } from '../studio/experience-registry';
 import { composeGrowBreath } from '../studio/grow-breath';
+import { composePayoutCopy } from '../studio/grow-payouts';
+import { composeFeedbackCopy } from '../studio/grow-feedback';
+import { answersDoorLabel, composeAnswersConfirm, ANSWERS_ERROR } from '../studio/grow-answers';
+import { PayoutsSheetComponent } from '../leos/payouts-sheet.component';
+import { FeedbackSheetComponent } from '../leos/feedback-sheet.component';
 
 /**
  * Studio Grow — trusted manager, not Excel.
  * One breath: greeting · one story · one figure · one suggestion.
+ * Doors: takings sheet · feedback sheet (S-15 / S-16) · answers, no sheet (S-17).
  */
 @Component({
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, PayoutsSheetComponent, FeedbackSheetComponent],
   template: `
     <div class="studio-grow studio-motion-appear">
       <header class="studio-grow__hero">
@@ -59,6 +65,26 @@ import { composeGrowBreath } from '../studio/grow-breath';
           <p class="studio-grow__suggest-label">One suggestion</p>
           <p class="studio-grow__suggest-body">{{ suggestion }}</p>
         </section>
+
+        <button type="button" class="studio-grow__payouts-link" (click)="openFeedback()">
+          How guests felt →
+        </button>
+        <button type="button" class="studio-grow__payouts-link" (click)="openPayouts()">
+          See what you've taken →
+        </button>
+        @for (period of answersPeriods; track period) {
+          <button
+            type="button"
+            class="studio-grow__payouts-link"
+            [disabled]="answersBusy === period"
+            (click)="requestAnswers(period)"
+          >
+            {{ answersButtonLabel(period) }}
+          </button>
+          @if (answersError[period]) {
+            <p class="studio-grow__answers-error" role="alert">{{ answersError[period] }}</p>
+          }
+        }
       }
 
       <div class="studio-grow__doors studio-motion-appear-delay-2">
@@ -71,7 +97,53 @@ import { composeGrowBreath } from '../studio/grow-breath';
         }
       </div>
     </div>
+
+    <leos-payouts-sheet
+      [open]="payoutsOpen"
+      [loading]="payoutsLoading"
+      [error]="payoutsError"
+      [totalLine]="payoutsTotalLine"
+      [cadenceLine]="payoutsCadenceLine"
+      (dismiss)="payoutsOpen = false"
+    />
+
+    <leos-feedback-sheet
+      [open]="feedbackOpen"
+      [loading]="feedbackLoading"
+      [error]="feedbackError"
+      [sentimentLine]="feedbackSentimentLine"
+      [flaggedLine]="feedbackFlaggedLine"
+      [canReply]="feedbackCanReply"
+      [replyBusy]="feedbackReplyBusy"
+      [replyLabel]="feedbackReplyLabel"
+      (dismiss)="feedbackOpen = false"
+      (heard)="markFeedbackHeard()"
+    />
   `,
+  styles: [
+    `
+      .studio-grow__payouts-link {
+        display: block;
+        margin: 0.5rem 0 0;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: var(--studio-ink-secondary, #6b7280);
+        font: inherit;
+        font-size: 0.9rem;
+        text-align: left;
+        cursor: pointer;
+      }
+      .studio-grow__payouts-link:hover {
+        color: var(--studio-ink, #1b2230);
+      }
+      .studio-grow__answers-error {
+        margin: 0.25rem 0 0;
+        font-size: 0.85rem;
+        color: var(--studio-danger, #b3452c);
+      }
+    `,
+  ],
 })
 export class StudioGrowPageComponent implements OnInit {
   private readonly ctx = inject(StudioContextService);
@@ -93,8 +165,30 @@ export class StudioGrowPageComponent implements OnInit {
   delighted = true;
   suggestion = 'Keep tonight calm — you’re ready for the next guest.';
 
+  payoutsOpen = false;
+  payoutsLoading = false;
+  payoutsError = '';
+  payoutsTotalLine = '';
+  payoutsCadenceLine = '';
+
+  feedbackOpen = false;
+  feedbackLoading = false;
+  feedbackError = '';
+  feedbackSentimentLine = '';
+  feedbackFlaggedLine = '';
+  feedbackCanReply = false;
+  feedbackReplyBusy = false;
+  feedbackReplyLabel = 'Got it';
+  private feedbackFlaggedId: string | null = null;
+
+  readonly answersPeriods: Array<'week' | 'month'> = ['week', 'month'];
+  answersBusy: 'week' | 'month' | null = null;
+  answersConfirm: Record<'week' | 'month', string> = { week: '', month: '' };
+  answersError: Record<'week' | 'month', string> = { week: '', month: '' };
+
   private typeId: ExperienceTypeId = 'restaurant';
   private hour = 12;
+  private venueId: string | null = null;
 
   ngOnInit() {
     this.hour = new Date().getHours();
@@ -126,6 +220,7 @@ export class StudioGrowPageComponent implements OnInit {
       next: (o) => {
         this.loading = false;
         if (o.venueName) this.venue = o.venueName;
+        this.venueId = o.venueId ?? null;
         const def = getExperience(this.typeId);
         const breath = composeGrowBreath({
           guestsToday: o.guestsToday,
@@ -157,10 +252,125 @@ export class StudioGrowPageComponent implements OnInit {
         this.delightLine = breath.delightLine;
         this.delighted = breath.delighted;
         this.suggestion = breath.suggestion;
+        this.applyFeedbackBreath();
       },
       error: () => {
         this.loading = false;
         this.error = 'Couldn’t load today’s story — try again shortly.';
+      },
+    });
+  }
+
+  private peoplePlural(): string {
+    const people = getExperience(this.typeId)?.terminology.participant ?? 'Guest';
+    const base = people.charAt(0).toUpperCase() + people.slice(1);
+    return people.toLowerCase().endsWith('s') ? base : `${base}s`;
+  }
+
+  private applyFeedbackBreath() {
+    this.api.getGrowFeedback({ venueId: this.venueId ?? undefined, period: 'week' }).subscribe({
+      next: (f) => {
+        const copy = composeFeedbackCopy({
+          tones: f.tones ?? [],
+          flagged: f.flagged,
+          participantNounPlural: this.peoplePlural(),
+        });
+        this.delightLine = copy.sentimentLine;
+        this.delighted = copy.sentiment === 'delighted';
+        this.feedbackSentimentLine = copy.sentimentLine;
+        this.feedbackFlaggedLine = copy.flaggedLine;
+        this.feedbackCanReply = !!f.flagged?.canReply && !!copy.flaggedLine;
+        this.feedbackReplyLabel = copy.replyLabel;
+        this.feedbackFlaggedId = f.flagged?.id ?? null;
+      },
+      error: () => {
+        /* keep heuristic delight if feedback endpoint fails */
+      },
+    });
+  }
+
+  openFeedback() {
+    this.feedbackOpen = true;
+    if (this.feedbackSentimentLine || this.feedbackLoading) return;
+    this.feedbackLoading = true;
+    this.feedbackError = '';
+    this.api.getGrowFeedback({ venueId: this.venueId ?? undefined, period: 'week' }).subscribe({
+      next: (f) => {
+        this.feedbackLoading = false;
+        const copy = composeFeedbackCopy({
+          tones: f.tones ?? [],
+          flagged: f.flagged,
+          participantNounPlural: this.peoplePlural(),
+        });
+        this.feedbackSentimentLine = copy.sentimentLine;
+        this.feedbackFlaggedLine = copy.flaggedLine;
+        this.feedbackCanReply = !!f.flagged?.canReply && !!copy.flaggedLine;
+        this.feedbackReplyLabel = copy.replyLabel;
+        this.feedbackFlaggedId = f.flagged?.id ?? null;
+        this.delightLine = copy.sentimentLine;
+        this.delighted = copy.sentiment === 'delighted';
+      },
+      error: () => {
+        this.feedbackLoading = false;
+        this.feedbackError = 'Couldn’t load feedback — try again shortly.';
+      },
+    });
+  }
+
+  markFeedbackHeard() {
+    if (!this.feedbackFlaggedId || this.feedbackReplyBusy) return;
+    this.feedbackReplyBusy = true;
+    this.api.markFeedbackHeard(this.feedbackFlaggedId).subscribe({
+      next: () => {
+        this.feedbackReplyBusy = false;
+        this.feedbackCanReply = false;
+        this.feedbackFlaggedLine = '';
+        this.feedbackFlaggedId = null;
+      },
+      error: () => {
+        this.feedbackReplyBusy = false;
+        this.feedbackError = 'Couldn’t mark that heard — try again shortly.';
+      },
+    });
+  }
+
+  openPayouts() {
+    this.payoutsOpen = true;
+    if (this.payoutsTotalLine || this.payoutsLoading) return;
+    this.payoutsLoading = true;
+    this.payoutsError = '';
+    this.api.getGrowPayouts({ venueId: this.venueId ?? undefined, period: 'week' }).subscribe({
+      next: (p) => {
+        this.payoutsLoading = false;
+        const copy = composePayoutCopy({ amount: p.amount, currency: p.currency, period: p.period });
+        this.payoutsTotalLine = copy.totalLine;
+        this.payoutsCadenceLine = copy.cadenceLine;
+      },
+      error: () => {
+        this.payoutsLoading = false;
+        this.payoutsError = 'Couldn’t load your totals — try again shortly.';
+      },
+    });
+  }
+
+  answersButtonLabel(period: 'week' | 'month'): string {
+    if (this.answersBusy === period) return 'Sending…';
+    if (this.answersConfirm[period]) return this.answersConfirm[period];
+    return answersDoorLabel(period);
+  }
+
+  requestAnswers(period: 'week' | 'month') {
+    if (this.answersBusy) return;
+    this.answersBusy = period;
+    this.answersError[period] = '';
+    this.api.requestVisitRecord({ period, venueId: this.venueId ?? undefined }).subscribe({
+      next: (res) => {
+        this.answersBusy = null;
+        this.answersConfirm[period] = composeAnswersConfirm(res.to);
+      },
+      error: () => {
+        this.answersBusy = null;
+        this.answersError[period] = ANSWERS_ERROR;
       },
     });
   }

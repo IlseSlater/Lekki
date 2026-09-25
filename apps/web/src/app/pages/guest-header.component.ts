@@ -34,8 +34,23 @@ export type GuestHeaderPhase = 'menu' | 'cart' | 'pay';
           }
         </div>
       </div>
+      @if (physicalContextLabel) {
+        <p class="leos-guest-header__place">{{ physicalContextLabel }}</p>
+      }
     </header>
   `,
+  styles: [
+    `
+      .leos-guest-header__place {
+        margin: 0.35rem 0 0;
+        font-family: var(--leos-font-ui, Sora, system-ui, sans-serif);
+        font-size: 0.8125rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        color: var(--leos-neutral-muted, #5c6570);
+      }
+    `,
+  ],
 })
 export class GuestHeaderComponent {
   @Input({ required: true }) venueName!: string;

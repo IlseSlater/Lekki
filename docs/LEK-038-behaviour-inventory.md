@@ -1,5 +1,7 @@
 # LEK-038 — Behaviour Inventory
 
+> **Historical — superseded by [ADR-004](adr/004-three-human-experiences.md).** This inventory predates the three-human-experiences model and marks some shipped behaviour (e.g. Allocated Settlement / mine-visit-equal split) as an open Gap. **Read instead:** [lifecycle-and-screen-map.md](ux/lifecycle-and-screen-map.md) · [ia-experience-studio-shells.md](ux/ia-experience-studio-shells.md) · [operate-craft.md](ux/operate-craft.md) · [grow-craft.md](ux/grow-craft.md) · [LVES](ux/lves.md) · [current-product-state.md](ux/current-product-state.md).
+
 **Status:** Active  
 **Title:** Proven Behaviours (Reference Experience → LEOS)  
 **Rule:** [ADR-003 Reference Experience Rule](adr/003-reference-experience-rule.md)  

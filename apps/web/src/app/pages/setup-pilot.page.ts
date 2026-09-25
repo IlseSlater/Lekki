@@ -232,7 +232,7 @@ type SkuRow = {
         waiting="Activate to map places and SKUs"
       />
 
-      <a escape class="leos-btn leos-btn--secondary" routerLink="/studio/integrations">Back</a>
+      <a escape class="leos-btn leos-btn--secondary" routerLink="/studio/setup/payments">Back</a>
       @if (tab === 'config') {
         <button
           primary
@@ -244,7 +244,7 @@ type SkuRow = {
           {{ busy ? 'Saving…' : active ? 'Save & Rotate Secret' : 'Activate Pilot' }}
         </button>
       } @else {
-        <a primary class="leos-btn leos-btn--primary" routerLink="/studio/integrations"
+        <a primary class="leos-btn leos-btn--primary" routerLink="/studio/setup/payments"
           >Done</a
         >
       }

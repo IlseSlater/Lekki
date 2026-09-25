@@ -1,4 +1,5 @@
 import { Injectable, signal } from '@angular/core';
+import { staffHomeForRole, staffShiftContinue } from '../studio/staff-paths';
 
 export type OperateStaffRole = 'kitchen' | 'bar' | 'waiter' | 'staff' | 'counter';
 
@@ -17,14 +18,6 @@ export type OperateStaffSession = {
 
 const KEY = 'leos.staff.session';
 const LEGACY_KEY = 'leos.studio.operateStaff';
-
-const ROLE_HOME: Record<string, string> = {
-  kitchen: '/staff/station/kitchen',
-  bar: '/staff/station/bar',
-  waiter: '/staff/service',
-  staff: '/staff/service',
-  counter: '/staff/station/counter',
-};
 
 @Injectable({ providedIn: 'root' })
 export class OperateStaffSessionService {
@@ -73,7 +66,10 @@ export class OperateStaffSessionService {
   ) {
     const next: OperateStaffSession = {
       ...session,
-      homePath: session.homePath || ROLE_HOME[session.role] || ROLE_HOME['staff'],
+      homePath: staffShiftContinue({
+        homePath: session.homePath,
+        role: session.role,
+      }),
       token: session.token,
       sessionId: session.sessionId,
       at: Date.now(),
@@ -99,7 +95,7 @@ export class OperateStaffSessionService {
   }
 
   homePathFor(role: string) {
-    return ROLE_HOME[role] || ROLE_HOME['staff'];
+    return staffHomeForRole(role);
   }
 
   canAccessRole(doorRole: string): boolean {

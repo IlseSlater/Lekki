@@ -102,9 +102,9 @@ This phase does NOT run automatically. It only runs if:
 
 The review requires built code to examine. If no components or pages have been built yet, do not run this phase. Instead, remind the designer: "Run `/design-review` once you have something built. It will check the output against the brief."
 
-When triggered, read the `design-review` skill (`.agents/skills/design-review/SKILL.md`) and follow its instructions.
+When triggered, read the `design-review` skill (`.agents/skills/design-review/SKILL.md`) and follow its instructions. On a **hero** moment, use fresh critics (`references/lekki-critics.md`): the same chat that built the screen does not pass it. Judge rendered output against `bar.md`, LVES, and HCI — binary pass/fail, one gap per rebuild.
 
-**Produces**: `.design/<feature-slug>/DESIGN_REVIEW.md` + screenshots saved in `.design/<feature-slug>/screenshots/`.
+**Produces**: `.design/<feature-slug>/DESIGN_REVIEW.md` + `bar.md` (hero) + screenshots in `.design/<feature-slug>/screenshots/`.
 **Transition**: "Review is done. Screenshots are saved in `.design/<feature-slug>/screenshots/`. If there are must-fix items, I can address them now."
 
 ## Project Files Structure
@@ -118,6 +118,7 @@ All design flow artifacts are saved under `.design/<feature-slug>/` where `<feat
     ├── INFORMATION_ARCHITECTURE.md  ← Phase 3: Navigation, page structure, user flows
     ├── TASKS.md                     ← Phase 5: Ordered build checklist from the brief
     ├── DESIGN_REVIEW.md             ← Phase 7: Prioritized critique against the brief
+    ├── bar.md                       ← Hero only: checkable mechanisms (not adjectives)
     └── screenshots/                 ← Phase 7: Visual evidence from the running app
         ├── review-[page]-desktop-1280.png
         ├── review-[page]-tablet-768.png

@@ -1,0 +1,153 @@
+/* LEKKI Visual Language — Surgical White & Metallic Rose-Gold Elevation
+   Canvas: pure white. Hierarchy: slate ink. Action: metallic rose-gold only.
+*/
+
+:root {
+  /* Brand rose-gold — metallic interactive family */
+  --leos-gold: #d7a14a;
+  --leos-gold-hover: #c48f38;
+  --leos-gold-light: #d9a85b;
+  --leos-gold-dark: #b88339;
+  --leos-gold-soft: rgba(215, 161, 74, 0.12);
+  --leos-gold-focus: #c48f38;
+
+  /* Interactive roles */
+  --leos-action: var(--leos-gold);
+  --leos-action-hover: var(--leos-gold-hover);
+  --leos-action-outline: var(--leos-gold-dark);
+  --leos-action-decorative: var(--leos-gold-light);
+  --leos-action-soft: var(--leos-gold-soft);
+
+  /* Surgical white surfaces */
+  --leos-warm-white: #ffffff;
+  --leos-surface: #ffffff;
+  --leos-surface-secondary: #f9f8f6;
+  --leos-warm-sand: #ffffff;
+  --leos-warm-sand-dark: #eae6e1;
+  --leos-warm-sand-focus: #d8d2c9;
+  --leos-surface-ambient: #ffffff;
+
+  /* Crisp slate ink */
+  --leos-ink: #0f172a;
+  --leos-ink-body: #475569;
+  --leos-ink-secondary: #64748b;
+  --leos-ink-muted: #94a3b8;
+  --leos-ink-caption: #94a3b8;
+  --leos-ink-tertiary: #94a3b8;
+  --leos-neutral-dark: #0f172a;
+  --leos-neutral-muted: #64748b;
+  --leos-neutral-subtle: #94a3b8;
+  /* Primary CTA label on metallic gold — dark for legibility */
+  --leos-on-brand: #1b2230;
+  --leos-on-brand-inverse: #ffffff;
+
+  /* Hairline borders */
+  --leos-border: #eae6e1;
+  --leos-border-card: #eae6e1;
+
+  /* Semantic */
+  --leos-success: #4f8a6b;
+  --leos-success-bg: rgba(79, 138, 107, 0.12);
+  --leos-warning: #d9a441;
+  --leos-warning-bg: rgba(217, 164, 65, 0.14);
+  --leos-danger: #c65b52;
+  --leos-danger-bg: rgba(198, 91, 82, 0.12);
+  --leos-info: #64748b;
+  --leos-info-bg: rgba(100, 116, 139, 0.12);
+
+  /* Icons */
+  --leos-icon: #64748b;
+  --leos-icon-active: var(--leos-gold);
+  --leos-icon-disabled: #cfc7bb;
+
+  /* Geometry — elevated layer system */
+  --leos-radius-card: 24px;
+  --leos-radius-button: 14px;
+  --leos-radius-input: 12px;
+  --leos-radius-pill: 999px;
+
+  /* Spacing */
+  --leos-space-xs: 0.5rem;
+  --leos-space-sm: 0.75rem;
+  --leos-space-md: 1rem;
+  --leos-space-lg: 1.5rem;
+  --leos-space-xl: 2rem;
+  --leos-space-2xl: 2rem;
+
+  /* Elevation layers */
+  --leos-shadow: 0 12px 36px rgba(15, 23, 42, 0.05), 0 2px 8px rgba(15, 23, 42, 0.02);
+  --leos-shadow-card: 0 12px 36px rgba(15, 23, 42, 0.05), 0 2px 8px rgba(15, 23, 42, 0.02);
+  --leos-shadow-soft: 0 2px 8px rgba(15, 23, 42, 0.04);
+  --leos-shadow-hover: 0 16px 40px rgba(15, 23, 42, 0.07), 0 4px 12px rgba(15, 23, 42, 0.03);
+  --leos-shadow-cta:
+    0 8px 18px rgba(184, 131, 57, 0.22), 0 2px 6px rgba(184, 131, 57, 0.12);
+  --leos-shadow-cta-hover:
+    0 10px 22px rgba(184, 131, 57, 0.28), 0 3px 8px rgba(184, 131, 57, 0.16);
+  --leos-shadow-cta-active: 0 4px 12px rgba(184, 131, 57, 0.22);
+  --leos-shadow-focus:
+    0 0 0 3.5px rgba(212, 160, 75, 0.18), 0 4px 16px rgba(196, 143, 56, 0.12);
+
+  /* Gradients */
+  --leos-gradient-hero: linear-gradient(180deg, #ffffff 0%, #f9f8f6 100%);
+  --leos-gradient-gold: linear-gradient(180deg, #d9a85b 0%, #b88339 100%);
+  --leos-gradient-cta: linear-gradient(180deg, #d9a85b 0%, #b88339 100%);
+
+  /* Motion */
+  --leos-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --leos-duration: 220ms;
+  --leos-duration-fast: 160ms;
+  --leos-duration-enter: 280ms;
+  --leos-duration-press: 120ms;
+  --leos-duration-ring: 420ms;
+  --leos-duration-sheet: 200ms;
+  --leos-duration-halo: 600ms;
+  --leos-stagger: 60ms;
+
+  /* Ground behind every product shell — atmosphere, never a control */
+  --leos-ground: #00070d;
+
+  /* Ash (workstation) — light glass on dark ground */
+  --leos-ash-ground: #00070d;
+  --leos-ash-halo: radial-gradient(ellipse 90% 55% at 50% 8%, rgba(215, 161, 74, 0.22), transparent 68%);
+  --leos-ash-card: rgba(255, 255, 255, 0.9);
+  --leos-ash-card-composite: #e6e6e7;
+  --leos-ash-card-blur: 8px;
+  --leos-ash-ink: #0f172a;
+  --leos-ash-ink-body: #475569;
+  --leos-ash-row-edge: #57575a;
+  --leos-ash-field-border: #d8d2c9;
+  --leos-ash-action: #0a0a0a;
+  --leos-ash-action-hover: #1a1a1a;
+  --leos-ash-on-action: #ffffff;
+
+  /* Obsidian (cinematic frame) — auth + go-live peak only. Not a dark-mode toggle. */
+  --leos-obsidian-ground: #00070d;
+  --leos-obsidian-halo: radial-gradient(ellipse 80% 45% at 50% 0%, rgba(215, 161, 74, 0.16), transparent 62%);
+  --leos-obsidian-card: rgba(12, 16, 22, 0.92);
+  --leos-obsidian-hairline: rgba(255, 255, 255, 0.08);
+  --leos-obsidian-ink: #f4f4f5;
+  --leos-obsidian-ink-muted: rgba(244, 244, 245, 0.58);
+  --leos-obsidian-action: #f4f4f5;
+  --leos-obsidian-on-action: #00070d;
+
+  /* Peak gold — Open for guests only. Never a standard Studio fill. */
+  --leos-action-peak: var(--leos-gold);
+  --leos-on-peak: #1b2230;
+
+
+  /* Typography */
+  --leos-font-sans: 'Sora', system-ui, -apple-system, sans-serif;
+  --leos-font-display: 'Fraunces', Georgia, serif;
+
+  /* Touch */
+  --leos-touch-min: 52px;
+
+  /* Compatibility aliases */
+  --leos-emerald: var(--leos-gold);
+  --leos-emerald-dark: var(--leos-gold-hover);
+  --leos-emerald-soft: var(--leos-gold-soft);
+  --leos-on-emerald: var(--leos-on-brand);
+  --leos-electric-cyan: var(--leos-gold);
+  --leos-electric-cyan-soft: var(--leos-gold-soft);
+  --leos-shadow-emerald: var(--leos-shadow);
+}

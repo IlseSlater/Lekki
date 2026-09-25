@@ -1,23 +1,24 @@
 # Experience Backlog
 
-**Dashboard:** [LEKKI-BUILD.md](LEKKI-BUILD.md)
+**Dashboard:** [LEKKI-BUILD.md](LEKKI-BUILD.md)  
+**Whole-product map:** [ux/lifecycle-and-screen-map.md](ux/lifecycle-and-screen-map.md) **§12**
 
 | | |
 |--|--|
-| Current Proof | Restaurant Complete · Café Proven · Pack paths · Go Live QR |
-| Next Proof | Marketplace / Neo — **Product unlock** |
+| Current Proof | GAP-01…GAP-08 closed or Hold-locked |
+| Next Proof | Continuity polish if named |
 | Platform Confidence | High |
-| Construction | **Holding** |
-| Goal | Pack markets without Platform change |
+| Construction | Hospitality Phase |
+| Goal | Confidence · Calm · Hospitality · Continuity |
 
-## Guest
+## Owned / closed
 
-Scan ✓ · Join ✓ · Browse ✓ · Cart ✓ · Payment ✓ · Status ✓ · Leave ✓ · Entry QR ✓
+[G-01](ux/stories/G-01-entry.md) · [S-11](ux/stories/S-11-team.md) · [S-12](ux/stories/S-12-catalogue.md) · [dead pages](ux/evidence/studio-dead-pages.md) · [payments door](ux/evidence/payments-one-door.md) · [coverage](ux/evidence/screen-coverage.md)
 
-## Provider
+## Hold (locked)
 
-Create ✓ · Configure ✓ · Context ✓ · Entry ✓ · Go Live ✓ QR · Operate ✓
+GAP-02 Neo unimported · GAP-07 no venue pause · GAP-09/10 documented · Marketplace · Neo UI
 
-## Blocked
+## Never
 
-Marketplace · Neo — wait for Product. Do not invent.
+Extra Setup · Admin BI · Restoring deleted preview pages.

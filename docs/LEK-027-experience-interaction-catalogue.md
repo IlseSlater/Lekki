@@ -1,5 +1,7 @@
 # LEK-027 — Experience Interaction Specification
 
+> **Historical — superseded by [ADR-004](adr/004-three-human-experiences.md).** This spec predates the three-human-experiences model and Studio's Operate/Grow/Team modes; its route map and payment-screen status no longer match the running app. **Read instead:** [lifecycle-and-screen-map.md](ux/lifecycle-and-screen-map.md) · [ia-experience-studio-shells.md](ux/ia-experience-studio-shells.md) · [operate-craft.md](ux/operate-craft.md) · [grow-craft.md](ux/grow-craft.md) · [LVES](ux/lves.md) · [current-product-state.md](ux/current-product-state.md).
+
 **Status: Frozen (v1.1)** — Experience Interaction Specification / Product Bible  
 **Change policy:** Schema and layer model frozen. Content may add `Status: intentional gap` detail or correct factual errors; structural redesign requires ADR.  
 **Complements:** [LEK-001](LEK-001.md) (Frozen constitution)  

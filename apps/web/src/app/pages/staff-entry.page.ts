@@ -4,6 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 import { LeosApiService } from '../services/leos-api.service';
 import { StudioContextService } from '../services/studio-context.service';
 import { OperateStaffSessionService } from '../services/operate-staff-session.service';
+import { STAFF_EXPERIENCES, staffPinReady, staffShiftContinue } from '../studio/staff-paths';
 
 type StaffPick = {
   id: string;
@@ -86,7 +87,7 @@ type StaffPick = {
             <button
               type="button"
               class="leos-btn leos-btn--primary"
-              [disabled]="busy || pin.length < 4"
+              [disabled]="busy || !pinReady"
               (click)="login()"
             >
               {{ busy ? 'Signing in…' : 'Continue' }}
@@ -223,11 +224,11 @@ export class StaffEntryPageComponent implements OnInit {
   }
 
   roleBlurb(role: string): string {
-    if (role === 'kitchen') return 'Kitchen';
-    if (role === 'bar') return 'Bar';
-    if (role === 'waiter') return 'Waiter';
-    if (role === 'counter') return 'Counter';
-    return 'Floor lead';
+    return STAFF_EXPERIENCES.find((e) => e.id === role)?.label || 'Floor lead';
+  }
+
+  get pinReady(): boolean {
+    return staffPinReady(this.pin);
   }
 
   select(s: StaffPick) {
@@ -245,7 +246,7 @@ export class StaffEntryPageComponent implements OnInit {
   }
 
   login() {
-    if (!this.selected || this.pin.length < 4) return;
+    if (!this.selected || !staffPinReady(this.pin)) return;
     this.busy = true;
     this.error = '';
     this.api
@@ -271,8 +272,12 @@ export class StaffEntryPageComponent implements OnInit {
         this.current = session;
         this.selected = null;
         this.picking = false;
-        const next = new URLSearchParams(window.location.search).get('next');
-        void this.router.navigateByUrl(next || session.homePath);
+        const next = staffShiftContinue({
+          homePath: session.homePath,
+          role: session.role,
+          nextQuery: new URLSearchParams(window.location.search).get('next'),
+        });
+        void this.router.navigateByUrl(next);
       },
       error: () => {
         this.busy = false;

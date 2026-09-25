@@ -7,6 +7,18 @@ import { safeBrandImageUrl } from '../leos/catalogue-parity';
 import { SETUP_STEPS, experienceLabel, getExperience } from '../studio/experience-registry';
 import { StudioContextService } from '../services/studio-context.service';
 import { LeosApiService } from '../services/leos-api.service';
+import {
+  TW_FAMILIES,
+  TW_SHADES,
+  matchTwColour,
+  twFamily,
+  twHex,
+  twSwatch500,
+  type TwFamilyId,
+  type TwShade,
+} from '../studio/tailwind-palette';
+import { arrivalFromGuestDesign, withArrival } from '../studio/venue-arrival';
+import { defaultDesignForType, type GuestExperienceDesign } from '../studio/guest-experience-design';
 
 /** Setup — Who you are. Name · Location · Logo · Colour (conversation). */
 @Component({
@@ -40,46 +52,122 @@ import { LeosApiService } from '../services/leos-api.service';
 
         <div class="id-marks">
           <div class="leos-field">
-            <span class="leos-field__label">Logo <em class="leos-field__need">optional</em></span>
+            <span class="leos-field__label">Logos <em class="leos-field__need">optional</em></span>
             <div class="id-logo">
               @if (logoSrc) {
                 <img class="id-logo__preview" [src]="logoSrc" alt="" width="56" height="56" />
               } @else {
                 <span class="id-logo__placeholder" aria-hidden="true">{{ initial }}</span>
               }
+              @for (mark of extraMarks; track mark) {
+                <img class="id-logo__preview" [src]="mark" alt="" width="56" height="56" />
+              }
               <div class="id-logo__actions">
                 <label class="id-logo__pick">
                   <input type="file" accept="image/*" (change)="onLogoPick($event)" />
                   {{ logoUrl ? 'Change logo' : 'Add logo' }}
                 </label>
+                @if (logoUrl && extraMarks.length < 3) {
+                  <label class="id-logo__pick">
+                    <input type="file" accept="image/*" (change)="onExtraMarkPick($event)" />
+                    Add another
+                  </label>
+                }
                 @if (logoUrl) {
                   <button type="button" class="id-logo__clear" (click)="clearLogo()">Remove</button>
+                }
+                @if (extraMarks.length) {
+                  <button type="button" class="id-logo__clear" (click)="clearLastMark()">
+                    Remove extra
+                  </button>
                 }
               </div>
             </div>
           </div>
+        </div>
 
-          <div class="leos-field">
-            <span class="leos-field__label">Colour <em class="leos-field__need">optional</em></span>
-            <div class="id-colour">
-              <input
-                class="id-colour__swatch"
-                type="color"
-                [ngModel]="brandColour"
-                (ngModelChange)="onColour($event)"
-                [attr.aria-label]="'Brand colour'"
-              />
-              <input
-                class="leos-field__input id-colour__hex"
-                name="colour"
-                [(ngModel)]="brandColour"
-                (ngModelChange)="onColour($event)"
-                maxlength="7"
-                placeholder="#d7a14a"
-              />
-            </div>
-            <p class="id-hint">Used on the guest phone and pay screens.</p>
+        <div class="leos-field">
+          <span class="leos-field__label">Words on the phone <em class="leos-field__need">optional</em></span>
+          <input
+            class="leos-field__input"
+            name="headline"
+            [(ngModel)]="headline"
+            (ngModelChange)="scheduleSave()"
+            [placeholder]="displayName"
+            maxlength="80"
+          />
+          <input
+            class="leos-field__input"
+            name="welcomeLine"
+            [(ngModel)]="welcomeLine"
+            (ngModelChange)="scheduleSave()"
+            placeholder="A line guests see under the name"
+            maxlength="140"
+          />
+        </div>
+
+        <div class="leos-field">
+          <span class="leos-field__label">Colour <em class="leos-field__need">optional</em></span>
+          <div class="id-families" role="listbox" [attr.aria-label]="'Background colour'">
+            @for (family of families; track family.id) {
+              <button
+                type="button"
+                class="id-swatch"
+                role="option"
+                [class.id-swatch--on]="colourFamily === family.id"
+                [style.background]="swatch500(family.id)"
+                [attr.aria-label]="family.label"
+                (click)="pickFamily(family.id)"
+              ></button>
+            }
           </div>
+          <div class="id-shades">
+            @for (shade of shades; track shade) {
+              @if (hexFor(colourFamily, shade); as hex) {
+                <button
+                  type="button"
+                  class="id-swatch id-swatch--sm"
+                  [class.id-swatch--on]="brandColour.toLowerCase() === hex.toLowerCase()"
+                  [style.background]="hex"
+                  [attr.aria-label]="colourFamily + ' ' + shade"
+                  (click)="pickHex(hex, 'from')"
+                ></button>
+              }
+            }
+          </div>
+          <label class="id-blend">
+            <input type="checkbox" [(ngModel)]="blend" (ngModelChange)="onBlendToggle()" />
+            Blend a second colour
+          </label>
+          @if (blend) {
+            <div class="id-families" role="listbox" aria-label="Second colour">
+              @for (family of families; track family.id) {
+                <button
+                  type="button"
+                  class="id-swatch"
+                  [class.id-swatch--on]="toFamily === family.id"
+                  [style.background]="swatch500(family.id)"
+                  [attr.aria-label]="family.label"
+                  (click)="pickToFamily(family.id)"
+                ></button>
+              }
+            </div>
+            <div class="id-shades">
+              @for (shade of shades; track shade) {
+                @if (hexFor(toFamily, shade); as hex) {
+                  <button
+                    type="button"
+                    class="id-swatch id-swatch--sm"
+                    [class.id-swatch--on]="colourTo.toLowerCase() === hex.toLowerCase()"
+                    [style.background]="hex"
+                    [attr.aria-label]="toFamily + ' ' + shade"
+                    (click)="pickHex(hex, 'to')"
+                  ></button>
+                }
+              }
+            </div>
+          }
+          <p class="id-hint">Guests see this wash after Lekki’s splash — then Get started into the menu. Live Experience updates as you choose.</p>
         </div>
 
         @if (savedFlash) {
@@ -164,6 +252,7 @@ import { LeosApiService } from '../services/leos-api.service';
       .id-logo {
         display: flex;
         align-items: center;
+        flex-wrap: wrap;
         gap: 1rem;
       }
       .id-logo__preview {
@@ -242,6 +331,36 @@ import { LeosApiService } from '../services/leos-api.service';
         color: var(--leos-ink-secondary, #64748b);
         line-height: 1.35;
       }
+      .id-families,
+      .id-shades {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+      }
+      .id-swatch {
+        width: 1.65rem;
+        height: 1.65rem;
+        border-radius: 6px;
+        border: 2px solid transparent;
+        box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.12);
+        cursor: pointer;
+        padding: 0;
+      }
+      .id-swatch--sm {
+        width: 1.25rem;
+        height: 1.25rem;
+      }
+      .id-swatch--on {
+        border-color: var(--leos-ink, #0f172a);
+      }
+      .id-blend {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+      }
     `,
   ],
 })
@@ -258,6 +377,15 @@ export class SetupIdentityPageComponent implements OnInit, OnDestroy {
   venueName = '';
   logoUrl = '';
   brandColour = '#d7a14a';
+  colourTo = '#312e81';
+  blend = false;
+  headline = '';
+  welcomeLine = '';
+  extraMarks: string[] = [];
+  colourFamily: TwFamilyId = 'gold';
+  toFamily: TwFamilyId = 'indigo';
+  readonly families = TW_FAMILIES;
+  readonly shades = TW_SHADES;
   location = '';
   typeLabel = 'Restaurant';
   savedFlash = false;
@@ -292,6 +420,8 @@ export class SetupIdentityPageComponent implements OnInit, OnDestroy {
     this.logoUrl = active.logoUrl || '';
     this.brandColour = active.brandColour || '#d7a14a';
     this.location = active.location || '';
+    this.applyArrival(active.guestDesign);
+    this.syncPaletteFromHex();
     this.ensureVenueAndHydrate();
   }
 
@@ -300,10 +430,66 @@ export class SetupIdentityPageComponent implements OnInit, OnDestroy {
     if (this.flashTimer) clearTimeout(this.flashTimer);
   }
 
+  swatch500(id: TwFamilyId) {
+    const family = twFamily(id);
+    return family ? twSwatch500(family) : '#d7a14a';
+  }
+
+  hexFor(id: TwFamilyId, shade: TwShade) {
+    return twHex(id, shade);
+  }
+
+  pickFamily(id: TwFamilyId) {
+    this.colourFamily = id;
+    const hex = this.swatch500(id);
+    this.pickHex(hex, 'from');
+  }
+
+  pickToFamily(id: TwFamilyId) {
+    this.toFamily = id;
+    const hex = this.swatch500(id);
+    this.pickHex(hex, 'to');
+  }
+
+  pickHex(hex: string, which: 'from' | 'to') {
+    if (which === 'to') {
+      this.colourTo = hex;
+      this.toFamily = matchTwColour(hex).family;
+    } else {
+      this.brandColour = hex;
+      this.colourFamily = matchTwColour(hex).family;
+    }
+    this.scheduleSave();
+  }
+
+  onBlendToggle() {
+    if (this.blend && !this.colourTo) this.colourTo = '#312e81';
+    this.scheduleSave();
+  }
+
+  syncPaletteFromHex() {
+    const from = matchTwColour(this.brandColour);
+    this.colourFamily = from.family;
+    const to = matchTwColour(this.colourTo);
+    this.toFamily = to.family;
+  }
+
+  applyArrival(design: GuestExperienceDesign | undefined) {
+    const arrival = arrivalFromGuestDesign(design);
+    this.headline = arrival.headline || '';
+    this.welcomeLine = arrival.line || '';
+    this.blend = arrival.blend === true;
+    this.colourTo = arrival.colourTo || this.colourTo;
+    this.extraMarks = arrival.marks || [];
+  }
+
   onColour(value: string) {
     const v = (value || '').trim();
     this.brandColour = /^#[0-9A-Fa-f]{6}$/.test(v) ? v : this.brandColour;
-    if (/^#[0-9A-Fa-f]{6}$/.test(v)) this.scheduleSave();
+    if (/^#[0-9A-Fa-f]{6}$/.test(v)) {
+      this.syncPaletteFromHex();
+      this.scheduleSave();
+    }
   }
 
   onLogoPick(ev: Event) {
@@ -317,6 +503,23 @@ export class SetupIdentityPageComponent implements OnInit, OnDestroy {
       this.ctx.upsertActive({ logoUrl: url });
       this.flashSaved();
     });
+  }
+
+  onExtraMarkPick(ev: Event) {
+    const input = ev.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    if (file.size > 2_000_000) return;
+    this.uploadAsset('logo', file, (url) => {
+      this.extraMarks = [...this.extraMarks, url].slice(0, 3);
+      this.scheduleSave();
+    });
+  }
+
+  clearLastMark() {
+    this.extraMarks = this.extraMarks.slice(0, -1);
+    this.scheduleSave();
   }
 
   clearLogo() {
@@ -390,13 +593,25 @@ export class SetupIdentityPageComponent implements OnInit, OnDestroy {
     const name =
       this.venueName.trim() || this.ctx.activeExperience()?.venueName?.trim() || '';
     if (!name && !markDone) return;
+    const active = this.ctx.activeExperience();
+    const typeId = active?.typeId || 'restaurant';
+    const activeDesign = {
+      ...defaultDesignForType(typeId),
+      ...(active?.guestDesign || {}),
+    } as Record<string, unknown>;
     this.ctx.upsertActive({
       venueName: name || this.venueName,
       logoUrl: this.logoUrl,
       brandColour: this.brandColour || '#d7a14a',
       menuBrandEnabled: false,
-      menuCoverUrl: '',
       location: this.location.trim(),
+      guestDesign: withArrival(activeDesign, {
+        headline: this.headline.trim(),
+        line: this.welcomeLine.trim(),
+        blend: this.blend,
+        colourTo: this.colourTo,
+        marks: this.extraMarks,
+      }) as GuestExperienceDesign,
     });
     if (markDone) this.ctx.markStep('identity');
     this.flashSaved();

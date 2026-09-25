@@ -4,7 +4,7 @@
 **Owns:** How LEOS should **look** — makes LEK-040 feel inevitable  
 **Feel:** [LEK-040](../LEK-040-human-experience-engineering.md)  
 **Parts:** [LEK-028](../LEK-028-component-catalogue.md)  
-**Code:** `apps/web/src/styles/_studio.scss` · Experience `_tokens.scss` / `_leos.scss`
+**Code:** `apps/web/src/styles/tokens.css` · `leos.css` · `studio.css` · `registers.css` · Tailwind aliases in `apps/web/src/styles.css` (`@theme`)
 
 Does not replace philosophy. Gives it a consistent visual expression.
 
@@ -105,14 +105,44 @@ Surgical white lobby · rose-gold cue — not cream wallpaper · not cold blue S
 | CTA shadow | `0 2px 8px rgba(215,161,74,.25)` |
 | Card shadow | `0 1px 3px rgba(15,23,42,.05)` |
 
-**Edition:** Surgical White & Rose-Gold (Warm Sand `#FAF7F2` unlocked — retired as default canvas).  
-Gold is rationed to primary CTA · focus · selected chips — never large washes.
+**Edition:** Surgical White & Rose-Gold on Guest. Studio workstation is **Ash**
+(light glass on `#00070d`). **Obsidian** is a cinematic frame on Sign-in and
+the Go-live peak — not a dark-mode toggle.
 
-Hero gradient: `#FFFFFF` → `#F9F8F6`. Gold accent: `#E8C178` → `#D7A14A`.
+**Action is four decisions, never one token.** The mistake to avoid is a
+single `--color-action` — Studio's action, Guest Pay's, the Obsidian frame's,
+and the go-live moment are different colours for different reasons:
 
-Studio uses the **same palette** (never dark). Operate only increases density.
+| Token | Resolves to | Where |
+|-------|-------------|-------|
+| `--color-action` | Gold (`--leos-action`) | Guest Pay, anything outside a register |
+| `--color-register-action` | Black in Ash, near-white in Obsidian | Any Studio control inside `.leos-register--*` |
+| `--color-peak` | Gold, exactly once | **Open for guests** — the single fill in the setup journey |
+| `--color-brand` | The **venue's** runtime colour, gold as fallback | Guest/PWA surfaces only — never Studio |
 
-Code: `apps/web/src/styles/_tokens.scss`
+`--color-brand` is the white-label seam: it reads a `--brand` custom property
+set per venue at runtime, falling back to `#D7A14A`. "They never see our name
+on the experience" — so a guest screen uses `bg-brand` / `text-brand`, never
+`bg-action`, which is ours to paint, not theirs.
+
+Code: `apps/web/src/styles/tokens.css` (raw values, single source of truth) ·
+`apps/web/src/styles.css` `@theme` block (Tailwind aliases — every
+`--color-*` there is a `var()`, never a literal)
+
+### Palettes outside the system (open decisions)
+
+Three private palettes live in component code and are deliberately **not**
+aliased into Tailwind tokens — aliasing them would make off-system colour the
+easy path before anyone has decided what they are:
+
+| Palette | Where | Status |
+|---------|-------|--------|
+| `--w-blue` `--w-mint` `--w-coral` `--w-ink` `--w-muted` | `service.page.ts` (Operate) | Contradicts "gold is the only brand colour" above — resolve the palette question before aliasing |
+| `--exp-ink` | `studio-team.page.ts` | One name, six hex values across experience types — needs a real per-experience token family, or shouldn't be a variable at all |
+| `--scan-*` | `scan-qr.page.ts` | Local alias over `--leos-ink` with a hardcoded `#fff` surface — harmless duplication, not a live decision |
+
+Until one of these is resolved, its surface keeps raw CSS instead of moving
+to Tailwind utilities.
 
 ### Buttons
 

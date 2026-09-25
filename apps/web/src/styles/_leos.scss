@@ -108,6 +108,18 @@ a:hover {
   gap: 0.35rem;
 }
 
+/* Open-tab Place Identity — place stays visible while the sheet scrolls */
+.leos-screen__header--identity {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  margin: 0 -0.15rem;
+  padding: 0.35rem 0.15rem 0.45rem;
+  background: color-mix(in srgb, var(--leos-warm-sand, #ffffff) 94%, #fff);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
 .leos-screen__place {
   margin: 0;
   font-family: var(--leos-font-display, Fraunces, Georgia, serif);

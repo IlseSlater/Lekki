@@ -12,6 +12,7 @@ import {
   GuestHelpSheetComponent,
   type GuestHelpKind,
 } from '../leos/guest-help-sheet.component';
+import { GuestFeedbackSheetComponent } from '../leos/guest-feedback-sheet.component';
 import {
   GuestChoicesSheetComponent,
   type ChoiceSheetResult,
@@ -28,19 +29,29 @@ import {
 import { GuestMenuListComponent } from './guest-menu-list.component';
 import { GuestCartDrawerComponent } from './guest-cart-drawer.component';
 import { livePayCtaLabel, liveReadyLead } from '../studio/ready-pay-continuity';
+import { payConfidenceSentence } from '../studio/pay-confidence';
 import { composeLeaveOpenCopy } from '../studio/leave-open-continuity';
-import { hasOpenBalance, isCleared, isGreaterMinor } from '../leos/money';
+import {
+  leavePrompt as leavePromptFor,
+  leaveConfirmTitle as leaveConfirmTitleFor,
+  leaveLabelShort as leaveLabelShortFor,
+  receiptTitle as receiptTitleFor,
+} from '../studio/receipt-leave-terms';
+import { hasOpenBalance } from '../leos/money';
 import { guestPlaceSpoken } from '../studio/place-continuity';
+import { draftOrderWhisper } from '../studio/order-state-calm';
 import {
   featuredMenuItems,
   menuWithoutSpecialsSurface,
   specialsCarouselItems,
 } from '../studio/specials-continuity';
 import { LeosMoneyPipe } from '../leos/leos-money.pipe';
+import { VenueArrivalComponent } from '../leos/venue-arrival.component';
+import { parseVenueArrival } from '../studio/venue-arrival';
 
 /**
  * LEOS Experience Heartbeat — Guest surface (Restaurant Pack as reference implementation).
- * Phases follow LEK-029 Guest UX contract: Browse → Cart → Live → Payment → Receipt.
+ * Phases: Arrival → Browse → Cart → Live → Payment → Receipt.
  * Domain state lives in GuestSessionService (component-scoped).
  */
 
@@ -56,29 +67,36 @@ import { LeosMoneyPipe } from '../leos/leos-money.pipe';
     GuestOrdersComponent,
     GuestTabBarComponent,
     GuestHelpSheetComponent,
+    GuestFeedbackSheetComponent,
     GuestChoicesSheetComponent,
     GuestMenuListComponent,
     GuestCartDrawerComponent,
     LeosMoneyPipe,
+    VenueArrivalComponent,
   ],
   template: `
     <div
       class="leos-guest-chrome leos-guest-chrome--atmosphere"
-      [class.leos-guest-chrome--browse]="(phase === 'browse' || phase === 'specials') && !!state.sessionId"
+      [class.leos-guest-chrome--browse]="phase === 'browse' && !!state.sessionId"
       [class.leos-guest-chrome--specials]="phase === 'specials'"
       [class.leos-guest-chrome--with-chip]="showCartChip"
       [class.leos-guest-chrome--with-cart-actions]="phase === 'cart'"
       [class.leos-guest-chrome--with-live-actions]="phase === 'live'"
+      [style.--brand]="state.brandColour || '#d7a14a'"
     >
+    @if (phase === 'arrival' && state.sessionId) {
+      <leos-venue-arrival class="leos-guest-arrival" [look]="arrivalLook" (started)="session.enterMenu()" />
+    }
     <leos-experience-screen
       [purpose]="purpose"
-      [lead]="browseDenseLead"
+      [lead]="screenLead"
       [help]="help"
       [place]="placeSpoken"
       [hospitality]="true"
       [compact]="true"
       [showFooter]="showFooter"
-      [docked]="!!state.sessionId"
+      [docked]="!!state.sessionId && phase !== 'arrival'"
+      [hidden]="phase === 'arrival'"
     >
       @if (!state.sessionId) {
         <p class="leos-muted">Start from Entry to rejoin the right place.</p>
@@ -93,13 +111,13 @@ import { LeosMoneyPipe } from '../leos/leos-money.pipe';
             </p>
           }
 
-          @if (tablePeople.length >= 2) {
+          @if (phase === 'browse' && guestNames.length >= 2) {
             <div
               class="leos-chip-row leos-chip-row--scroll leos-chip-row--calm leos-browse-tools__chips"
               role="status"
               aria-label="People at your table"
             >
-              @for (name of tablePeople; track name) {
+              @for (name of guestNames; track name) {
                 <span class="leos-chip leos-chip--readonly">{{ name }}</span>
               }
             </div>
@@ -195,14 +213,11 @@ import { LeosMoneyPipe } from '../leos/leos-money.pipe';
                 >
                   @for (item of specialsCarousel; track item.id) {
                     <article class="leos-specials-card" role="listitem">
-                      <div
-                        class="leos-specials-card__media"
-                        [attr.data-has-image]="item.imageUrl ? 'true' : 'false'"
-                      >
-                        @if (item.imageUrl) {
+                      @if (item.imageUrl) {
+                        <div class="leos-specials-card__media">
                           <img [src]="item.imageUrl" alt="" />
-                        }
-                      </div>
+                        </div>
+                      }
                       <div class="leos-specials-card__body">
                         <h3 class="leos-specials-card__title">{{ item.label }}</h3>
                         @if (item.description) {
@@ -296,9 +311,6 @@ import { LeosMoneyPipe } from '../leos/leos-money.pipe';
             [sending]="submitting"
             [recordedFlash]="orderRecordedFlash"
           />
-          @if (timelineGuidance) {
-            <p class="leos-muted" role="status" aria-live="polite">{{ timelineGuidance }}</p>
-          }
         }
 
         @if (phase === 'payment' && allowPay) {
@@ -314,10 +326,10 @@ import { LeosMoneyPipe } from '../leos/leos-money.pipe';
             [mineRemaining]="mineRemaining"
             [equalRemaining]="equalRemaining"
             [visitLabel]="billVisitLabel"
-            [allowTip]="allowTip"
-            [allowHelp]="allowHelp"
-            [trustLine]="paymentTrustLine"
-            [savedPaymentMethodStatus]="savedPaymentMethodStatus"
+          [allowTip]="allowTip"
+          [allowHelp]="allowHelp"
+          [trustLine]="''"
+          [savedPaymentMethodStatus]="savedPaymentMethodStatus"
             [paymentMethodLabel]="paymentMethodLabel"
             [serviceHelpLabel]="serviceAssist.label"
             [managerHelpLabel]="managerAssist.label"
@@ -338,7 +350,7 @@ import { LeosMoneyPipe } from '../leos/leos-money.pipe';
 
         @if (phase === 'receipt') {
           <div class="leos-leave-moment" role="status">
-            <p class="leos-leave-moment__title">You’re finished</p>
+            <p class="leos-leave-moment__title">{{ receiptTitle }}</p>
             <p class="leos-leave-moment__thanks">
               Thanks for joining us today.
               @if (state.displayName && state.displayName !== 'Guest') {
@@ -433,7 +445,7 @@ import { LeosMoneyPipe } from '../leos/leos-money.pipe';
       }
     </leos-experience-screen>
 
-    <div class="leos-guest-chrome__dock" [hidden]="!state.sessionId">
+    <div class="leos-guest-chrome__dock" [hidden]="!state.sessionId || phase === 'arrival'">
       @if (phase === 'cart') {
         <div class="leos-cart-dock-actions">
           <button type="button" class="leos-btn leos-btn--secondary" (click)="phase = 'browse'">
@@ -480,6 +492,14 @@ import { LeosMoneyPipe } from '../leos/leos-money.pipe';
       [managerPendingHint]="managerAssist.pendingHint"
       (choose)="requestHelp($event)"
       (dismiss)="helpSheetOpen = false"
+    />
+
+    <leos-guest-feedback-sheet
+      [open]="feedbackSheetOpen"
+      [busy]="feedbackBusy"
+      (delight)="onFeedbackDelight()"
+      (concern)="onFeedbackConcern($event)"
+      (skip)="skipFeedback()"
     />
 
     <leos-guest-choices-sheet
@@ -621,7 +641,44 @@ export class GuestPageComponent implements OnInit, OnDestroy {
 
   // --- Domain method forwarding ---
   onTabSelect(tab: GuestTabId) { this.session.onTabSelect(tab); }
-  requestLeave() { this.session.requestLeave(); }
+  feedbackSheetOpen = false;
+  feedbackBusy = false;
+  private feedbackOffered = false;
+
+  get allowGuestFeedback(): boolean {
+    const d = this.state.guestDesign as { feedback?: boolean } | null;
+    return !!d?.feedback;
+  }
+
+  requestLeave() {
+    if (this.allowGuestFeedback && !this.feedbackOffered && this.phase === 'receipt') {
+      this.feedbackOffered = true;
+      this.feedbackSheetOpen = true;
+      return;
+    }
+    this.session.requestLeave();
+  }
+
+  onFeedbackDelight() {
+    this.feedbackBusy = true;
+    this.session.submitFeedback('delighted');
+    this.feedbackBusy = false;
+    this.feedbackSheetOpen = false;
+    this.session.requestLeave();
+  }
+
+  onFeedbackConcern(text: string) {
+    this.feedbackBusy = true;
+    this.session.submitFeedback('concern', text);
+    this.feedbackBusy = false;
+    this.feedbackSheetOpen = false;
+    this.session.requestLeave();
+  }
+
+  skipFeedback() {
+    this.feedbackSheetOpen = false;
+    this.session.requestLeave();
+  }
   stayFromLeave() { this.session.stayFromLeave(); }
   openHelpSheet() { this.session.openHelpSheet(); }
   goToEntry() { this.session.goToEntry(); }
@@ -664,14 +721,7 @@ export class GuestPageComponent implements OnInit, OnDestroy {
   }
 
   get leavePrompt(): string {
-    const close = this.terms.term('close', 'leave').toLowerCase();
-    if (close.includes('complete')) return 'complete your visit';
-    if (close.includes('clear')) return 'clear your table';
-    if (close.includes('end') || close.includes('stay')) return 'end your stay session';
-    if (close.includes('zone')) return 'leave your zone';
-    if (close.includes('board')) return 'board or leave when you’re ready';
-    if (close.includes('bay')) return 'leave the waiting bay';
-    return close;
+    return leavePromptFor(this.terms.term('close', 'leave'));
   }
 
   get ordersNoun(): string {
@@ -680,12 +730,11 @@ export class GuestPageComponent implements OnInit, OnDestroy {
   }
 
   get leaveConfirmTitle(): string {
-    const close = this.terms.term('close', 'leave').toLowerCase();
-    if (close.includes('complete')) return 'Visit complete?';
-    if (close.includes('end') || close.includes('stay')) return 'End your stay?';
-    if (close.includes('zone')) return 'Leave this zone?';
-    if (close.includes('bay')) return 'Leave the bay?';
-    return 'All done here?';
+    return leaveConfirmTitleFor(this.terms.term('close', 'leave'));
+  }
+
+  get receiptTitle(): string {
+    return receiptTitleFor(this.terms.term('close', 'leave'));
   }
 
   get leaveOpenCopy() {
@@ -761,6 +810,23 @@ export class GuestPageComponent implements OnInit, OnDestroy {
     this.searchOpen = false;
   }
 
+  get guestNames(): string[] {
+    return this.tablePeople.filter(
+      (name) => !/^(pos|staff|waiter|kitchen|host)$/i.test(name.trim()),
+    );
+  }
+
+  get screenLead(): string {
+    if (this.phase === 'specials') return 'What’s on tonight.';
+    if (this.phase === 'browse') {
+      return draftOrderWhisper(
+        this.cartCount,
+        this.terms.term('transaction', 'order').toLowerCase(),
+      );
+    }
+    return this.browseDenseLead;
+  }
+
   get browseDenseLead(): string {
     if (this.phase === 'browse' || this.phase === 'specials') return '';
     return this.lead;
@@ -771,12 +837,24 @@ export class GuestPageComponent implements OnInit, OnDestroy {
     return place === 'Table' ? 'Table order' : 'This visit';
   }
 
+  get arrivalLook() {
+    return parseVenueArrival({
+      venueName: this.state.venueName,
+      location: this.state.location,
+      placeSpoken: this.placeSpoken,
+      brandColour: this.state.brandColour,
+      logoUrl: this.state.logoUrl,
+      guestDesign: this.state.guestDesign,
+    });
+  }
+
   get showCartChip(): boolean {
     return (
       !!this.state.sessionId &&
       this.cart.length > 0 &&
       this.phase !== 'cart' &&
-      this.phase !== 'leave'
+      this.phase !== 'leave' &&
+      this.phase !== 'arrival'
     );
   }
 
@@ -833,12 +911,7 @@ export class GuestPageComponent implements OnInit, OnDestroy {
   }
 
   get leaveLabelShort(): string {
-    const close = this.terms.term('close', 'Leave');
-    if (/complete/i.test(close)) return 'Complete';
-    if (/end/i.test(close) && /stay/i.test(close)) return 'End stay';
-    if (/zone/i.test(close)) return 'Leave zone';
-    if (/bay/i.test(close)) return 'Leave bay';
-    return 'Leave';
+    return leaveLabelShortFor(this.terms.term('close', 'Leave'));
   }
 
   get browseGreeting(): string {
@@ -849,22 +922,13 @@ export class GuestPageComponent implements OnInit, OnDestroy {
   }
 
   get paymentTrustLine(): string {
-    const mine = this.mineRemaining;
-    const visit = this.visitRemaining;
-    const equal = this.equalRemaining;
-    if (equal != null && isCleared(equal) && hasOpenBalance(visit)) {
-      return 'Your equal share is paid — you can still cover the visit if you like.';
-    }
-    if (mine != null && visit != null && isCleared(mine) && hasOpenBalance(visit)) {
-      return 'Equal share is paid — you can still cover the visit if you like.';
-    }
-    if (equal != null && hasOpenBalance(equal) && visit != null && isGreaterMinor(visit, equal)) {
-      return 'Pay an equal share, your items, or the whole visit — nothing until you confirm.';
-    }
-    if (mine != null && visit != null && hasOpenBalance(mine) && isGreaterMinor(visit, mine)) {
-      return 'Pay for your items, or the whole visit — nothing until you confirm.';
-    }
-    return 'Nothing is charged until you confirm.';
+    return payConfidenceSentence({
+      mineRemaining: this.mineRemaining,
+      visitRemaining: this.visitRemaining,
+      equalRemaining: this.equalRemaining,
+      shareSettled: this.shareSettledMoment,
+      visitHasOpenBalance: this.visitHasOpenBalance,
+    });
   }
 
   get visitHasOpenBalance(): boolean {
@@ -884,11 +948,7 @@ export class GuestPageComponent implements OnInit, OnDestroy {
           : this.timelineGuidance ||
               `We’ve got your ${txn} — we’ll let you know when it’s ready.`;
       case 'payment':
-        if (this.shareSettledMoment) {
-          return this.visitHasOpenBalance
-            ? 'Others can still settle the visit — or you can cover it.'
-            : 'You’re all set for this visit.';
-        }
+        // One confidence sentence as lead — never duplicated under the total.
         return this.paymentTrustLine;
       case 'receipt':
         return 'Thanks for joining us today.';

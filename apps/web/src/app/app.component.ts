@@ -8,7 +8,6 @@ import { WebsiteHorizonComponent } from './pages/website-horizon.component';
 function horizonCanvasFor(url: string): boolean {
   const path = url.split('?')[0];
   if (path === '/' || path === '') return false;
-  if (path.startsWith('/splash')) return false;
   return true;
 }
 

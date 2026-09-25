@@ -1,5 +1,7 @@
 # LEK-029 — Experience Composition & Wireframes
 
+> **Historical — superseded by [ADR-004](adr/004-three-human-experiences.md).** This composition spec predates the three-human-experiences model and Studio's Operate/Grow/Team modes. **Read instead:** [lifecycle-and-screen-map.md](ux/lifecycle-and-screen-map.md) · [ia-experience-studio-shells.md](ux/ia-experience-studio-shells.md) · [operate-craft.md](ux/operate-craft.md) · [grow-craft.md](ux/grow-craft.md) · [LVES](ux/lves.md) · [current-product-state.md](ux/current-product-state.md).
+
 **Status:** Active (Design stream) v0.1  
 **Title:** Experience Composition & Living Wireframe Specification  
 **Depends on:** [LEK-027](LEK-027-experience-interaction-catalogue.md) (Frozen), [LEK-028](LEK-028-component-catalogue.md), [LEK-026](LEK-026-leds-visual-language.md), [LEK-040](LEK-040-human-experience-engineering.md) (Frozen) · [North Star](NORTH-STAR.md)  

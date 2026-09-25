@@ -75,6 +75,7 @@ As @chief-architect and @platform-architect, review this PR for Pack leakage…
 | 160/220/280/360 motion | `design/motion-architect` |
 | WCAG 2.1 AA | `design/accessibility-architect` |
 | Visual front-end craft · critique · browser QA | `design/web-design-engineer` |
+| Tailwind v4 · LVES `@theme` · halo · first impression | `design/tailwind-expert` |
 | Awwards-quality **marketing** motion | `design/build-awwwards-quality-sites` |
 | Neo · Context Dock · EKG | `engineering/ai-architect` |
 | LEK · ADR · Blueprints · skill hygiene | `engineering/documentation-architect` |
@@ -89,7 +90,7 @@ As @chief-architect and @platform-architect, review this PR for Pack leakage…
 | **Studio Setup** | Frozen v1. White paper, 1Q/1A, one gold CTA, live Guest phone. | studio, ux, brand, angular-web |
 | **Operate** | Touch-first certainty. One sticky job. No floor plans. | operate, ux, angular-web |
 | **Grow** | Calm numbers, one question. Never BI walls. | growth, brand |
-| **Marketing / Lekki.com** | Distinctive motion OK. | awwwards, tastemaker, web-design-engineer |
+| **Marketing / Lekki.com** | Distinctive motion OK. | tailwind-expert, awwwards, tastemaker, web-design-engineer |
 | **Runtime / Packs** | Generic platform; industry nouns in packs. | platform, pack, api, data, nestjs-runtime |
 
 GSAP, Three.js, parallax, and “cinematic scroll” belong on **marketing**, not Guest/Studio/Operate.

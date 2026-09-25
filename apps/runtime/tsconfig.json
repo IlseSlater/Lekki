@@ -19,6 +19,7 @@
     { "path": "../../packs/restaurant" },
     { "path": "../../connectors/manual-payment" },
     { "path": "../../connectors/payfast" },
-    { "path": "../../connectors/pilot-pos" }
+    { "path": "../../connectors/pilot-pos" },
+    { "path": "../../connectors/resend" }
   ]
 }

@@ -64,14 +64,14 @@ type TodayRow = { label: string; value: string; ok?: boolean };
             <a class="leos-btn leos-btn--primary" routerLink="/studio/operate">Open Operate</a>
             <div class="studio-home__actions" aria-label="When you have a minute">
               <a class="leos-btn leos-btn--secondary" routerLink="/studio/setup/payments">Payments</a>
-              <a class="leos-btn leos-btn--secondary" routerLink="/studio/menu">Menu</a>
+              <a class="leos-btn leos-btn--secondary" routerLink="/studio/menu">{{ catalogueNoun }}</a>
               <a class="leos-btn leos-btn--secondary" routerLink="/studio/setup/golive">Guest QR</a>
             </div>
           } @else {
             <a class="leos-btn leos-btn--primary" [routerLink]="resumeLink">{{ primaryCta }}</a>
             <div class="studio-home__actions" aria-label="Optional">
-              <a class="leos-btn leos-btn--secondary" routerLink="/studio/menu">Menu</a>
-              <a class="leos-btn leos-btn--secondary" routerLink="/studio/integrations">Integrations</a>
+              <a class="leos-btn leos-btn--secondary" routerLink="/studio/menu">{{ catalogueNoun }}</a>
+              <a class="leos-btn leos-btn--secondary" routerLink="/studio/setup/payments">Payments</a>
             </div>
           }
         </div>
@@ -94,6 +94,7 @@ export class StudioHomePageComponent implements OnInit {
   resumeLink = '/studio/setup/identity';
   todayRows: TodayRow[] = [];
   recessedLine = '';
+  catalogueNoun = 'Menu';
 
   ngOnInit() {
     this.ctx.touchLastSeen();
@@ -130,6 +131,7 @@ export class StudioHomePageComponent implements OnInit {
       this.greeting = `${hello}.`;
     }
     const def = getExperience(c.typeId);
+    this.catalogueNoun = def?.terminology.catalogue ?? 'Menu';
     const station = def?.terminology.station ?? 'Kitchen';
     const placeNoun = def?.terminology.place ?? 'place';
     const placePlural = def?.defaults.placeLabel ?? `${placeNoun}s`;

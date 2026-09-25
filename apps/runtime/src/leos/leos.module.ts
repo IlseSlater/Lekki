@@ -17,6 +17,8 @@ import { PaymentExpiryService } from './payment-expiry.service';
 import { WorkspaceService } from './workspace.service';
 import { ASSET_STORE } from './assets/asset-store';
 import { LocalDiskAssetStore } from './assets/local-disk-asset-store';
+import { EmailRuntimeService } from './email-runtime.service';
+import { AnswersMailerService } from './answers-mailer.service';
 
 @Module({
   imports: [forwardRef(() => EventsModule), StaffAuthModule],
@@ -33,6 +35,8 @@ import { LocalDiskAssetStore } from './assets/local-disk-asset-store';
     SessionAccessService,
     PaymentExpiryService,
     WorkspaceService,
+    EmailRuntimeService,
+    AnswersMailerService,
     {
       provide: ASSET_STORE,
       useFactory: () => new LocalDiskAssetStore(),
@@ -47,6 +51,7 @@ import { LocalDiskAssetStore } from './assets/local-disk-asset-store';
     SessionAccessService,
     PaymentExpiryService,
     WorkspaceService,
+    EmailRuntimeService,
     ASSET_STORE,
   ],
 })

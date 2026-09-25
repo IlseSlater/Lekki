@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { resolveCatalogueLock } from './catalogue-lock';
+import { resolveCatalogueLock, studioLivePhone, catalogueEditorCopy } from './catalogue-lock';
 import {
   DEFAULT_GUEST_DESIGN,
   formatCataloguePriceMajor,
@@ -12,6 +12,31 @@ test('zero unit price is Free, never R0.00', () => {
   assert.equal(formatCataloguePriceMajor(0), 'Free');
   assert.equal(formatCataloguePriceMinor(0), 'Free');
   assert.equal(formatCataloguePriceMajor(140), 'R140');
+});
+
+test('editor copy uses pack item noun, not always dish', () => {
+  const copy = catalogueEditorCopy({ itemNoun: 'Treatment', count: 0 });
+  assert.equal(copy.addLabel, 'Add the first treatment');
+  assert.doesNotMatch(copy.addLabel, /dish/i);
+});
+
+test('menu editor unlocks the venue catalogue on the phone', () => {
+  const r = resolveCatalogueLock({ live: true, slug: 'menu' });
+  assert.equal(r.lockCatalogue, false);
+  assert.equal(r.allowExampleCatalogue, false);
+});
+
+test('studio menu URL shows browse shell, not arrival', () => {
+  const phone = studioLivePhone({ url: '/studio/menu', live: true });
+  assert.equal(phone.mode, 'shell');
+  assert.equal(phone.lockCatalogue, false);
+  assert.equal(phone.publicLive, true);
+});
+
+test('identity setup still shows arrival', () => {
+  const phone = studioLivePhone({ url: '/studio/setup/identity', live: false });
+  assert.equal(phone.mode, 'arrival');
+  assert.equal(phone.lockCatalogue, true);
 });
 
 test('fail closed: unknown slug, golive, live, and payments stay locked', () => {

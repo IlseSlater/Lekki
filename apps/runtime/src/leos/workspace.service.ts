@@ -110,7 +110,10 @@ export class WorkspaceService {
         !Array.isArray(venue.guestDesignJson)
           ? { ...(venue.guestDesignJson as Record<string, unknown>) }
           : {};
-      data.guestDesignJson = { ...existing, ...body.guestDesign };
+      data.guestDesignJson = this.sanitizeGuestDesign({
+        ...existing,
+        ...body.guestDesign,
+      });
     }
 
     if (Object.keys(data).length === 0) {
@@ -201,6 +204,44 @@ export class WorkspaceService {
     });
     if (!venue) throw new ForbiddenException('Venue is not in your organisation');
     return venue;
+  }
+
+  private sanitizeGuestDesign(design: Record<string, unknown>): Record<string, unknown> {
+    const arrivalRaw = design.arrival;
+    if (arrivalRaw === undefined) return design;
+    if (!arrivalRaw || typeof arrivalRaw !== 'object' || Array.isArray(arrivalRaw)) {
+      const { arrival: _drop, ...rest } = design;
+      return rest;
+    }
+    const o = arrivalRaw as Record<string, unknown>;
+    const marks = Array.isArray(o.marks)
+      ? o.marks
+          .filter((u): u is string => typeof u === 'string')
+          .slice(0, 3)
+          .map((u) => {
+            try {
+              return assertSafeAssetUrl(u, 'logoUrl');
+            } catch {
+              return '';
+            }
+          })
+          .filter(Boolean)
+      : [];
+    const colourTo =
+      typeof o.colourTo === 'string' && /^#[0-9A-Fa-f]{6}$/.test(o.colourTo.trim())
+        ? o.colourTo.trim()
+        : undefined;
+    return {
+      ...design,
+      arrival: {
+        headline: typeof o.headline === 'string' ? o.headline.trim().slice(0, 80) : '',
+        line: typeof o.line === 'string' ? o.line.trim().slice(0, 140) : '',
+        cta: typeof o.cta === 'string' ? o.cta.trim().slice(0, 32) : '',
+        blend: o.blend === true,
+        ...(colourTo ? { colourTo } : {}),
+        marks,
+      },
+    };
   }
 
   private async toDto(venue: {

@@ -20,6 +20,8 @@
     "test": "pnpm -r run test",
     "check:nouns": "node scripts/check-noun-separation.mjs",
     "check:page-hex": "node scripts/check-page-hex.mjs",
+    "check:screens": "node scripts/check-screen-coverage.mjs",
+    "check:keyframes": "node scripts/check-keyframe-collisions.mjs",
     "check:payfast": "pnpm --filter @lekki/connector-payfast run build && node --import tsx connectors/payfast/src/self-check.ts",
     "proof": "pnpm run build:packages && node scripts/architectural-proof.mjs",
     "e2e": "node scripts/e2e-heartbeat.mjs",

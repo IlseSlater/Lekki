@@ -1,5 +1,9 @@
-import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, NotFoundException, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
+import type { EventEnvelope } from '@lekki/contracts';
+import { id } from '@lekki/contracts';
+import { newEventId } from '@lekki/shared';
 import { PrismaService } from '../prisma/prisma.service';
+import { OutboxService } from '../events/outbox.service';
 import { RequireStaffPermission, StaffAuthGuard } from '../staff-auth/staff-auth.guard';
 import type { StaffTokenClaims } from '../staff-auth/staff-token.service';
 import { MissingFieldError } from '../leos/domain-errors';
@@ -8,7 +12,203 @@ import { MissingFieldError } from '../leos/domain-errors';
 @Controller('grow')
 @UseGuards(StaffAuthGuard)
 export class GrowController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly outbox: OutboxService,
+  ) {}
+
+  /**
+   * Answers (S-17) — "Email me last week's/this month's orders."
+   * Returns immediately; the actual send happens async via the outbox
+   * (VisitRecordRequested → AnswersMailerService), never blocking this request
+   * on email-provider latency. Never an in-app table — CSV by email only.
+   */
+  @Post('answers')
+  @RequireStaffPermission('organisation.manage')
+  async answers(
+    @Req() req: { staff?: StaffTokenClaims },
+    @Body() body: { period?: 'week' | 'month'; venueId?: string },
+  ) {
+    const orgId = req.staff?.org;
+    if (!orgId) throw new MissingFieldError('organisationId');
+    const staffId = req.staff?.sub;
+    if (!staffId) throw new MissingFieldError('staffId');
+    const resolvedPeriod = body.period === 'month' ? 'month' : 'week';
+
+    const [venue, staff] = await Promise.all([
+      body.venueId
+        ? this.prisma.venue.findFirst({ where: { id: body.venueId, organisationId: orgId } })
+        : this.prisma.venue.findFirst({ where: { organisationId: orgId }, orderBy: { createdAt: 'asc' } }),
+      this.prisma.staffMember.findUnique({ where: { id: staffId } }),
+    ]);
+    if (!venue) throw new NotFoundException('No venue found for this organisation');
+    if (!staff?.email) throw new NotFoundException('No email on file for this staff account');
+
+    await this.outbox.append(
+      this.answersEnvelope(orgId, venue.id, {
+        venueId: venue.id,
+        period: resolvedPeriod,
+        toEmail: staff.email,
+      }),
+    );
+
+    return { to: staff.email, period: resolvedPeriod };
+  }
+
+  private answersEnvelope(
+    organisationId: string,
+    venueId: string,
+    payload: Record<string, unknown>,
+  ): EventEnvelope {
+    return {
+      $schema: 'https://schemas.lekki.io/events/v1/envelope.json',
+      eventId: newEventId(),
+      eventName: 'VisitRecordRequested',
+      version: '1.0.0',
+      occurredAt: new Date().toISOString(),
+      producer: 'lekki:runtime',
+      correlationId: id.correlation(newEventId()),
+      organisationId: id.organisation(organisationId),
+      venueId: id.venue(venueId),
+      payload,
+      privacy: { containsPii: true, classification: 'INTERNAL' },
+    };
+  }
+
+  /**
+   * Payouts — one trading total, no promised payout date.
+   * PayFast's own settlement cadence (T+2/3 working days, merchant-chosen payout
+   * frequency) isn't known to this runtime — never invent a "lands on X" date here.
+   */
+  @Get('payouts')
+  @RequireStaffPermission('organisation.manage')
+  async payouts(
+    @Req() req: { staff?: StaffTokenClaims },
+    @Query('venueId') venueId?: string,
+    @Query('period') period?: 'week' | 'month',
+  ) {
+    const orgId = req.staff?.org;
+    if (!orgId) throw new MissingFieldError('organisationId');
+    const resolvedPeriod = period === 'month' ? 'month' : 'week';
+
+    const venue = venueId
+      ? await this.prisma.venue.findFirst({ where: { id: venueId, organisationId: orgId } })
+      : await this.prisma.venue.findFirst({ where: { organisationId: orgId }, orderBy: { createdAt: 'asc' } });
+
+    const resolvedVenueId = venue?.id;
+    if (!resolvedVenueId) {
+      return { amount: 0, currency: 'ZAR', period: resolvedPeriod };
+    }
+
+    const { start } = periodBounds(resolvedPeriod);
+    const payments = await this.prisma.payment.findMany({
+      where: {
+        status: { in: ['completed', 'settled'] },
+        createdAt: { gte: start },
+        session: { venueId: resolvedVenueId },
+      },
+      select: { amount: true, currency: true },
+    });
+    const { amount, currency } = sumPayments(payments);
+    return { amount, currency, period: resolvedPeriod };
+  }
+
+  /**
+   * Feedback — one sentiment, at most one flagged comment. Never a review console.
+   * Guest feedback is stored as AssistanceRequest kind=feedback (reuse, not a new CRM table).
+   */
+  @Get('feedback')
+  @RequireStaffPermission('organisation.manage')
+  async feedback(
+    @Req() req: { staff?: StaffTokenClaims },
+    @Query('venueId') venueId?: string,
+    @Query('period') period?: 'week' | 'month',
+  ) {
+    const orgId = req.staff?.org;
+    if (!orgId) throw new MissingFieldError('organisationId');
+    const resolvedPeriod = period === 'month' ? 'month' : 'week';
+
+    const venue = venueId
+      ? await this.prisma.venue.findFirst({ where: { id: venueId, organisationId: orgId } })
+      : await this.prisma.venue.findFirst({ where: { organisationId: orgId }, orderBy: { createdAt: 'asc' } });
+
+    const resolvedVenueId = venue?.id;
+    if (!resolvedVenueId) {
+      return { tones: [] as string[], flagged: null, period: resolvedPeriod };
+    }
+
+    const { start } = periodBounds(resolvedPeriod);
+    const rows = await this.prisma.assistanceRequest.findMany({
+      where: {
+        organisationId: orgId,
+        venueId: resolvedVenueId,
+        kind: 'feedback',
+        createdAt: { gte: start },
+      },
+      select: {
+        id: true,
+        message: true,
+        status: true,
+        createdAt: true,
+        session: {
+          select: {
+            participants: {
+              orderBy: { joinedAt: 'asc' },
+              take: 1,
+              select: { displayName: true },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const tones: string[] = [];
+    let flagged: {
+      id: string;
+      text: string;
+      guestFirstName: string;
+      canReply: boolean;
+    } | null = null;
+
+    for (const row of rows) {
+      const parsed = parseFeedbackMessage(row.message);
+      if (!parsed) continue;
+      tones.push(parsed.tone);
+      if (!flagged && parsed.tone === 'concern' && parsed.text) {
+        const name = row.session?.participants?.[0]?.displayName?.trim() || '';
+        const first = name && name !== 'Guest' ? name.split(/\s+/)[0] : 'A guest';
+        flagged = {
+          id: row.id,
+          text: parsed.text,
+          guestFirstName: first,
+          canReply: row.status === 'open' || row.status === 'acknowledged',
+        };
+      }
+    }
+
+    return { tones, flagged, period: resolvedPeriod };
+  }
+
+  /** Owner heard the flagged comment — resolve without a CRM reply thread. */
+  @Post('feedback/:id/heard')
+  @RequireStaffPermission('organisation.manage')
+  async feedbackHeard(
+    @Req() req: { staff?: StaffTokenClaims },
+    @Param('id') id: string,
+  ) {
+    const orgId = req.staff?.org;
+    if (!orgId) throw new MissingFieldError('organisationId');
+    const existing = await this.prisma.assistanceRequest.findFirst({
+      where: { id, organisationId: orgId, kind: 'feedback' },
+    });
+    if (!existing) throw new NotFoundException('Feedback not found');
+    if (existing.status === 'resolved') return existing;
+    return this.prisma.assistanceRequest.update({
+      where: { id },
+      data: { status: 'resolved', resolvedAt: new Date() },
+    });
+  }
 
   @Get('overview')
   @RequireStaffPermission('organisation.manage')
@@ -187,4 +387,33 @@ function dayBounds(offsetDays: number): { start: Date; end: Date } {
   const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offsetDays);
   const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offsetDays + 1);
   return { start, end };
+}
+
+
+/** Guest feedback message — keep in sync with apps/web grow-feedback.parseFeedbackMessage. */
+function parseFeedbackMessage(
+  raw: string | null | undefined,
+): { tone: 'delighted' | 'concern'; text: string } | null {
+  if (!raw) return null;
+  try {
+    const o = JSON.parse(raw) as { tone?: string; text?: string };
+    if (o.tone === 'delighted') return { tone: 'delighted', text: '' };
+    if (o.tone === 'concern' || o.tone === 'mixed') {
+      return { tone: 'concern', text: typeof o.text === 'string' ? o.text.trim() : '' };
+    }
+  } catch {
+    /* plain-text fallback */
+  }
+  const text = raw.trim();
+  if (!text) return null;
+  if (/^delighted$/i.test(text)) return { tone: 'delighted', text: '' };
+  return { tone: 'concern', text };
+}
+
+/** Rolling window start for Payouts — 7 or 30 days back, local server time. */
+function periodBounds(period: 'week' | 'month'): { start: Date } {
+  const now = new Date();
+  const daysBack = period === 'month' ? 30 : 7;
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysBack);
+  return { start };
 }

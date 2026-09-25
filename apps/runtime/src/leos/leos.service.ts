@@ -1467,17 +1467,21 @@ export class LeosService {
     });
     if (!session) throw new Error('Session not found');
 
-    const enabled = await this.leos.profileEngine.resolveCapability(
-      { profileId: session.profileId, version: session.profileVersion },
-      'assistance.request',
-    );
-    if (!enabled.ok || !enabled.value) {
-      throw new Error('Assistance capability not enabled for profile');
-    }
-
     const kind = normalizeAssistanceKind(input.kind);
 
-    // One open assistance per kind per session (service and manager can coexist).
+    // Feedback reuses AssistanceRequest storage but is not floor help —
+    // do not require the assistance.request capability (Studio guestDesign.feedback gates UI).
+    if (kind !== 'feedback') {
+      const enabled = await this.leos.profileEngine.resolveCapability(
+        { profileId: session.profileId, version: session.profileVersion },
+        'assistance.request',
+      );
+      if (!enabled.ok || !enabled.value) {
+        throw new Error('Assistance capability not enabled for profile');
+      }
+    }
+
+    // One open assistance per kind per session (service, manager, feedback can coexist).
     const existingOpen = await this.prisma.assistanceRequest.findFirst({
       where: {
         sessionId: session.id,
@@ -1536,7 +1540,7 @@ export class LeosService {
       include: { session: true },
     });
     if (!existing) throw new Error('Assistance not found');
-    if (!opts?.staffPresent && existing.kind !== 'manager') {
+    if (!opts?.staffPresent && existing.kind !== 'manager' && existing.kind !== 'feedback') {
       throw new Error('Staff authentication required for service assistance');
     }
     if (existing.status === 'resolved') return existing;
@@ -1573,7 +1577,7 @@ export class LeosService {
       include: { session: true },
     });
     if (!existing) throw new Error('Assistance not found');
-    if (!opts?.staffPresent && existing.kind !== 'manager') {
+    if (!opts?.staffPresent && existing.kind !== 'manager' && existing.kind !== 'feedback') {
       throw new Error('Staff authentication required for service assistance');
     }
     const request = await this.prisma.assistanceRequest.update({
@@ -1653,11 +1657,12 @@ export class LeosService {
   }
 }
 
-/** Locked assistance kinds for LEOS dual help (Waiter vs Manager). */
-export type AssistanceKind = 'service' | 'manager';
+/** Locked assistance kinds — Waiter · Manager · guest Feedback (Grow, not floor). */
+export type AssistanceKind = 'service' | 'manager' | 'feedback';
 
 export function normalizeAssistanceKind(kind?: string): AssistanceKind {
   const k = (kind ?? 'service').toLowerCase().trim();
   if (k === 'manager' || k === 'owner' || k === 'escalate') return 'manager';
+  if (k === 'feedback' || k === 'review') return 'feedback';
   return 'service';
 }

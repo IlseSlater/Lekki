@@ -521,6 +521,21 @@ import { lekkiJsonLd, seoForPath } from '../studio/marketing-seo';
       .lk-pill:hover {
         transform: translateY(-1px);
       }
+      .lk-pill:active {
+        transform: scale(0.98);
+      }
+      .lk-pill:focus-visible {
+        outline: 2px solid var(--leos-gold, #d7a14a);
+        outline-offset: 3px;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .lk-pill,
+        .lk-pill:hover,
+        .lk-pill:active {
+          transition: none;
+          transform: none;
+        }
+      }
 
       .lk-chip {
         display: inline-flex;
@@ -629,17 +644,20 @@ import { lekkiJsonLd, seoForPath } from '../studio/marketing-seo';
       .lk-app__body {
         position: relative;
         min-height: 22rem;
+        overflow: hidden;
       }
       .lk-glow {
         position: absolute;
         inset: 0;
+        pointer-events: none;
+        /* Dusk + gold lamp — no teal. */
         background:
-          radial-gradient(ellipse at 50% 40%, rgba(180, 220, 230, 0.55), transparent 55%),
-          radial-gradient(ellipse at 30% 80%, rgba(90, 140, 160, 0.4), transparent 50%),
-          #1a2830;
+          radial-gradient(ellipse 72% 58% at 50% 46%, rgba(215, 161, 74, 0.2), transparent 64%),
+          radial-gradient(190% 82% at 50% 0%, #11151a 0%, #333b42 46%, #c2a184 100%);
       }
       .lk-card {
         position: absolute;
+        z-index: 1;
         left: 50%;
         top: 50%;
         transform: translate(-50%, -46%);
@@ -651,6 +669,18 @@ import { lekkiJsonLd, seoForPath } from '../studio/marketing-seo';
         backdrop-filter: blur(8px);
         text-align: left;
         color: #fff;
+      }
+      .lk-card::before {
+        content: '';
+        position: absolute;
+        z-index: -1;
+        left: 50%;
+        top: 28%;
+        width: 150%;
+        height: 140%;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+        background: radial-gradient(ellipse at center, rgba(215, 161, 74, 0.18), transparent 68%);
       }
       .lk-card__avatars {
         display: flex;
@@ -682,6 +712,14 @@ import { lekkiJsonLd, seoForPath } from '../studio/marketing-seo';
         color: rgba(255, 255, 255, 0.7);
         font-size: 0.82rem;
         line-height: 1.55;
+      }
+      @media (prefers-contrast: more) {
+        .lk-glow {
+          background: #11151a;
+        }
+        .lk-card::before {
+          display: none;
+        }
       }
 
       .lk-intro,

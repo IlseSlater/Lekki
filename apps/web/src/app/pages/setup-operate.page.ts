@@ -19,6 +19,8 @@ import {
   pressureSentence,
   rankEscalations,
   stationGlanceLine,
+  isPrimaryNeedsYouAction,
+  paymentOpenTableLabel,
 } from '../studio/operate-glance';
 import { ServicePageComponent } from './service.page';
 import { StationPageComponent } from './station.page';
@@ -106,15 +108,39 @@ type TablePulse = {
                     <span class="studio-operate__age">{{ e.ageLabel }}</span>
                   }
                 </span>
-                <span class="studio-operate__status">{{
-                  e.status === 'acknowledged' ? 'Claimed — on the way' : 'Waiting for claim'
-                }}</span>
+                <span class="studio-operate__status">
+                  @if (e.kind === 'payment') {
+                    Payment didn't go through
+                  } @else {
+                    {{ e.status === 'acknowledged' ? 'Claimed — on the way' : 'Waiting for claim' }}
+                  }
+                </span>
                 <div class="studio-operate__hint studio-operate__hint--actions">
-                  @if (e.status !== 'acknowledged') {
+                  @if (e.kind === 'payment') {
                     <button
                       type="button"
                       [class]="
-                        isPrimaryClaim(e)
+                        isPrimaryNeedsYou(e)
+                          ? 'leos-btn leos-btn--primary studio-operate__claim'
+                          : 'studio-operate__text-act'
+                      "
+                      (click)="openPaymentTable(e)"
+                    >
+                      {{ paymentOpenLabel }}
+                    </button>
+                    <button
+                      type="button"
+                      class="studio-operate__text-act"
+                      [disabled]="busyId === e.id"
+                      (click)="notePayment(e)"
+                    >
+                      Got it
+                    </button>
+                  } @else if (e.status !== 'acknowledged') {
+                    <button
+                      type="button"
+                      [class]="
+                        isPrimaryNeedsYou(e)
                           ? 'leos-btn leos-btn--primary studio-operate__claim'
                           : 'studio-operate__text-act'
                       "
@@ -133,17 +159,16 @@ type TablePulse = {
                       Resolve
                     </button>
                   }
-                  <button
-                    type="button"
-                    class="studio-operate__text-act"
-                    [disabled]="busyId === e.id"
-                    (click)="forceClear(e)"
-                  >
-                    Force clear
-                  </button>
-                  <button type="button" class="studio-operate__text-act" (click)="openFloorPanel()">
-                    Floor ›
-                  </button>
+                  @if (e.kind !== 'payment') {
+                    <button
+                      type="button"
+                      class="studio-operate__text-act"
+                      [disabled]="busyId === e.id"
+                      (click)="forceClear(e)"
+                    >
+                      Force clear
+                    </button>
+                  }
                 </div>
               </div>
             }
@@ -261,7 +286,7 @@ type TablePulse = {
             </div>
             <div class="studio-operate__rail-board">
               @if (panelKind === 'floor') {
-                <leos-service-board [embedMonitor]="true" />
+                <leos-service-board [embedMonitor]="true" [focusSessionId]="focusSessionId" />
               } @else if (panelStationKey) {
                 <leos-station-board
                   [embedMonitor]="true"
@@ -530,6 +555,7 @@ export class SetupOperatePageComponent implements OnInit, OnDestroy {
   helpCount = 0;
   floorMonitor = '';
   panelOpen = false;
+  focusSessionId = '';
   panelKind: 'floor' | 'station' = 'floor';
   panelStationKey = '';
   panelStationLabel = '';
@@ -554,13 +580,40 @@ export class SetupOperatePageComponent implements OnInit, OnDestroy {
   }
 
   openFloorPanel() {
+    this.focusSessionId = '';
     this.panelKind = 'floor';
     this.panelStationKey = '';
     this.panelStationLabel = '';
     this.panelOpen = true;
   }
 
+  openPaymentTable(row: EscalationRow) {
+    this.focusSessionId = row.sessionId || '';
+    this.panelKind = 'floor';
+    this.panelStationKey = '';
+    this.panelStationLabel = '';
+    this.panelOpen = true;
+  }
+
+  notePayment(row: EscalationRow) {
+    if (this.busyId) return;
+    this.busyId = row.id;
+    this.actionError = '';
+    this.api.markPaymentAttentionHeard(row.id).subscribe({
+      next: () => {
+        this.busyId = '';
+        this.escalations = this.escalations.filter((x) => x.id !== row.id);
+        this.refresh();
+      },
+      error: () => {
+        this.busyId = '';
+        this.actionError = 'Couldn’t mark that — try again shortly.';
+      },
+    });
+  }
+
   openStationPanel(s: StationSummary) {
+    this.focusSessionId = '';
     this.panelKind = 'station';
     this.panelStationKey = s.id;
     this.panelStationLabel = s.label;
@@ -569,6 +622,7 @@ export class SetupOperatePageComponent implements OnInit, OnDestroy {
 
   closeFloorPanel() {
     this.panelOpen = false;
+    this.focusSessionId = '';
   }
 
   get railLabel(): string {
@@ -583,10 +637,17 @@ export class SetupOperatePageComponent implements OnInit, OnDestroy {
     return this.summaries.filter((s) => s.tone !== 'calm');
   }
 
-  /** One gold Claim — first open escalation only. */
+  /** One gold Needs-you action — Claim or Open table, never both. */
+  isPrimaryNeedsYou(e: EscalationRow): boolean {
+    return isPrimaryNeedsYouAction(this.escalations, e);
+  }
+
+  get paymentOpenLabel(): string {
+    return paymentOpenTableLabel(this.placeNoun);
+  }
+
   isPrimaryClaim(e: EscalationRow): boolean {
-    const first = this.escalations.find((x) => x.status !== 'acknowledged');
-    return !!first && first.id === e.id;
+    return this.isPrimaryNeedsYou(e) && e.kind !== 'payment';
   }
 
   get handoffLine(): string {
@@ -594,7 +655,9 @@ export class SetupOperatePageComponent implements OnInit, OnDestroy {
   }
 
   get ownerHint(): string {
-    const first = this.escalations.find((x) => x.status !== 'acknowledged');
+    const first = this.escalations.find(
+      (x) => x.kind === 'payment' || x.status !== 'acknowledged',
+    );
     const hotStation = this.glanceStations[0];
     const hotPlace = this.glancePlaces[0];
     const placeLabel = hotPlace ? `${this.placeNoun} ${hotPlace.placeCode}` : null;
@@ -625,7 +688,8 @@ export class SetupOperatePageComponent implements OnInit, OnDestroy {
       this.greeting = base;
     }
     this.paymentsOk = !!cfg.paymentsDone;
-    this.paymentsLine = this.paymentsOk ? 'Healthy' : 'Still to finish';
+    /** Setup-completion only, not live connector health — see paymentsAttention for that. */
+    this.paymentsLine = this.paymentsOk ? 'Set up' : 'Still to finish';
     this.typeId = (cfg.typeId || 'restaurant') as ExperienceTypeId;
     const def = getExperience(this.typeId);
     this.placeNoun = def?.terminology.place ?? 'Table';
@@ -744,6 +808,7 @@ export class SetupOperatePageComponent implements OnInit, OnDestroy {
       ...stationCalls,
       assistance: this.api.listAssistance().pipe(catchError(() => of([]))),
       floor: this.api.listFloorTables().pipe(catchError(() => of({ tables: [] }))),
+      paymentsAttention: this.api.listPaymentAttention().pipe(catchError(() => of([]))),
     }).subscribe((bundle) => {
       this.loading = false;
       const assistance = (
@@ -776,15 +841,27 @@ export class SetupOperatePageComponent implements OnInit, OnDestroy {
       this.placeBySession = new Map(floorTables.map((t) => [t.sessionId, t.placeCode]));
       this.guestCount = Array.isArray(floorTables) ? floorTables.length : null;
 
-      const serviceHelp = assistance.filter((a) => a.kind !== 'manager');
+      const serviceHelp = assistance.filter((a) => a.kind === 'service');
       this.helpCount = serviceHelp.length;
 
       const managerSessions = new Set(
         assistance.filter((a) => a.kind === 'manager').map((a) => a.sessionId || ''),
       );
 
-      this.escalations = rankEscalations(
-        assistance
+      const paymentsAttention = (
+        bundle as {
+          paymentsAttention: Array<{
+            id: string;
+            sessionId: string;
+            placeCode: string | null;
+            status: string;
+            createdAt: string;
+          }>;
+        }
+      ).paymentsAttention;
+
+      this.escalations = rankEscalations([
+        ...assistance
           .filter((a) => a.kind === 'manager')
           .map((a) => {
             const place = a.sessionId ? this.placeBySession.get(a.sessionId) : undefined;
@@ -803,7 +880,19 @@ export class SetupOperatePageComponent implements OnInit, OnDestroy {
               pulse: a.status === 'open' || mins >= 2,
             };
           }),
-      );
+        ...paymentsAttention.map((p) => ({
+          id: p.id,
+          sessionId: p.sessionId || '',
+          placeLabel: p.placeCode
+            ? `${this.placeNoun} ${p.placeCode}`
+            : `Guest ${this.placeNoun.toLowerCase()}`,
+          status: p.status,
+          kind: 'payment',
+          createdAt: p.createdAt,
+          ageLabel: this.ageLabel(p.createdAt),
+          pulse: true,
+        })),
+      ]);
 
       this.tablePulses = floorTables
         .map((t) => {

@@ -18,3 +18,8 @@ test('accepts R-prefixed prices and tabs', () => {
   const rows = parseMenuList('Burger\tR89.50\tFood');
   assert.deepEqual(rows, [{ label: 'Burger', unitPrice: 89.5, category: 'Food' }]);
 });
+
+test('missing category uses the pack default, not a sample menu', () => {
+  const rows = parseMenuList('Consult,120', 'Treatments');
+  assert.deepEqual(rows, [{ label: 'Consult', unitPrice: 120, category: 'Treatments' }]);
+});

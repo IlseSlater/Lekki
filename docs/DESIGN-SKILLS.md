@@ -27,7 +27,7 @@ Every skill here has a **Lekki Context** section at the top pointing at the real
 5. brief-to-tasks            → .design/<feature-slug>/TASKS.md
 6. frontend-design           → the actual Angular components/pages
 —
-7. design-review             → .design/<feature-slug>/DESIGN_REVIEW.md + screenshots, on request after something is built
+7. design-review             → .design/<feature-slug>/DESIGN_REVIEW.md + screenshots; hero moments also get bar.md and fresh critics (builder does not self-pass)
 ```
 
 Run the whole thing with `design-flow`, or invoke any single skill on its own — e.g. "grill me on this menu redesign" or "review what we just built."

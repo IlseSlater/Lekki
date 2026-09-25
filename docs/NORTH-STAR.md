@@ -98,6 +98,8 @@ Discover → Join → Experience            Setup  → ★ FROZEN v1
 
 ### Frozen IA rule
 
+> **Superseded by [ADR-004](adr/004-three-human-experiences.md).** The "two customer surfaces" claim and the Fulfilment/Payment line below predate the three-human-experiences model (Guest · Staff · Studio) and Studio's Team mode. **Read instead:** [lifecycle-and-screen-map.md](ux/lifecycle-and-screen-map.md) · [ia-experience-studio-shells.md](ux/ia-experience-studio-shells.md) · [operate-craft.md](ux/operate-craft.md) · [grow-craft.md](ux/grow-craft.md) · [LVES](ux/lves.md) · [current-product-state.md](ux/current-product-state.md).
+
 **LEOS has two customer surfaces: Experience and Studio.** Studio contains three modes—**Setup**, **Operate**, and **Grow**. Modes adapt the interface to the user’s job without creating separate products or architectures. **Live Experience** projects the current configuration into the guest journey; it is never a free-form layout builder.
 
 Do **not** elevate Operate or Grow into separate products (never “Insights” as a peer product).  

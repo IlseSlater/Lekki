@@ -34,11 +34,21 @@ import { resolveShowSpecials } from '../studio/specials-continuity';
 import { offlineQueue } from './offline-queue';
 import { hasOpenBalance, isCleared, isGreaterMinor, toMinor, fromMinor } from '../leos/money';
 import { composeStillInBanner } from '../studio/mid-visit-resume';
+import { firstImpressionLand, menuPhaseAfterGetStarted } from '../studio/guest-entry-gate';
+import { encodeFeedbackMessage } from '../studio/grow-feedback';
 import { firstValueFrom } from 'rxjs';
 import { timeout } from 'rxjs/operators';
 
 
-export type GuestPhase = 'browse' | 'specials' | 'cart' | 'live' | 'payment' | 'receipt' | 'leave';
+export type GuestPhase =
+  | 'arrival'
+  | 'browse'
+  | 'specials'
+  | 'cart'
+  | 'live'
+  | 'payment'
+  | 'receipt'
+  | 'leave';
 
 export type CatalogueItem = {
   id: string;
@@ -318,6 +328,12 @@ export class GuestSessionService {
     return this.cart[this.editingCartIndex] ?? null;
   }
 
+  enterMenu() {
+    this.phase = menuPhaseAfterGetStarted();
+    this.preferSpecialsLanding = false;
+    this.persistGuestState();
+  }
+
   onTabSelect(tab: GuestTabId) {
     if (tab === 'specials') {
       this.phase = 'specials';
@@ -374,7 +390,6 @@ export class GuestSessionService {
     const paymentResult = opts.paymentResult;
     const welcomeBack = opts.welcomeBack;
     const welcomeStill = opts.welcomeStill;
-    const justJoined = opts.justJoined;
     if (paymentResult === 'return') {
       this.message = 'Confirming your payment…';
       this.phase = 'live';
@@ -394,14 +409,32 @@ export class GuestSessionService {
       this.showStillIn();
     } else if (this.onboarding.isReturningGuest() && this.onboarding.consumeReturnGreeting()) {
       this.showWelcomeBack();
-    } else if (
-      (justJoined || !this.onboarding.isReturningGuest()) &&
-      this.onboarding.consumeJoinGreeting()
-    ) {
-      this.showJoined();
     }
     if (this.state.sessionId) {
-      this.restoreGuestPersist();
+      const restored = this.restoreGuestPersist();
+      const skipLanding =
+        !!welcomeBack ||
+        !!welcomeStill ||
+        this.onboarding.isReturningGuest();
+      const land = firstImpressionLand({
+        hasSession: true,
+        paymentResult,
+        restoredPhase: restored ? this.phase : null,
+        skipLanding,
+      });
+      if (land === 'arrival') {
+        this.phase = 'arrival';
+        this.message = '';
+        this.onboarding.consumeJoinGreeting();
+        this.persistGuestState();
+      } else if (
+        land !== 'keep' &&
+        !paymentResult &&
+        (opts.justJoined || !this.onboarding.isReturningGuest()) &&
+        this.onboarding.consumeJoinGreeting()
+      ) {
+        this.showJoined();
+      }
       this.onboarding.noteOpenSession(this.state.sessionId);
       this.refreshLive();
       this.bindLiveSocket();
@@ -1410,6 +1443,26 @@ export class GuestSessionService {
       });
   }
 
+  /** Leave-moment feedback — AssistanceRequest kind=feedback (Grow, not floor). */
+  submitFeedback(tone: 'delighted' | 'concern', text?: string) {
+    if (!this.state.sessionId) return;
+    this.api
+      .requestAssistance({
+        sessionId: this.state.sessionId,
+        kind: 'feedback',
+        message: encodeFeedbackMessage(tone, text),
+      })
+      .subscribe({
+        next: () => {
+          this.message =
+            tone === 'delighted' ? 'Thank you — that means a lot.' : 'Thank you — we heard you.';
+        },
+        error: () => {
+          this.error = 'Couldn’t send that — you can still leave.';
+        },
+      });
+  }
+
   /** @deprecated Prefer openHelpSheet / requestHelp — kept for any leftover call sites. */
   callService() {
     this.openHelpSheet();
@@ -1569,19 +1622,21 @@ export class GuestSessionService {
     );
   }
 
-  private restoreGuestPersist() {
-    if (typeof sessionStorage === 'undefined') return;
+  private restoreGuestPersist(): boolean {
+    if (typeof sessionStorage === 'undefined') return false;
     try {
       const raw = sessionStorage.getItem(this.guestPersistKey());
-      if (!raw) return;
+      if (!raw) return false;
       const parsed = JSON.parse(raw) as { cart?: CartLine[]; phase?: GuestPhase };
       if (Array.isArray(parsed.cart)) this.cart = parsed.cart;
       if (parsed.phase && parsed.phase !== 'leave' && parsed.phase !== 'receipt') {
         this.phase = parsed.phase;
+        return true;
       }
     } catch {
       /* ignore */
     }
+    return false;
   }
 
   private clearGuestPersist() {

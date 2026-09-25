@@ -170,10 +170,10 @@ type PanelView = 'home' | 'details';
         padding: 1.15rem 1.15rem 1.25rem;
         background: var(--leos-surface, #fff);
         box-shadow: 0 18px 60px rgba(0, 0, 0, 0.12);
-        animation: leos-help-up 0.28s ease-out;
+        animation: leos-pay-up 0.28s ease-out;
       }
 
-      @keyframes leos-help-up {
+      @keyframes leos-pay-up {
         from {
           transform: translateY(0.75rem);
           opacity: 0.6;

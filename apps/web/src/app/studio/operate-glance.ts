@@ -16,6 +16,22 @@ export function rankEscalations<T extends { status: string; createdAt?: string }
   });
 }
 
+/** One gold primary on Needs you — Claim for manager help, Open table for payment failure. */
+export function isPrimaryNeedsYouAction<T extends { id: string; kind: string; status: string }>(
+  rows: T[],
+  row: T,
+): boolean {
+  const first = rows.find((x) => {
+    if (x.kind === 'payment') return true;
+    return x.status !== 'acknowledged';
+  });
+  return !!first && first.id === row.id;
+}
+
+export function paymentOpenTableLabel(placeNoun: string): string {
+  return `Open ${placeNoun.toLowerCase()}`;
+}
+
 export function placeGlanceLine(tone: GlanceTone, prepWord = 'Preparing'): string {
   if (tone === 'attention') return 'Needs you';
   if (tone === 'ready') return 'Ready';

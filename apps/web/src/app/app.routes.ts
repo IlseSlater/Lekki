@@ -151,18 +151,9 @@ export const routes: Routes = [
           },
         ],
       },
-      {
-        path: 'integrations',
-        loadComponent: () =>
-          import('./pages/setup-integrations.page').then(
-            (m) => m.SetupIntegrationsPageComponent,
-          ),
-      },
-      {
-        path: 'integrations/payfast',
-        loadComponent: () =>
-          import('./pages/setup-payfast.page').then((m) => m.SetupPayfastPageComponent),
-      },
+      /** GAP-06 — one door: How they pay. Hub URLs redirect; Pilot stays a capability deep link. */
+      { path: 'integrations', redirectTo: 'setup/payments' },
+      { path: 'integrations/payfast', redirectTo: 'setup/payments/connect' },
       {
         path: 'integrations/pilot',
         loadComponent: () =>

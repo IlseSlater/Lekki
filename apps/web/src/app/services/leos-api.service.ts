@@ -397,7 +397,7 @@ export class LeosApiService {
 
   requestAssistance(body: {
     sessionId: string;
-    kind?: 'service' | 'manager';
+    kind?: 'service' | 'manager' | 'feedback';
     message?: string;
   }) {
     return this.http.post<{
@@ -409,7 +409,7 @@ export class LeosApiService {
     }>(`${this.api}/assistance`, body);
   }
 
-  listAssistance(opts?: { sessionId?: string; kind?: 'service' | 'manager' }) {
+  listAssistance(opts?: { sessionId?: string; kind?: 'service' | 'manager' | 'feedback' }) {
     const params: Record<string, string> = {};
     if (opts?.sessionId) params['sessionId'] = opts.sessionId;
     if (opts?.kind) params['kind'] = opts.kind;
@@ -779,6 +779,63 @@ export class LeosApiService {
   }
 
   /** Grow Org Memory — yesterday / wait / calm trading breath. */
+  getGrowFeedback(params?: { venueId?: string; period?: 'week' | 'month' }) {
+    return this.http.get<{
+      tones: Array<'delighted' | 'concern'>;
+      flagged: {
+        id: string;
+        text: string;
+        guestFirstName: string;
+        canReply: boolean;
+      } | null;
+      period: 'week' | 'month';
+    }>(`${this.api}/grow/feedback`, {
+      params: {
+        ...(params?.venueId ? { venueId: params.venueId } : {}),
+        ...(params?.period ? { period: params.period } : {}),
+      },
+    });
+  }
+
+  markFeedbackHeard(id: string) {
+    return this.http.post<{ id: string; status: string }>(`${this.api}/grow/feedback/${id}/heard`, {});
+  }
+
+  getGrowPayouts(params?: { venueId?: string; period?: 'week' | 'month' }) {
+    return this.http.get<{ amount: number; currency: string; period: 'week' | 'month' }>(
+      `${this.api}/grow/payouts`,
+      { params: { ...(params?.venueId ? { venueId: params.venueId } : {}), ...(params?.period ? { period: params.period } : {}) } },
+    );
+  }
+
+  requestVisitRecord(body: { period: 'week' | 'month'; venueId?: string }) {
+    return this.http.post<{ to: string; period: 'week' | 'month' }>(
+      `${this.api}/grow/answers`,
+      body,
+    );
+  }
+
+  listPaymentAttention(params?: { venueId?: string }) {
+    return this.http.get<
+      Array<{
+        id: string;
+        sessionId: string;
+        placeCode: string | null;
+        status: string;
+        createdAt: string;
+      }>
+    >(`${this.api}/operate/payments-attention`, {
+      params: params?.venueId ? { venueId: params.venueId } : {},
+    });
+  }
+
+  markPaymentAttentionHeard(id: string) {
+    return this.http.post<{ id: string; noted: boolean }>(
+      `${this.api}/operate/payments-attention/${id}/heard`,
+      {},
+    );
+  }
+
   getGrowOverview(token?: string) {
     return this.http.get<{
       venueName: string | null;

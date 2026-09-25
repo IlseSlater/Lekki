@@ -1,6 +1,10 @@
 ---
 name: design-review
-description: Run a structured design critique against the brief and codebase. Checks visual hierarchy, consistency, responsiveness, accessibility, and aesthetic fidelity. Use when user wants a design review, critique, QA pass, polish pass, or mentions "review" after building.
+description: >-
+  Critique a built Lekki screen against the brief, LVES, and a checkable bar.
+  Builder must not grade own work — use rendered screenshots and binary pass/fail.
+  Triggers: design review, critic loop, hero craft, “does this beat the bar”,
+  /design-review.
 ---
 
 ## Lekki Context (read first)
@@ -14,6 +18,17 @@ description: Run a structured design critique against the brief and codebase. Ch
 > **CRITICAL — Visual Screenshot Capture**
 >
 > You MUST capture screenshots of the running application as part of every design review. Code review alone is insufficient — you need to see what the user sees. Follow the screenshot capture protocol in Step 3 below. This is not optional.
+
+## Fresh critics (hero moments)
+
+If this is a flagship surface (Guest arrival, Go live QR, Pay), follow
+[`references/lekki-critics.md`](references/lekki-critics.md) **before** the long
+checklist: name a real bar → write `bar.md` (checkable mechanisms) → screenshot
+the running app → three **binary** verdicts (Moment / System / Craft). Craft
+never reads the implementation. The builder chat must not declare a win.
+
+Do **not** fan out a token-hungry agent farm. One rebuild per named gap. The
+human stops the run.
 
 ## Example prompts
 
@@ -65,6 +80,7 @@ description: Run a structured design critique against the brief and codebase. Ch
    └── onboarding-flow/
        ├── DESIGN_BRIEF.md
        ├── DESIGN_REVIEW.md
+       ├── bar.md
        └── screenshots/
            ├── review-homepage-desktop-1280.png
            ├── review-homepage-tablet-768.png

@@ -1,15 +1,17 @@
 # Platform Dashboard
 
+**Superseded as a freeze queue.** Running product = [current-product-state.md](current-product-state.md) HCI lock + [lifecycle-and-screen-map.md](lifecycle-and-screen-map.md). Remaining work is map **§11**, not G-05 “next freeze”.
+
+The L0–L6 stars below are **historical Delivery OS archaeology**. Do not treat them as “Guest is not built.”
+
 **Mission:** [NORTH-STAR.md](../NORTH-STAR.md) (**Frozen**) · **HXE:** [LEK-040](../LEK-040-human-experience-engineering.md)  
-**Delivery OS:** [LEOS-DELIVERY-SYSTEM.md](../LEOS-DELIVERY-SYSTEM.md) (**Frozen**)  
-**Board:** [sprint-1-heartbeat.md](sprint-1-heartbeat.md) · **Stories:** [stories/](stories/)  
-**Only Release Manager advances maturity.**
+**Board:** [LEKKI-BUILD.md](../LEKKI-BUILD.md)
 
 ### Current state
 
-| Vision | Architecture | Interaction | Components | Implementation | Delivery OS |
-|--------|--------------|-------------|------------|----------------|-------------|
-| Frozen | Frozen | In progress | Growing | Starting | Active |
+| Vision | Architecture | Heartbeat in app | Remaining |
+|--------|--------------|------------------|-----------|
+| Frozen | Frozen | Running (Arrival→Return) | Named GAPs · continuity polish |
 
 ---
 

@@ -25,6 +25,8 @@ Charter: `.cursor/agents/executive-orchestrator.md`
 
 Do not redesign architecture unless completion is impossible.
 
+**Vertical slice.** One complete human journey at a time (Guest visit · Owner go-live · Staff shift). Finish Studio look → Live phone → Guest (or Staff station) for that walk before opening another GAP. Do not sequence leftover holes as a horizontal backlog. Map: [docs/ux/lifecycle-and-screen-map.md](docs/ux/lifecycle-and-screen-map.md) §12.
+
 ## Triggers
 
 `Build Story G-0X` · `Continue building Lekki` · `Continue`

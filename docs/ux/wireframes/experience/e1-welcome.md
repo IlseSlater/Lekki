@@ -1,5 +1,9 @@
 # Experience · E1 Welcome (Discover)
 
+**Running software (source of truth):** Lekki splash (`/splash`) then venue landing (`phase === 'arrival'`) with **Get started** → menu. Session join is during splash, not after Continue. See [lifecycle-and-screen-map.md](../../lifecycle-and-screen-map.md).
+
+The boxes below are the original Discover spec. Do not rebuild them as a second Join wall.
+
 **Layout grammar:** Experience Shell  
 **Runtime:** Entry → Context  
 **Pack:** labels only (venue / profile)

@@ -53,14 +53,25 @@ import { StudioContextService } from '../services/studio-context.service';
           }
         </div>
 
-        <leos-confidence-indicator
-          confidence
-          eyebrow="You’ll create"
-          [fact]="selectedLabel"
-          [ready]="!!selected"
-          okLabel="Looks good"
-          waiting="Choose an experience type to continue"
-        />
+        @if (selected) {
+          <leos-confidence-indicator
+            confidence
+            eyebrow="You’ll create"
+            [fact]="selectedLabel"
+            [ready]="true"
+            okLabel="Looks good"
+            waiting=""
+          />
+        } @else {
+          <leos-confidence-indicator
+            confidence
+            eyebrow="You’ll create"
+            fact="An experience"
+            [ready]="false"
+            okLabel="Looks good"
+            waiting="Choose an experience type to continue"
+          />
+        }
 
         <a escape class="leos-btn leos-btn--secondary" routerLink="/studio/welcome">Back</a>
         <button

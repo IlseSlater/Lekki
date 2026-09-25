@@ -3,14 +3,14 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { OnboardingService } from '../services/onboarding.service';
 import { LeosApiService, SessionStateService } from '../services/leos-api.service';
 import { isSameOpenSessionResume } from '../studio/mid-visit-resume';
-import { GUEST_SPLASH_MAX_MS } from '../studio/guest-entry-gate';
+import { GUEST_SPLASH_MAX_MS, splashWelcomeQuery } from '../studio/guest-entry-gate';
 
-const FIRST_SPLASH_MS = Math.min(700, GUEST_SPLASH_MAX_MS);
-const RETURN_SPLASH_MS = Math.min(500, GUEST_SPLASH_MAX_MS);
+const FIRST_SPLASH_MS = GUEST_SPLASH_MAX_MS;
+const RETURN_SPLASH_MS = GUEST_SPLASH_MAX_MS;
 
 /**
- * Brand intro after QR scan — under one second, tap to skip,
- * then straight into the live menu. No onboarding wall.
+ * Brand intro after QR scan — dusk hills, gold mark flows down, then copy.
+ * Tap anywhere to skip into the venue experience (landing, then menu).
  */
 @Component({
   standalone: true,
@@ -22,22 +22,22 @@ const RETURN_SPLASH_MS = Math.min(500, GUEST_SPLASH_MAX_MS);
       [class.gs--return]="returningSplash"
       role="button"
       tabindex="0"
-      aria-label="Lekki — continue to your menu. Tap to skip."
+      aria-label="Lekki — continue. Tap to skip."
       (click)="skip()"
       (keydown.enter)="skip()"
       (keydown.space)="skip(); $event.preventDefault()"
     >
-      <img
-        class="gs__photo"
-        src="/brand/lekki-intro-splash.jpg"
-        alt="Lekki — The human experience app"
-        decoding="async"
-      />
-      <div class="gs__veil" aria-hidden="true"></div>
-      <div class="gs__progress" aria-hidden="true">
-        <span class="gs__progress-bar"></span>
+      <div class="gs__mark">
+        <img
+          class="gs__logo"
+          src="/brand/lekki-mark.png"
+          width="128"
+          height="128"
+          alt=""
+        />
+        <p class="gs__word">Lekki.</p>
+        <p class="gs__welcome">The human experience app.</p>
       </div>
-      <p class="gs__skip" aria-hidden="true">Tap to continue</p>
     </div>
   `,
   styles: [
@@ -46,106 +46,116 @@ const RETURN_SPLASH_MS = Math.min(500, GUEST_SPLASH_MAX_MS);
         position: fixed;
         inset: 0;
         z-index: 50;
-        background: var(--leos-warm-sand, #ffffff);
+        display: grid;
+        justify-items: center;
+        align-content: start;
+        padding-top: 18vh;
+        background: transparent;
         overflow: hidden;
         opacity: 1;
-        transition: opacity 280ms ease;
+        transition: opacity 280ms cubic-bezier(0.22, 1, 0.36, 1);
         cursor: pointer;
+      }
+      .gs:focus {
+        outline: none;
+      }
+      .gs:focus-visible {
+        outline: 2px solid var(--leos-gold, #d7a14a);
+        outline-offset: -10px;
       }
       .gs--out {
         opacity: 0;
         pointer-events: none;
       }
-
-      .gs__photo {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        object-position: center center;
-        opacity: 0;
-        transform: scale(1.03);
-        animation: gs-in 700ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+      .gs__mark {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.85rem;
       }
-
-      .gs__veil {
+      .gs__mark::before {
+        content: '';
         position: absolute;
-        inset: 0;
-        background: radial-gradient(
-          ellipse at 50% 35%,
-          transparent 35%,
-          rgba(250, 247, 242, 0.35) 100%
-        );
+        z-index: 0;
+        left: 50%;
+        top: 4rem;
+        width: 16rem;
+        height: 16rem;
+        transform: translate(-50%, -50%);
         pointer-events: none;
-        opacity: 0;
-        animation: gs-fade 500ms 200ms ease forwards;
+        background: radial-gradient(ellipse at center, rgba(215, 161, 74, 0.2), transparent 68%);
       }
-
-      .gs__progress {
-        position: absolute;
-        left: 12%;
-        right: 12%;
-        bottom: 12%;
-        height: 2px;
-        background: rgba(255, 255, 255, 0.35);
-        border-radius: 999px;
-        overflow: hidden;
-      }
-      .gs__progress-bar {
+      .gs__logo {
+        position: relative;
+        z-index: 1;
         display: block;
-        height: 100%;
-        width: 0;
-        background: #d7a14a;
-        animation: gs-bar 700ms linear forwards;
+        width: 8rem;
+        height: 8rem;
+        object-fit: contain;
+        transform: translateY(-42vh);
+        filter: drop-shadow(0 0 16px rgba(215, 161, 74, 0.32))
+          drop-shadow(0 10px 24px rgba(215, 161, 74, 0.16));
+        animation: gs-flow-down 3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
       }
-      .gs--return .gs__progress-bar {
-        animation-duration: 500ms;
-      }
-
-      .gs__skip {
-        position: absolute;
-        left: 0;
-        right: 0;
-        bottom: 6%;
+      .gs__word,
+      .gs__welcome {
         margin: 0;
-        text-align: center;
-        font-family: 'Sora', system-ui, sans-serif;
-        font-size: 0.75rem;
-        letter-spacing: 0.04em;
-        color: rgba(255, 255, 255, 0.85);
+        font-family: Sora, system-ui, sans-serif;
         opacity: 0;
-        animation: gs-fade 400ms 350ms ease forwards;
+        animation: gs-copy-in 0.9s 1.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
       }
-
-      @keyframes gs-in {
+      .gs__word {
+        font-size: 1.7rem;
+        font-weight: 650;
+        letter-spacing: -0.04em;
+        color: #fff;
+      }
+      .gs__welcome {
+        font-size: 0.95rem;
+        color: rgba(255, 255, 255, 0.62);
+      }
+      @keyframes gs-flow-down {
+        from {
+          transform: translateY(-42vh);
+        }
         to {
-          opacity: 1;
-          transform: scale(1);
+          transform: translateY(0);
         }
       }
-      @keyframes gs-fade {
+      @keyframes gs-copy-in {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
         to {
           opacity: 1;
-        }
-      }
-      @keyframes gs-bar {
-        to {
-          width: 100%;
+          transform: translateY(0);
         }
       }
 
       @media (prefers-reduced-motion: reduce) {
-        .gs__photo,
-        .gs__veil,
-        .gs__progress-bar,
-        .gs__skip {
+        .gs {
+          transition: none;
+        }
+        .gs__logo {
+          animation: none;
+          transform: none;
+        }
+        .gs__word,
+        .gs__welcome {
           animation: none;
           opacity: 1;
           transform: none;
         }
-        .gs__progress-bar {
-          width: 100%;
+      }
+      @media (prefers-contrast: more) {
+        .gs__mark::before {
+          display: none;
+        }
+        .gs__logo {
+          filter: none;
         }
       }
     `,
@@ -253,7 +263,7 @@ export class GuestSplashPageComponent implements OnInit, OnDestroy {
           res.session.id,
         );
         if (stillIn) this.onboarding.noteOpenSession(res.session.id);
-        const welcome = stillIn ? 'still' : returning ? 'back' : undefined;
+        const welcome = splashWelcomeQuery({ stillIn, returning });
         void this.router.navigate(['/experience'], {
           queryParams: welcome ? { welcome } : {},
         });

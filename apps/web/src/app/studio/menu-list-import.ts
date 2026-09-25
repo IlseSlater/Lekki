@@ -43,7 +43,7 @@ function looksLikeHeader(cells: string[]): boolean {
   return /\b(name|item|dish|label)\b/.test(joined) && /\b(price|zar|cost)\b/.test(joined);
 }
 
-export function parseMenuList(text: string): ImportedMenuRow[] {
+export function parseMenuList(text: string, defaultCategory = 'Food'): ImportedMenuRow[] {
   const lines = text
     .split(/\r?\n/)
     .map((l) => l.trim())
@@ -56,7 +56,7 @@ export function parseMenuList(text: string): ImportedMenuRow[] {
     if (i === 0 && looksLikeHeader(cells)) continue;
     const label = (cells[0] ?? '').trim();
     const price = parsePrice(cells[1] ?? '');
-    const category = (cells[2] ?? '').trim() || 'Food';
+    const category = (cells[2] ?? '').trim() || defaultCategory;
     if (!label || price == null) continue;
     rows.push({ label, unitPrice: price, category });
   }

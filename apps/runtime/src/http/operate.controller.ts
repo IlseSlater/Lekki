@@ -1,4 +1,4 @@
-import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, NotFoundException, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RequireStaffPermission, StaffAuthGuard } from '../staff-auth/staff-auth.guard';
 import type { StaffTokenClaims } from '../staff-auth/staff-token.service';
@@ -12,6 +12,67 @@ import type { StaffTokenClaims } from '../staff-auth/staff-token.service';
 @RequireStaffPermission('session.read')
 export class OperateController {
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Payment attention — failed/amount-mismatch on still-open sessions, not yet noted.
+   * Continuity: Open table + Got it (operatorNotedAt). Never invents refund.
+   */
+  @Get('payments-attention')
+  async paymentsAttention(
+    @Req() req: { staff: StaffTokenClaims },
+    @Query('venueId') venueId?: string,
+  ) {
+    const organisationId = req.staff.org;
+    const payments = await this.prisma.payment.findMany({
+      where: {
+        organisationId,
+        status: { in: ['failed', 'amount_mismatch'] },
+        operatorNotedAt: null,
+        session: {
+          status: { in: ['created', 'active', 'settling'] },
+          ...(venueId ? { venueId } : {}),
+        },
+      },
+      select: {
+        id: true,
+        status: true,
+        sessionId: true,
+        createdAt: true,
+        session: { select: { physicalContext: { select: { code: true } } } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return payments.map((p) => ({
+      id: p.id,
+      sessionId: p.sessionId,
+      placeCode: p.session?.physicalContext?.code ?? null,
+      status: p.status,
+      createdAt: p.createdAt.toISOString(),
+    }));
+  }
+
+  /** Owner noted the failure — money status unchanged. */
+  @Post('payments-attention/:id/heard')
+  async paymentAttentionHeard(
+    @Req() req: { staff: StaffTokenClaims },
+    @Param('id') id: string,
+  ) {
+    const organisationId = req.staff.org;
+    const existing = await this.prisma.payment.findFirst({
+      where: {
+        id,
+        organisationId,
+        status: { in: ['failed', 'amount_mismatch'] },
+      },
+    });
+    if (!existing) throw new NotFoundException('Payment not found');
+    if (existing.operatorNotedAt) return { id: existing.id, noted: true };
+    const updated = await this.prisma.payment.update({
+      where: { id },
+      data: { operatorNotedAt: new Date() },
+    });
+    return { id: updated.id, noted: true };
+  }
 
   @Get('floor')
   async floor(

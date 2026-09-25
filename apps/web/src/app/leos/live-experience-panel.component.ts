@@ -8,14 +8,18 @@ import {
   type GuestExperienceDesign,
   type ProjectionItem,
 } from '../studio/guest-experience-design';
-import { getExperience, type SetupStepSlug } from '../studio/experience-registry';
+import { getExperience } from '../studio/experience-registry';
 import { StudioContextService } from '../services/studio-context.service';
 import { LeosApiService } from '../services/leos-api.service';
 import { GuestShellProjectionComponent } from './guest-shell-projection.component';
+import { VenueArrivalComponent } from './venue-arrival.component';
+import { parseVenueArrival, type VenueArrivalLook } from '../studio/venue-arrival';
 import { safeBrandImageUrl } from './catalogue-parity';
 import { CatalogueLiveService } from '../services/catalogue-live.service';
 import { missingFactCopy, resolveLiveFacts, spokenPlaceLine } from '../studio/live-facts';
-import { resolveCatalogueLock } from '../studio/catalogue-lock';
+import { guestPlaceSpoken } from '../studio/place-continuity';
+import { livePayConfidenceSentence } from '../studio/pay-confidence';
+import { studioLivePhone } from '../studio/catalogue-lock';
 
 /**
  * Live Experience — phone on the desk (Design System v1).
@@ -24,7 +28,7 @@ import { resolveCatalogueLock } from '../studio/catalogue-lock';
 @Component({
   selector: 'leos-live-experience-panel',
   standalone: true,
-  imports: [GuestShellProjectionComponent],
+  imports: [GuestShellProjectionComponent, VenueArrivalComponent],
   template: `
     <div class="phone-desk" aria-label="Live Experience">
       <p class="phone-desk__label">Live Experience</p>
@@ -32,36 +36,21 @@ import { resolveCatalogueLock } from '../studio/catalogue-lock';
         <div class="phone__notch" aria-hidden="true"></div>
         <div class="phone__screen">
           @if (mode === 'arrival') {
-            <div class="phone-arrival" [style.--brand]="brandColour">
-              <p class="phone-arrival__eyebrow" [class.phone-venue--morph]="pulse">
-                {{ arrivalEyebrow }}
-              </p>
-              @if (placeSpoken) {
-                <p class="phone-arrival__place">
-                  <strong>{{ placeSpoken }}</strong>
-                </p>
-              }
-              <p class="phone-arrival__reassure">You’re in.</p>
-              <p class="phone-arrival__muted">
-                @if (placeSpoken) {
-                  <strong>{{ placeSpoken }}</strong>
-                  — the team can see you. Browse when you’re ready.
-                } @else {
-                  The team can see you. Browse when you’re ready.
-                }
-              </p>
-              <button type="button" class="phone-arrival__cta" tabindex="-1">
-                {{ catalogueLabel }}
-              </button>
-            </div>
+            <leos-venue-arrival [look]="arrivalLook" [interactive]="false" />
           } @else if (mode === 'pay') {
             <div class="phone-pay" [style.--brand]="brandColour">
               @if (logoUrl) {
                 <img class="phone-pay__logo" [src]="logoUrl" alt="" width="36" height="36" />
               }
               <h2 class="phone-pay__venue" [class.phone-venue--morph]="pulse">{{ venueName }}</h2>
+              @if (guestPlaceLine) {
+                <p class="phone-pay__place">{{ guestPlaceLine }}</p>
+              }
               <p class="phone-pay__title">Your {{ paymentLabel.toLowerCase() }}</p>
               <p class="phone-pay__amount">{{ sampleVisitTotal }}</p>
+              @if (payConfidence) {
+                <p class="phone-pay__trust">{{ payConfidence }}</p>
+              }
               <ul class="phone-pay__methods">
                 @if (payMethods.card) {
                   <li>Card</li>
@@ -127,36 +116,21 @@ import { resolveCatalogueLock } from '../studio/catalogue-lock';
           <div class="phone__notch" aria-hidden="true"></div>
           <div class="phone__screen">
             @if (mode === 'arrival') {
-              <div class="phone-arrival" [style.--brand]="brandColour">
-                <p class="phone-arrival__eyebrow" [class.phone-venue--morph]="pulse">
-                  {{ arrivalEyebrow }}
-                </p>
-                @if (placeSpoken) {
-                  <p class="phone-arrival__place">
-                    <strong>{{ placeSpoken }}</strong>
-                  </p>
-                }
-                <p class="phone-arrival__reassure">You’re in.</p>
-                <p class="phone-arrival__muted">
-                  @if (placeSpoken) {
-                    <strong>{{ placeSpoken }}</strong>
-                    — the team can see you. Browse when you’re ready.
-                  } @else {
-                    The team can see you. Browse when you’re ready.
-                  }
-                </p>
-                <button type="button" class="phone-arrival__cta" tabindex="-1">
-                  {{ catalogueLabel }}
-                </button>
-              </div>
+              <leos-venue-arrival [look]="arrivalLook" [interactive]="false" />
             } @else if (mode === 'pay') {
               <div class="phone-pay" [style.--brand]="brandColour">
                 @if (logoUrl) {
                   <img class="phone-pay__logo" [src]="logoUrl" alt="" width="36" height="36" />
                 }
                 <h2 class="phone-pay__venue" [class.phone-venue--morph]="pulse">{{ venueName }}</h2>
+                @if (guestPlaceLine) {
+                  <p class="phone-pay__place">{{ guestPlaceLine }}</p>
+                }
                 <p class="phone-pay__title">Your {{ paymentLabel.toLowerCase() }}</p>
                 <p class="phone-pay__amount">{{ sampleVisitTotal }}</p>
+                @if (payConfidence) {
+                  <p class="phone-pay__trust">{{ payConfidence }}</p>
+                }
                 <ul class="phone-pay__methods">
                   @if (payMethods.card) {
                     <li>Card</li>
@@ -307,7 +281,8 @@ import { resolveCatalogueLock } from '../studio/catalogue-lock';
         height: min(62dvh, 34rem);
         transition: opacity var(--studio-duration, 220ms) var(--studio-ease-soft, cubic-bezier(0.33, 1, 0.68, 1));
       }
-      .phone__screen leos-guest-shell-projection {
+      .phone__screen leos-guest-shell-projection,
+      .phone__screen leos-venue-arrival {
         display: block;
         height: 100%;
       }
@@ -422,10 +397,18 @@ import { resolveCatalogueLock } from '../studio/catalogue-lock';
         color: #6b7280;
       }
       .phone-pay__venue {
-        margin: 0.35rem 0 1.5rem;
+        margin: 0.35rem 0 0;
         font-family: 'Fraunces', Georgia, serif;
         font-size: 1.5rem;
         font-weight: 650;
+      }
+      .phone-pay__place {
+        margin: 0.2rem 0 1.25rem;
+        font-family: 'Sora', system-ui, sans-serif;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        color: #6b7280;
       }
       .phone-pay__title {
         margin: 0;
@@ -433,10 +416,17 @@ import { resolveCatalogueLock } from '../studio/catalogue-lock';
         color: #6b7280;
       }
       .phone-pay__amount {
-        margin: 0.35rem 0 1.5rem;
+        margin: 0.35rem 0 0.5rem;
         font-size: 2rem;
         font-weight: 650;
         letter-spacing: -0.03em;
+      }
+      .phone-pay__trust {
+        margin: 0 0 1.25rem;
+        font-size: 0.8125rem;
+        font-weight: 550;
+        line-height: 1.4;
+        color: #6b7280;
       }
       .phone-pay__methods {
         list-style: none;
@@ -526,11 +516,26 @@ export class LiveExperiencePanelComponent implements OnInit, OnDestroy {
   brandColour = '#d7a14a';
   location = '';
   placeLabel = '';
-  /** Guest-spoken place — never “Table Table 1”. */
+  /** Guest-spoken place (`Table 12`) — same string Guest shell shows. */
   placeSpoken = '';
   /** Entry eyebrow: venue when named, else Welcome. */
   arrivalEyebrow = 'Welcome';
   greeting = 'Hi there';
+
+  /** Alias for pay / shell templates — same as placeSpoken. */
+  get guestPlaceLine(): string {
+    return this.placeSpoken;
+  }
+
+  get payConfidence(): string {
+    const payOpen = !!(
+      this.payMethods.card ||
+      this.payMethods.applePay ||
+      this.payMethods.googlePay ||
+      this.design.payAtTable
+    );
+    return livePayConfidenceSentence(payOpen);
+  }
   design: GuestExperienceDesign = defaultDesignForType('restaurant');
   payMethods = { card: true, applePay: true, googlePay: true };
   pulse = false;
@@ -547,6 +552,18 @@ export class LiveExperiencePanelComponent implements OnInit, OnDestroy {
   leaveLabel = 'Leave';
   experienceTypeId = 'restaurant';
   private lastFingerprint = '';
+
+  get arrivalLook(): VenueArrivalLook {
+    const active = this.ctx.activeExperience();
+    return parseVenueArrival({
+      venueName: this.venueName,
+      location: this.location,
+      placeSpoken: this.placeSpoken,
+      brandColour: this.brandColour,
+      logoUrl: this.logoUrl,
+      guestDesign: active?.guestDesign,
+    });
+  }
 
   constructor() {
     effect(() => {
@@ -582,21 +599,12 @@ export class LiveExperiencePanelComponent implements OnInit, OnDestroy {
 
   private hydrate(fromLive: boolean) {
     const url = this.router.url;
-    const match = /\/studio\/setup\/([^/?#]+)/.exec(url);
-    const onCreate = url.includes('/studio/create');
-    const slug = (match?.[1] ?? (onCreate ? 'experience' : 'identity')) as SetupStepSlug;
-
-    // Identity + Places → arrival · Payments → pay · Go Live → public shell · else browse shell
-    if (slug === 'payments') {
-      this.mode = 'pay';
-      this.publicLive = false;
-    } else if (slug === 'identity' || slug === 'places') {
-      this.mode = 'arrival';
-      this.publicLive = false;
-    } else {
-      this.mode = 'shell';
-      this.publicLive = slug === 'golive' || !!this.ctx.readConfig().live;
-    }
+    const desk = studioLivePhone({
+      url,
+      live: !!this.ctx.readConfig().live,
+    });
+    this.mode = desk.mode;
+    this.publicLive = desk.publicLive;
 
     const active = this.ctx.activeExperience();
     // typeId defaults to restaurant for pack terminology and design mode only — never for venue/place/catalogue facts.
@@ -627,12 +635,8 @@ export class LiveExperiencePanelComponent implements OnInit, OnDestroy {
     this.placeNoun = def?.terminology.place ?? 'Table';
     this.transactionLabel = def?.terminology.transaction ?? 'Order';
     this.leaveLabel = this.leaveLabelFor(typeId, this.placeNoun);
-    const catLock = resolveCatalogueLock({
-      live: !!this.ctx.readConfig().live,
-      slug: match?.[1] ?? '',
-    });
-    this.lockCatalogue = catLock.lockCatalogue;
-    this.allowExampleCatalogue = catLock.allowExampleCatalogue;
+    this.lockCatalogue = desk.lockCatalogue;
+    this.allowExampleCatalogue = desk.allowExampleCatalogue;
     const paymentsActive = this.ctx.livePaymentsActive();
     this.payMethods = this.ctx.livePayMethods();
     if (this.lockCatalogue && !paymentsActive) {
@@ -661,13 +665,15 @@ export class LiveExperiencePanelComponent implements OnInit, OnDestroy {
 
     const focus = this.ctx.liveFocusPlace();
     this.placeLabel = focus || factPlace;
-    this.placeSpoken = spokenPlaceLine({
+    // Open-tab Place Identity: Live speaks the same form as Guest — never raw code alone.
+    this.placeSpoken = guestPlaceSpoken(this.placeNoun, this.placeLabel);
+    this.arrivalEyebrow = this.venueName || 'Welcome';
+
+    const deskJoin = spokenPlaceLine({
       venueName: this.venueName,
       placeCode: this.placeLabel,
     });
-    this.arrivalEyebrow = this.venueName || 'Welcome';
-
-    const fp = `${this.venueName}|${this.logoUrl}|${this.brandColour}|${this.location}|${this.placeSpoken}|${JSON.stringify(this.design)}|${JSON.stringify(this.payMethods)}|${this.mode}|${this.publicLive}|${this.sampleVisitTotal}`;
+    const fp = `${this.venueName}|${this.logoUrl}|${this.brandColour}|${this.location}|${deskJoin}|${this.placeSpoken}|${JSON.stringify(this.design)}|${JSON.stringify(this.payMethods)}|${this.mode}|${this.publicLive}|${this.sampleVisitTotal}|${this.arrivalLook.background}|${this.arrivalLook.headline}`;
     if (fromLive && this.lastFingerprint && this.lastFingerprint !== fp) {
       this.pulse = true;
       if (this.pulseTimer) clearTimeout(this.pulseTimer);

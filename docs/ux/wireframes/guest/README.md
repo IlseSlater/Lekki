@@ -7,6 +7,8 @@
 
 LEOS is not a collection of pages. It is a collection of **states**. The screen barely changes; the state does.
 
+**Running path (not in the numbered boxes below):** QR → `/splash` → `arrival` (Get started → menu) → G-03…G-09 phases on `/experience`. Join commits during splash. Specs G-01–G-09 remain the heartbeat; splash/landing are **GAP-04**.
+
 ---
 
 ## Numbering

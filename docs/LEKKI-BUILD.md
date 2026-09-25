@@ -14,9 +14,9 @@ Read first every session.
 | **Mission** | Give people **confidence** throughout an experience. |
 | **Sacred** | Reduce **uncertainty**. |
 | **Phase** | **Hospitality Phase** |
-| **Current Proof** | **Continuity polish if named** |
-| **Current Human Moment** | Name one continuity moment — then craft it |
-| **Next Proof** | Hold until a moment is named |
+| **Current Proof** | **Payment failed — what do I do?** — Open table · Got it |
+| **Current Human Moment** | A payment failed — what’s my next step? |
+| **Next Proof** | Continuity polish if named |
 | **Platform Confidence** | High |
 | **Bottleneck** | Named Continuity craft — not new products |
 | **Goal** | Confidence · Calm · Hospitality · Continuity |
@@ -25,7 +25,7 @@ Read first every session.
 
 **Instruct:** `Continue building Lekki`
 
-**Look:** [LVES](ux/lves.md) · **Studio Design Constitution:** [LEOS-Studio-Design-Blueprint.md](ux/LEOS-Studio-Design-Blueprint.md) (v1.2 · [§3A Studio→Live→Guest](ux/LEOS-Studio-Design-Blueprint.md#section-3a--studio--live-experience--guest-interaction-contract)) · **Studio Design System v1 (Frozen):** [studio-design-system.md](ux/studio-design-system.md) · **Motion (Frozen):** [leos-motion-system.md](ux/leos-motion-system.md)  
+**Look:** [LVES](ux/lves.md) · **Lifecycle & Screen Map:** [lifecycle-and-screen-map.md](ux/lifecycle-and-screen-map.md) · **Studio Design Constitution:** [LEOS-Studio-Design-Blueprint.md](ux/LEOS-Studio-Design-Blueprint.md) (v1.2 · [§3A Studio→Live→Guest](ux/LEOS-Studio-Design-Blueprint.md#section-3a--studio--live-experience--guest-interaction-contract)) · **Studio Design System v1 (Frozen):** [studio-design-system.md](ux/studio-design-system.md) · **Motion (Frozen):** [leos-motion-system.md](ux/leos-motion-system.md)  
 **Setup v1:** **COMPLETE — do not redesign** · [operate-craft](ux/operate-craft.md) · [grow-craft](ux/grow-craft.md)  
 **Live Experience (frozen):** [live-experience.md](ux/live-experience.md)  
 **Phase freeze:** [Hospitality Phase](ux/hospitality-phase.md) — Moments → Feel → Trust  
@@ -56,7 +56,7 @@ LEOS
 
 **IA:** three humans · three experiences · one platform — [IA](ux/ia-experience-studio-shells.md) · [ADR-004](adr/004-three-human-experiences.md)
 
-We design **moments**, not screens.
+We design **moments**, not screens. We ship **vertical slices** — one complete journey, all layers — not leftover GAP lists. [Map §12](ux/lifecycle-and-screen-map.md).
 
 ---
 
@@ -124,9 +124,9 @@ Restaurant ✓ · Café ✓ · Hotel · Festival · Airport · Healthcare path-p
 
 **Hospitality Phase.** Shell ✓ · Live ✓ · Setup ✓ · Owner→QR ✓ · Home ✓ · Operate ✓ · Welcome Back ✓ · Grow ✓ · Alignment ✓ · **Claim-from-table** ✓ · **PaymentCapability vault** ✓ · **Board calm** ✓ · **G-04 browse confidence** ✓ · **Equal share people** ✓ · **Studio→Live→Guest parity** ✓ · **Team confidence** ✓ · **Operate craft glance** ✓ · **Grow one-breath** ✓ · **Tip Continuity** ✓ · **Ready → Pay** ✓ · **Leave while open** ✓ · **Mid-visit resume** ✓ · **Help ack** ✓ · **Entry wait still-in** ✓.
 
-**Next:** Continuity polish if named. Resist Marketplace · Neo · Setup redesign · Admin BI · allocation wizard.
+**Next:** Stop. GAP-01…GAP-08 are closed or Hold-locked. Next is a named continuity moment — not Marketplace · Neo · Setup redesign · restoring deleted pages.
 
-**Roadmap (fidelity, not redesign):** Shell ✓ · Live ✓ · Setup ✓ · Evidence ✓ · Home ✓ · Operate ✓ · Remember ✓ · Grow ✓ · Align ✓ · Claim ✓ · Vault ✓ · Board calm ✓ · G-04 ✓ · Equal people ✓ · §3A Live parity ✓ · Team confidence ✓ · Operate craft ✓ · Grow one-breath ✓ · Tip Continuity ✓ · Ready → Pay ✓ · Leave while open ✓ · Mid-visit resume ✓ · Help ack ✓ · Entry wait ✓.
+**Roadmap (fidelity, not redesign):** Shell ✓ · Live ✓ · Setup ✓ · Evidence ✓ · Home ✓ · Operate ✓ · Remember ✓ · Grow ✓ · Align ✓ · Claim ✓ · Vault ✓ · Board calm ✓ · G-04 ✓ · Equal people ✓ · §3A Live parity ✓ · Team confidence ✓ · Operate craft ✓ · Grow one-breath ✓ · Tip Continuity ✓ · Ready → Pay ✓ · Leave while open ✓ · Mid-visit resume ✓ · Help ack ✓ · Entry wait ✓ · First impression ✓ · Staff shift ✓ · Catalogue ✓ · Dead pages ✓ · Payments one door ✓ · Screen coverage ✓.
 
-**Evidence:** [Entry wait still-in](ux/evidence/continuity-entry-wait.md) · [Help ack](ux/evidence/continuity-help-ack.md) · [Mid-visit resume](ux/evidence/continuity-mid-visit-resume.md) · [Leave while open](ux/evidence/continuity-leave-open.md) · [Ready → Pay](ux/evidence/continuity-ready-pay.md) · [Tip Continuity](ux/evidence/continuity-tip-parity.md) · [Grow one-breath](ux/evidence/grow-one-breath.md) · [Operate craft glance](ux/evidence/operate-craft-glance.md) · [Studio Team confidence](ux/evidence/studio-team-confidence.md) · [Studio→Live→Guest parity](ux/evidence/studio-live-guest-parity.md) · [Equal share people](ux/evidence/continuity-equal-share.md) · [G-04 choices sheet](ux/evidence/g04-choices-sheet.md) · [Operate calm / Board calm](ux/evidence/operate-calm-pass.md) · [PaymentCapability vault](ux/evidence/payment-capability-vault.md) · [Claim-from-table](ux/evidence/continuity-claim-from-table.md) · [Alignment crisp](ux/evidence/continuity-alignment-crisp.md) · [Grow calm](ux/evidence/grow-calm-insights.md) · [Welcome Back](ux/evidence/welcome-back-remember.md) · [Studio Home readiness](ux/evidence/studio-home-readiness.md) · [Owner → QR walk](ux/evidence/owner-qr-walk.md) · [Setup visual pass](ux/evidence/setup-visual-pass.md) · [Live first-class](ux/evidence/live-experience-first-class.md) · [Blueprint §3A](ux/LEOS-Studio-Design-Blueprint.md#section-3a--studio--live-experience--guest-interaction-contract)
+**Evidence:** [Screen coverage](ux/evidence/screen-coverage.md) · [Payments one door](ux/evidence/payments-one-door.md) · [Dead Studio pages](ux/evidence/studio-dead-pages.md) · [Catalogue menu](ux/evidence/catalogue-menu.md) · [Staff shift](ux/evidence/staff-shift.md) · [Guest first impression](ux/evidence/guest-first-impression.md) · [Entry wait still-in](ux/evidence/continuity-entry-wait.md) · [Help ack](ux/evidence/continuity-help-ack.md) · [Mid-visit resume](ux/evidence/continuity-mid-visit-resume.md) · [Leave while open](ux/evidence/continuity-leave-open.md) · [Ready → Pay](ux/evidence/continuity-ready-pay.md) · [Tip Continuity](ux/evidence/continuity-tip-parity.md) · [Grow one-breath](ux/evidence/grow-one-breath.md) · [Operate craft glance](ux/evidence/operate-craft-glance.md) · [Studio Team confidence](ux/evidence/studio-team-confidence.md) · [Studio→Live→Guest parity](ux/evidence/studio-live-guest-parity.md) · [Equal share people](ux/evidence/continuity-equal-share.md) · [G-04 choices sheet](ux/evidence/g04-choices-sheet.md) · [Operate calm / Board calm](ux/evidence/operate-calm-pass.md) · [PaymentCapability vault](ux/evidence/payment-capability-vault.md) · [Claim-from-table](ux/evidence/continuity-claim-from-table.md) · [Alignment crisp](ux/evidence/continuity-alignment-crisp.md) · [Grow calm](ux/evidence/grow-calm-insights.md) · [Welcome Back](ux/evidence/welcome-back-remember.md) · [Studio Home readiness](ux/evidence/studio-home-readiness.md) · [Owner → QR walk](ux/evidence/owner-qr-walk.md) · [Setup visual pass](ux/evidence/setup-visual-pass.md) · [Live first-class](ux/evidence/live-experience-first-class.md) · [Blueprint §3A](ux/LEOS-Studio-Design-Blueprint.md#section-3a--studio--live-experience--guest-interaction-contract)
 

@@ -23,6 +23,7 @@ Skills are **how-to** (progressive disclosure). Agents under `.cursor/agents/` a
 | Voice · copy · hospitality language | `@brand-architect` |
 | Motion 160/220/280/360 | `@motion-architect` |
 | WCAG AA | `@accessibility-architect` |
+| Tailwind · CVA · `cn()` · halo | `@tailwind-expert` (rule `elite-frontend-tailwind`) |
 | PaymentCapability · basis-points | `@payments-architect` |
 | Money / split / Decimal proof | `@money-invariants` |
 | Unit tests (`node:test`, `.test.ts`) | `@unit-proof` |

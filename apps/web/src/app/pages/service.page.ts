@@ -1,4 +1,4 @@
-import { Component, Input, OnDestroy, OnInit, inject } from '@angular/core';
+import { Component, Input, OnChanges, OnDestroy, OnInit, SimpleChanges, inject } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
@@ -915,7 +915,7 @@ type HelpReq = {
     `,
   ],
 })
-export class ServicePageComponent implements OnInit, OnDestroy {
+export class ServicePageComponent implements OnInit, OnChanges, OnDestroy {
   private readonly api = inject(LeosApiService);
   private readonly ctx = inject(StudioContextService);
   private readonly staffSession = inject(OperateStaffSessionService);
@@ -942,6 +942,8 @@ export class ServicePageComponent implements OnInit, OnDestroy {
   monitorMode = false;
   /** Studio Operate right rail — real Staff board, read-only. */
   @Input() embedMonitor = false;
+  /** When set from Operate payment attention, open that session's detail. */
+  @Input() focusSessionId = '';
   socketLive = false;
   detail: TableRow | null = null;
   detailItems: TableItem[] = [];
@@ -1065,6 +1067,19 @@ export class ServicePageComponent implements OnInit, OnDestroy {
     }, this.api.isSocketConnected() ? 8000 : 4000);
   }
 
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['focusSessionId'] && this.focusSessionId) {
+      this.applyFocusSession();
+    }
+  }
+
+  private applyFocusSession() {
+    if (!this.focusSessionId || !this.tables.length) return;
+    if (this.detail?.sessionId === this.focusSessionId) return;
+    const hit = this.tables.find((t) => t.sessionId === this.focusSessionId);
+    if (hit) this.loadDetail(this.focusSessionId, true);
+  }
+
   ngOnDestroy() {
     if (this.poll) clearInterval(this.poll);
     this.unsubPlatform?.();
@@ -1150,7 +1165,7 @@ export class ServicePageComponent implements OnInit, OnDestroy {
   }
 
   get serviceHelpCount(): number {
-    return this.assistance.filter((a) => a.kind !== 'manager').length;
+    return this.assistance.filter((a) => a.kind === 'service').length;
   }
 
   placeFor(req: HelpReq): string {
@@ -1187,7 +1202,7 @@ export class ServicePageComponent implements OnInit, OnDestroy {
           bundle as { assistance: HelpReq[] }
         ).assistance;
         this.assistance = assistance
-          .filter((a) => a.status !== 'resolved')
+          .filter((a) => a.status !== 'resolved' && a.kind !== 'feedback')
           .sort((a, b) => {
             const aOpen = a.status === 'acknowledged' ? 1 : 0;
             const bOpen = b.status === 'acknowledged' ? 1 : 0;
@@ -1202,6 +1217,9 @@ export class ServicePageComponent implements OnInit, OnDestroy {
           pendingCount: t.pendingCount ?? 0,
           items: t.items ?? [],
         }));
+
+
+        this.applyFocusSession();
 
         if (this.detail) {
           const live = this.tables.find((t) => t.sessionId === this.detail!.sessionId);
@@ -1464,7 +1482,7 @@ export class ServicePageComponent implements OnInit, OnDestroy {
   }
 
   private nextHelp(): HelpReq | null {
-    const service = this.assistance.filter((a) => a.kind !== 'manager');
+    const service = this.assistance.filter((a) => a.kind === 'service');
     return service.find((a) => a.status !== 'acknowledged') || service[0] || null;
   }
 

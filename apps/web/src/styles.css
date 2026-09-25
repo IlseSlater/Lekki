@@ -1,0 +1,199 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   LEOS global style entry — Tailwind v4 over the existing LEOS/LVES CSS.
+
+   Read docs/tailwind-conversion-prompt.md before changing this file.
+   Three things here are load-bearing and are not style preferences:
+
+   1. PREFLIGHT IS DELIBERATELY NOT IMPORTED.
+      Tailwind's base reset strips heading sizes, list markers, button
+      chrome and default margins. This app resets only box-sizing and
+      body margin (leos.css lines 1-20), so Preflight would visibly change
+      every screen. The goal of this phase is zero rendered change, so we
+      import theme + utilities and skip preflight.css.
+      To adopt Preflight later, add it back one surface at a time:
+        @import "tailwindcss/preflight.css" layer(base);
+
+   2. THE PRODUCT CSS IS IMPORTED INTO layer(components).
+      Unlayered CSS beats layered CSS regardless of specificity, so without
+      layer() every .leos-* rule would beat every Tailwind utility and no
+      utility would ever apply. tokens.css stays UNLAYERED on purpose — it
+      only declares custom properties, which layers do not affect.
+
+   3. ORDER IS tokens → leos → studio → registers.
+      Same order as the old styles.scss @use chain. registers.css must come
+      last: its prefers-contrast block overrides .leos-studio-shell__main
+      from studio.css.
+   ───────────────────────────────────────────────────────────────────────── */
+
+@layer theme, base, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+@import "./styles/tokens.css";
+@import "./styles/leos.css" layer(components);
+@import "./styles/studio.css" layer(components);
+@import "./styles/registers.css" layer(components);
+
+/* ─────────────────────────────────────────────────────────────────────────
+   @theme — aliases over the existing --leos-* / --studio-* tokens.
+
+   These generate utilities (bg-ink, text-ink-body, rounded-card, max-w-studio…).
+   They are ALIASES: every value is a var() pointing at a real token. Never put
+   a literal colour here — --leos-* and --studio-* remain the single source of
+   truth, per docs/LEK-026 §10 and docs/ux/lves.md.
+
+   Coverage was measured, not guessed: 87 distinct custom properties are read
+   from component CSS across Guest/PWA, Operate, Studio and the shells. The
+   aliases below cover every one that belongs to the design system. The ones
+   that do not are listed at the bottom as open decisions rather than quietly
+   promoted into the Tailwind vocabulary.
+
+   Emitting these changes nothing on screen. Nothing uses them until a screen
+   is converted.
+   ───────────────────────────────────────────────────────────────────────── */
+
+@theme {
+  /* ── Action: four different things, never collapsed into one ────────────
+     The mistake to avoid is a single --color-action. Studio's action is
+     black, Guest Pay's is gold, the Obsidian frame's is near-white, and the
+     go-live peak is gold exactly once. They are different decisions. */
+
+  /* Root action — gold. Guest Pay and anything outside a register. */
+  --color-action: var(--leos-action);
+  --color-action-hover: var(--leos-action-hover);
+  --color-on-action: var(--leos-on-brand);
+
+  /* Register action — resolves per context: black in Ash, near-white in
+     Obsidian. Use this on any Studio control inside .leos-register--*. */
+  --color-register-action: var(--leos-register-action);
+  --color-register-action-hover: var(--leos-register-action-hover);
+  --color-on-register-action: var(--leos-register-on-action);
+
+  /* Peak — "Open for guests". One fill in the entire setup journey. */
+  --color-peak: var(--leos-action-peak);
+  --color-on-peak: var(--leos-on-peak);
+
+  /* ── Venue brand — the white-label colour ───────────────────────────────
+     GUEST/PWA CRITICAL. --brand is set at runtime from the venue's profile;
+     16 declarations in the guest shell read it, every one with #d7a14a as
+     the fallback. lves.md: "They never see our name on the experience."
+     Anything on a guest surface that should carry the VENUE's colour uses
+     bg-brand / text-brand / border-brand — never bg-action, which is ours. */
+  --color-brand: var(--brand, var(--leos-gold));
+
+  /* ── Ink ───────────────────────────────────────────────────────────────
+     Verified on the real Ash card composite (#e6e6e7):
+     ink 15.4:1 · ink-body 6.08:1 · ink-secondary 3.82:1 (FAILS AA there —
+     placeholder text only) */
+  --color-ink: var(--leos-ink);
+  --color-ink-body: var(--leos-ink-body);
+  --color-ink-secondary: var(--leos-ink-secondary);
+  --color-ink-muted: var(--leos-ink-muted);
+
+  /* Studio ink ramp — 65 uses in component CSS, the most-read family here */
+  --color-studio-ink: var(--studio-ink);
+  --color-studio-ink-secondary: var(--studio-ink-secondary);
+  --color-studio-ink-tertiary: var(--studio-ink-tertiary);
+
+  /* Obsidian ink — the cinematic frame (sign-in, go-live). Not dark mode. */
+  --color-obsidian-ink: var(--leos-obsidian-ink);
+  --color-obsidian-ink-muted: var(--leos-obsidian-ink-muted);
+
+  /* ── Surfaces ──────────────────────────────────────────────────────────── */
+  --color-ground: var(--leos-ground);
+  --color-surface: var(--leos-surface);
+  --color-surface-secondary: var(--leos-surface-secondary);
+  --color-sand: var(--leos-warm-sand);
+  --color-sand-dark: var(--leos-warm-sand-dark);
+  --color-studio-surface: var(--studio-surface);
+  --color-studio-surface-secondary: var(--studio-surface-secondary);
+  --color-obsidian-card: var(--leos-obsidian-card);
+
+  /* ── Boundaries ────────────────────────────────────────────────────────
+     WCAG 1.4.11 wants 3:1 on a control boundary. --leos-border (#eae6e1) is
+     1.24:1 and is decorative only; --color-field (#d8d2c9) is the real one. */
+  --color-hairline: var(--leos-border);
+  --color-field: var(--leos-ash-field-border);
+  --color-row-edge: var(--leos-ash-row-edge);
+  --color-studio-line: var(--studio-line);
+  --color-obsidian-hairline: var(--leos-obsidian-hairline);
+
+  /* ── Semantic ──────────────────────────────────────────────────────────── */
+  --color-success: var(--leos-success);
+  --color-success-bg: var(--leos-success-bg);
+  --color-warning: var(--leos-warning);
+  --color-warning-bg: var(--leos-warning-bg);
+  --color-danger: var(--leos-danger);
+  --color-danger-bg: var(--leos-danger-bg);
+  --color-studio-success: var(--studio-success);
+  --color-studio-success-soft: var(--studio-success-soft);
+
+  /* ── Geometry ──────────────────────────────────────────────────────────── */
+  --radius-card: var(--leos-radius-card);
+  --radius-button: var(--leos-radius-button);
+  --radius-input: var(--leos-radius-input);
+  --radius-studio: var(--studio-radius);
+  --radius-studio-lg: var(--studio-radius-lg);
+
+  /* ── Layout widths — generates max-w-* / w-* ───────────────────────────
+     The Studio column and the phone-on-desk Live Experience panel are
+     layout constants, not arbitrary numbers. */
+  --container-studio: var(--studio-studio-width);
+  --container-live: var(--studio-live-width);
+  --container-story: var(--studio-story-width);
+
+  /* ── Type ──────────────────────────────────────────────────────────────── */
+  --font-sans: var(--leos-font-sans);
+  --font-display: var(--leos-font-display);
+  --font-studio: var(--studio-font);
+
+  /* ── Motion ────────────────────────────────────────────────────────────
+     Everything moves like light: fade · flow · rise · settle.
+     See docs/ux/leos-motion-system.md (Frozen). */
+  --ease-leos: var(--leos-ease);
+  --ease-studio: var(--studio-ease);
+  --ease-studio-soft: var(--studio-ease-soft);
+
+  --duration-press: var(--leos-duration-press);
+  --duration-fast: var(--leos-duration-fast);
+  --duration-base: var(--leos-duration);
+  --duration-enter: var(--leos-duration-enter);
+  --duration-sheet: var(--leos-duration-sheet);
+  --duration-settle: var(--studio-duration-settle);
+  --duration-ring: var(--leos-duration-ring);
+  --duration-halo: var(--leos-duration-halo);
+  --duration-stagger: var(--leos-stagger);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   NOT ALIASED — open design decisions, deliberately left out
+   ─────────────────────────────────────────────────────────────────────────
+
+   Three private palettes exist outside the design system. Aliasing them here
+   would make off-system colour the path of least resistance, so they stay
+   out until someone decides what they are. Until then, those surfaces keep
+   their CSS rather than moving to utilities.
+
+   1. --w-* in service.page.ts (68 uses) — Operate's own palette, declared as
+      raw hex inside one component:
+        --w-blue #e7f0ff · --w-mint #e4f6ea · --w-coral #ffe8dc
+        --w-ink  #1b2230 · --w-muted #6b7280
+      lves.md: "Gold is the only brand color. Everything else stays neutral."
+      Operate currently has mint, blue and coral. Resolve that first.
+
+   2. --exp-ink in studio-team.page.ts — one name, six different hex values
+      for six experience types. Either a real per-experience token family or
+      it should not be a variable at all.
+
+   3. --scan-* in scan-qr.page.ts — a local alias layer over --leos-ink with
+      hardcoded --scan-surface: #fff. Harmless, but it duplicates tokens that
+      already exist.
+
+   BREAKPOINTS are also deliberately not set. The app uses ten distinct
+   widths: 640, 768 and 1280 already match Tailwind's sm/md/xl; the other
+   seven — 720, 800, 860, 900, 960, 1023(max), 1100 — have no equivalent.
+   Reassigning a 900px query to lg (1024px) would move layout on real
+   screens, so converted screens keep their existing @media blocks until the
+   seven orphans get an answer.
+   ───────────────────────────────────────────────────────────────────────── */

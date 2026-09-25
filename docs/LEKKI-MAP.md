@@ -1,7 +1,7 @@
 # LEKKI-MAP
 
 **Nav only** — how Lekki fits together. Not a LEK. Not process expansion.  
-Daily board: [LEKKI-BUILD.md](LEKKI-BUILD.md)
+Daily board: [LEKKI-BUILD.md](LEKKI-BUILD.md) · Screens: [ux/lifecycle-and-screen-map.md](ux/lifecycle-and-screen-map.md)
 
 ---
 
@@ -39,7 +39,7 @@ Every change improves **CX · DX · OX · PX** and reduces cognitive load, uncer
 ## Journeys (priority filter)
 
 Provider: Create → Configure → Activate → Operate → Grow  
-Experience: Discover → Join → Experience → Complete → Return  
+Experience: QR → Splash → Arrival → Menu heartbeat → Complete → Return  
 
 Improve one or both — or do not build.
 
@@ -84,12 +84,12 @@ If yes → continue. If not → fix the platform.
 | | |
 |--|--|
 | Mission | OS for human experiences |
-| Phase | Construction |
-| Current Proof | Restaurant |
-| Next Proof | Marketplace / Neo (Product unlock) |
+| Phase | **Hospitality Phase** |
+| Current Proof | GAP-01…GAP-08 closed or Hold-locked |
+| Next Proof | Continuity polish if named — not Marketplace / Neo |
 | Platform Confidence | High |
-| Construction | Holding |
-| Platform Proof Index | Restaurant ✓ · Café ✓ Proven · Packs ✓ · Go Live QR ✓ |
+| Construction | One journey · all layers · then stop |
+| Platform Proof Index | Restaurant ✓ · Café ✓ · Packs ✓ · Go Live QR ✓ · Guest heartbeat ✓ |
 
 **Three Green:** Running · Proven · Reusable.  
 **Commit test:** Did this make LEOS a better OS for human experiences?

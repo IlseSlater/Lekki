@@ -27,6 +27,24 @@ export function staffHomeForRole(role: string): string {
   }
 }
 
+/** After PIN — stay in Staff. Ignore ?next= that would leak into Studio. */
+export function staffShiftContinue(input: {
+  homePath?: string | null;
+  role?: string | null;
+  nextQuery?: string | null;
+}): string {
+  const home = (input.homePath || '').trim() || staffHomeForRole(input.role || '');
+  const next = (input.nextQuery || '').trim();
+  if (next.startsWith('/staff')) return next;
+  return home.startsWith('/staff') ? home : staffHomeForRole(input.role || '');
+}
+
+export const STAFF_PIN_MIN = 4;
+
+export function staffPinReady(pin: string): boolean {
+  return pin.replace(/\s/g, '').length >= STAFF_PIN_MIN;
+}
+
 export function staffMonitorPath(workPath: string): string {
   const sep = workPath.includes('?') ? '&' : '?';
   return `${workPath}${sep}monitor=1`;

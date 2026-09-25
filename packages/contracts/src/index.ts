@@ -2,6 +2,8 @@ export * from './ids';
 export * from './events';
 export * from './capabilities/payment';
 export * from './capabilities/payment-connector-definition';
+export * from './capabilities/email';
+export * from './capabilities/email-connector-definition';
 export * from './capabilities/fulfilment';
 export * from './profile';
 export * from './entry';

@@ -1,5 +1,7 @@
 # LEK-028 — Component Catalogue
 
+> **Historical — superseded by [ADR-004](adr/004-three-human-experiences.md).** This catalogue predates the three-human-experiences model and Studio's Operate/Grow/Team modes. **Read instead:** [lifecycle-and-screen-map.md](ux/lifecycle-and-screen-map.md) · [ia-experience-studio-shells.md](ux/ia-experience-studio-shells.md) · [operate-craft.md](ux/operate-craft.md) · [grow-craft.md](ux/grow-craft.md) · [LVES](ux/lves.md) · [current-product-state.md](ux/current-product-state.md).
+
 **Status:** Active — **incrementally frozen**  
 **Governed by:** [LEK Build Loop](BUILDING-LEOS.md) — extract from screens; freeze before redesign  
 **Title:** LEOS Platform Component Catalogue  

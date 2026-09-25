@@ -37,3 +37,4 @@ Pass → note on story card. Fail → Question or notes back to UX Lead / Compon
 ## Definition of Success
 
 No screen reaches engineering without an independent Experience Review pass.
+On a hero Guest/Studio moment, that independence is the same as `design-review` critics: rendered screenshots vs `bar.md`, not the builder’s own adjectives.

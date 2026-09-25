@@ -6,6 +6,7 @@
 |---|----------|------|
 | 0 | [LEKKI-BUILD](../LEKKI-BUILD.md) | **Daily company board** |
 | 0cs | [Current Product State §3](current-product-state.md) | **Authoritative HCI lock** — Hospitality Phase |
+| 0map | [Lifecycle & Screen Map](lifecycle-and-screen-map.md) | **Whole product** — states · roles · SCR-* · **§12 vertical slices** |
 | 0ic | [Experience Interaction Craft §3](experience-interaction-craft.md) | **Guest patterns** — G-04 customisation |
 | 0bp3a | [Blueprint SECTION 3A](LEOS-Studio-Design-Blueprint.md#section-3a--studio--live-experience--guest-interaction-contract) | **Studio→Live→Guest** no-drift contract |
 | 0n | [NORTH-STAR](../NORTH-STAR.md) | Mission — **Frozen** |
@@ -25,10 +26,11 @@
 | 1r | [Restaurant Pack UX Constitution](restaurant-pack-ux-constitution.md) | **Frozen** — browse · one sheet · cart upsell |
 | 1g04 | [G-04 Choices Sheet](g04-choices-sheet.md) | **Shipped** — pointer → Interaction Craft |
 | 2 | [Layout Grammar](layout-grammar.md) | Wireframe rhythm |
-| 3 | [Guest Experience Inventory](guest-experience-inventory.md) | Screen status |
+| 3 | [Guest Experience Inventory](guest-experience-inventory.md) | **Running** vs Hold |
+| 3s | [Screen Inventory](screen-inventory.md) | Surfaces vs Hold |
 | 3b | [Evidence](evidence/guest/README.md) | First-class proof |
 | 4 | [Wireframe Template](wireframe-template.md) | Uncertainty removed |
 | 5 | [Guest Journey states](wireframes/guest/README.md) | State specs |
 | 6 | [G-06 Live Order](wireframes/guest/live-order.md) | **Frozen** — buildable |
 
-**Orchestrate:** `Build Story G-05` / `Build Story G-06` → Executive Orchestrator.
+**Orchestrate:** `Continue building Lekki` → [LEKKI-BUILD](../LEKKI-BUILD.md). GAP-01…GAP-08: `pnpm run check:screens`.

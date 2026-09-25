@@ -7,6 +7,8 @@ import {
   pressureSentence,
   rankEscalations,
   stationGlanceLine,
+  isPrimaryNeedsYouAction,
+  paymentOpenTableLabel,
 } from './operate-glance';
 
 test('escalations: open and oldest first', () => {
@@ -18,6 +20,29 @@ test('escalations: open and oldest first', () => {
   assert.equal(ranked[0].createdAt, '2026-08-19T09:00:00.000Z');
   assert.equal(ranked[1].createdAt, '2026-08-19T10:05:00.000Z');
   assert.equal(ranked[2].status, 'acknowledged');
+});
+
+test('Needs you gold: payment row can be primary Open table', () => {
+  const rows = [
+    { id: 'pay1', kind: 'payment', status: 'failed' },
+    { id: 'mgr1', kind: 'manager', status: 'open' },
+  ];
+  assert.equal(isPrimaryNeedsYouAction(rows, rows[0]), true);
+  assert.equal(isPrimaryNeedsYouAction(rows, rows[1]), false);
+});
+
+test('Needs you gold: open manager Claim beats later payment', () => {
+  const rows = [
+    { id: 'mgr1', kind: 'manager', status: 'open' },
+    { id: 'pay1', kind: 'payment', status: 'failed' },
+  ];
+  assert.equal(isPrimaryNeedsYouAction(rows, rows[0]), true);
+  assert.equal(isPrimaryNeedsYouAction(rows, rows[1]), false);
+});
+
+test('Open table label uses place noun calmly', () => {
+  assert.equal(paymentOpenTableLabel('Table'), 'Open table');
+  assert.equal(paymentOpenTableLabel('Room'), 'Open room');
 });
 
 test('place lines match craft anatomy', () => {

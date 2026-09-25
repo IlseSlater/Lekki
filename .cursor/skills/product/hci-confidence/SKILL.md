@@ -36,12 +36,17 @@ Then the success triad:
 
 State the **uncertainty removed** in one sentence. If you cannot, the change is not ready.
 
+On a **hero** screen, HCI is the Moment critic only. Do not also pass System
+or Craft from this chat if you just built the UI — those need rendered
+evidence (`.agents/skills/design-review/references/lekki-critics.md`).
+
 ## Never
 
 - Approve because it compiles.
 - Add a step that asks a human to remember.
 - Ship a second gold button “just this screen.”
 - Treat HCI as a slide — it is a gate.
+- Grade your own build with adjectives (“feels premium”).
 
 ## Handoff
 
