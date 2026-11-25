@@ -21,5 +21,6 @@ test('Batch 7: JSON-LD includes Organization and SoftwareApplication', () => {
   assert.ok(types.includes('SoftwareApplication'));
   const org = graph.find((n) => n['@type'] === 'Organization');
   assert.equal(org?.['url'], `${PUBLIC_SITE_ORIGIN}/`);
+  assert.equal(org?.['email'], 'info@lekki.co.za');
   assert.equal(PUBLIC_SITE_ORIGIN, 'https://lekki.co.za');
 });

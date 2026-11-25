@@ -32,9 +32,11 @@ import { lekkiJsonLd, seoForPath } from '../studio/marketing-seo';
         <nav class="lk-nav__center" aria-label="Primary">
           <a href="#about">About</a>
           <a href="#features">Features</a>
-          <a href="#pricing">Pricing</a>
+          @if (showPricing) {
+            <a href="#pricing">Pricing</a>
+          }
           <a href="#faq">FAQ</a>
-          <a href="mailto:hello&#64;lekki.app">Contact</a>
+          <a href="mailto:info&#64;lekki.co.za">Contact</a>
         </nav>
         <div class="lk-nav__end">
           <a class="lk-link" routerLink="/signin" (pointerenter)="warmSignin()">Login</a>
@@ -56,9 +58,11 @@ import { lekkiJsonLd, seoForPath } from '../studio/marketing-seo';
         <div class="lk-drawer" role="dialog" aria-label="Menu">
           <a href="#about" (click)="menuOpen = false">About</a>
           <a href="#features" (click)="menuOpen = false">Features</a>
-          <a href="#pricing" (click)="menuOpen = false">Pricing</a>
+          @if (showPricing) {
+            <a href="#pricing" (click)="menuOpen = false">Pricing</a>
+          }
           <a href="#faq" (click)="menuOpen = false">FAQ</a>
-          <a href="mailto:hello&#64;lekki.app" (click)="menuOpen = false">Contact</a>
+          <a href="mailto:info&#64;lekki.co.za" (click)="menuOpen = false">Contact</a>
           <a routerLink="/signin" (pointerenter)="warmSignin()" (click)="menuOpen = false">Login</a>
           <a class="lk-pill lk-pill--solid" routerLink="/signin" (pointerenter)="warmSignin()" (click)="menuOpen = false">Get started</a>
         </div>
@@ -74,7 +78,7 @@ import { lekkiJsonLd, seoForPath } from '../studio/marketing-seo';
             Lekki gives restaurants, cafés, hotels, and festivals a fully branded space
             with menus, orders, the kitchen, and the bill.
           </p>
-          <a class="lk-pill lk-pill--solid lk-hero__cta" routerLink="/signin" (pointerenter)="warmSignin()" data-rise>Get started free</a>
+          <a class="lk-pill lk-pill--solid lk-hero__cta" routerLink="/signin" (pointerenter)="warmSignin()" data-rise>{{ showPricing ? 'Get started free' : 'Get started' }}</a>
         </div>
 
         <div horizonScreen class="lk-stage" data-rise-late>
@@ -268,6 +272,7 @@ import { lekkiJsonLd, seoForPath } from '../studio/marketing-seo';
         }
       </section>
 
+      @if (showPricing) {
       <section class="lk-block" id="pricing">
         <p class="lk-chip">Pricing</p>
         <h2 class="lk-center-title">Clear pricing plans that scale with you</h2>
@@ -296,6 +301,7 @@ import { lekkiJsonLd, seoForPath } from '../studio/marketing-seo';
           }
         </div>
       </section>
+      }
 
       <section class="lk-block" id="faq">
         <p class="lk-chip">FAQ</p>
@@ -306,7 +312,7 @@ import { lekkiJsonLd, seoForPath } from '../studio/marketing-seo';
           </p>
         </div>
         <div class="lk-faq">
-          @for (item of faqs; track item.q; let i = $index) {
+          @for (item of visibleFaqs; track item.q; let i = $index) {
             <div class="lk-faq__item">
               <button type="button" [attr.aria-expanded]="faqOpen === i" (click)="toggleFaq(i)">
                 {{ item.q }}
@@ -320,7 +326,7 @@ import { lekkiJsonLd, seoForPath } from '../studio/marketing-seo';
         </div>
         <p class="lk-faq__more">
           Can’t find what you’re looking for? Reach out — we’re fast.
-          <a href="mailto:hello&#64;lekki.app">Contact us →</a>
+          <a href="mailto:info&#64;lekki.co.za">Contact us →</a>
         </p>
       </section>
 
@@ -331,10 +337,15 @@ import { lekkiJsonLd, seoForPath } from '../studio/marketing-seo';
         <div class="lk-close__copy">
           <h2>Your first guest is one scan away.</h2>
           <p>
-            Lekki is free to start. Set up your venue, print a QR, and see what it feels like
-            when everything lives in one place — under your name.
+            @if (showPricing) {
+              Lekki is free to start. Set up your venue, print a QR, and see what it feels like
+              when everything lives in one place — under your name.
+            } @else {
+              Set up your venue, print a QR, and see what it feels like
+              when everything lives in one place — under your name.
+            }
           </p>
-          <a class="lk-pill lk-pill--solid" routerLink="/signin">Start for free</a>
+          <a class="lk-pill lk-pill--solid" routerLink="/signin">{{ showPricing ? 'Start for free' : 'Get started' }}</a>
         </div>
         <aside class="lk-close__card">
           <strong>Rusty Oak</strong>
@@ -355,9 +366,11 @@ import { lekkiJsonLd, seoForPath } from '../studio/marketing-seo';
           <div>
             <p>Product</p>
             <a href="#about">About</a>
-            <a href="#pricing">Pricing</a>
+            @if (showPricing) {
+              <a href="#pricing">Pricing</a>
+            }
             <a href="#faq">FAQ</a>
-            <a href="mailto:hello&#64;lekki.app">Contact</a>
+            <a href="mailto:info&#64;lekki.co.za">Contact</a>
           </div>
           <div>
             <p>Legal</p>
@@ -1153,6 +1166,9 @@ export class WebsiteHomePageComponent implements OnInit, AfterViewInit, OnDestro
     },
   ];
 
+  /** Pricing stays in the page so it can return. Hidden until plans are ready to show. */
+  readonly showPricing = false;
+
   readonly plans = [
     {
       name: 'Starter',
@@ -1190,7 +1206,7 @@ export class WebsiteHomePageComponent implements OnInit, AfterViewInit, OnDestro
       blurb: 'For groups that need more control.',
       cta: 'Contact us',
       link: false,
-      href: 'mailto:hello@lekki.app',
+      href: 'mailto:info@lekki.co.za',
       featured: false,
       items: [
         'Unlimited venues',
@@ -1202,6 +1218,10 @@ export class WebsiteHomePageComponent implements OnInit, AfterViewInit, OnDestro
       ],
     },
   ];
+
+  get visibleFaqs() {
+    return this.showPricing ? this.faqs : this.faqs.filter((item) => !/free|paid plan|pricing/i.test(item.q));
+  }
 
   readonly faqs = [
     {

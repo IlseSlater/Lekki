@@ -43,7 +43,7 @@ export function lekkiJsonLd(): Record<string, unknown> {
         name: 'Lekki',
         url: `${PUBLIC_SITE_ORIGIN}/`,
         logo: `${PUBLIC_SITE_ORIGIN}/brand/lekki-logo.png`,
-        email: 'hello@lekki.app',
+        email: 'info@lekki.co.za',
       },
       {
         '@type': 'SoftwareApplication',
