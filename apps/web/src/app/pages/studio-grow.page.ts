@@ -128,19 +128,19 @@ import { FeedbackSheetComponent } from '../leos/feedback-sheet.component';
         padding: 0;
         border: 0;
         background: transparent;
-        color: var(--studio-ink-secondary, #6b7280);
+        color: var(--studio-ink-secondary);
         font: inherit;
         font-size: 0.9rem;
         text-align: left;
         cursor: pointer;
       }
       .studio-grow__payouts-link:hover {
-        color: var(--studio-ink, #1b2230);
+        color: var(--studio-ink);
       }
       .studio-grow__answers-error {
         margin: 0.25rem 0 0;
         font-size: 0.85rem;
-        color: var(--studio-danger, #b3452c);
+        color: var(--leos-danger);
       }
     `,
   ],
