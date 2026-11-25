@@ -25,6 +25,9 @@ export const MARKETING_SEO: Record<string, RouteSeo> = {
   },
 };
 
+/** Public marketing origin. Live site is lekki.co.za (Vercel). */
+export const PUBLIC_SITE_ORIGIN = 'https://lekki.co.za';
+
 export function seoForPath(path: string): RouteSeo {
   const key = path.split('?')[0] || '/';
   return MARKETING_SEO[key] ?? MARKETING_SEO['/'];
@@ -38,8 +41,8 @@ export function lekkiJsonLd(): Record<string, unknown> {
       {
         '@type': 'Organization',
         name: 'Lekki',
-        url: 'https://lekki.io/',
-        logo: 'https://lekki.io/brand/lekki-logo.png',
+        url: `${PUBLIC_SITE_ORIGIN}/`,
+        logo: `${PUBLIC_SITE_ORIGIN}/brand/lekki-logo.png`,
         email: 'hello@lekki.app',
       },
       {
@@ -47,7 +50,7 @@ export function lekkiJsonLd(): Record<string, unknown> {
         name: 'LEOS',
         applicationCategory: 'BusinessApplication',
         operatingSystem: 'Web',
-        url: 'https://lekki.io/',
+        url: `${PUBLIC_SITE_ORIGIN}/`,
         description:
           'Hospitality experience platform — QR guest menus, orders, kitchen fulfilment, and split bills.',
         offers: {
