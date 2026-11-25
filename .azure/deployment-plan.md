@@ -23,7 +23,7 @@ The site that belongs on that domain is the Angular app in `apps/web`. Home, pri
 | Classification | Production |
 | Scale | Small |
 | Budget | Cost-Optimized |
-| **Subscription** | Not visible from this machine yet. Azure CLI is installed and not signed in. Sign-in must be the Microsoft account `islater88@outlook.com`. |
+| **Subscription** | None. Signed in as `islater88@outlook.com` on 2026-11-25 12:45 SAST. Tenant `Default Directory` (`83b7fef4-fb21-4a3b-9290-9d3358f117d4`) has no subscription. A subscription has to be created before any resource can exist. |
 | **Location** | `westeurope` |
 
 `westeurope` is the Static Web Apps region closest to South Africa. The Free SKU is served from Azure's edge network, so the management region is not the visitor's download region. Static Web Apps is not offered in `southafricanorth`.
@@ -92,7 +92,7 @@ None. No Key Vault, no database, no managed identity. The public pages do not re
 | Microsoft.Web/staticSites | 1 | Blocked | 10 Free static web apps per subscription | Quota source: Azure Static Web Apps limits. Usage cannot be read until `az login` succeeds as `islater88@outlook.com`. |
 | Microsoft.Network/dnsZones | 1 | Blocked | 250 public zones per subscription | Quota source: Azure DNS limits. Usage cannot be read until sign-in. |
 
-**Status:** Blocked on Azure sign-in. No resource is over a published limit for a new or lightly used subscription. This section will be filled with live `az` counts on the deploy turn, before `az deployment` or `az staticwebapp create`.
+**Status:** Blocked. Sign-in succeeded and the account has no subscription, so live usage is zero and there is nothing to deploy into. After a subscription exists, read `az staticwebapp list` and `az network dns zone list` before create. Published limits remain 10 Free static web apps and 250 DNS zones per subscription.
 
 ---
 
@@ -104,7 +104,7 @@ None. No Key Vault, no database, no managed identity. The public pages do not re
 - [x] Requirements captured
 - [x] Recipe selected — AZCLI
 - [x] Architecture mapped — Static Web Apps Free + Azure DNS
-- [ ] Subscription confirmed — waiting for sign-in as `islater88@outlook.com`
+- [x] Sign-in confirmed as `islater88@outlook.com` — no subscription on tenant `83b7fef4-fb21-4a3b-9290-9d3358f117d4`
 - [ ] Live quota read — waiting for the same sign-in
 
 ### Phase 2: Execution
