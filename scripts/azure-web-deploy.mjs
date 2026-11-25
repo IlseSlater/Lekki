@@ -9,7 +9,7 @@ import { existsSync } from 'node:fs';
 
 const RG = 'rg-lekki-web';
 const APP = 'lekki-co-za';
-const LOCATION = 'westeurope';
+const LOCATION = 'westus2';
 const DOMAIN = 'lekki.co.za';
 const OUTPUT = 'apps/web/dist/web/browser';
 
