@@ -89,7 +89,17 @@ async function bootstrap() {
       crossOriginResourcePolicy: { policy: 'cross-origin' },
     }),
   );
-  app.use(json({ limit: '256kb' }));
+  app.use(
+    json({
+      limit: '256kb',
+      // POS webhooks are HMAC-signed over the exact bytes sent — keep them.
+      verify: (req, _res, buf) => {
+        if ((req as Request).url?.startsWith('/integrations/pos/')) {
+          (req as Request & { rawBody?: Buffer }).rawBody = Buffer.from(buf);
+        }
+      },
+    }),
+  );
   app.use(urlencoded({ extended: true, limit: '256kb' }));
   app.use((req: Request, res: Response, next: NextFunction) => {
     req.setTimeout(30_000);

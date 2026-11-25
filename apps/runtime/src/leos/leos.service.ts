@@ -21,6 +21,7 @@ import {
 } from './payment-invariants';
 import {
   canReservePayment,
+  failureReleasesReservation,
   paymentBaseMinor,
   paymentExpiresAt,
   sessionRemainingMinor,
@@ -37,6 +38,7 @@ import {
 } from './append-external-line';
 import {
   POS_OPEN_SESSION_STATUSES,
+  posLineExternalRef,
   resolvePosPlace,
   resolvePosSku,
 } from './pos-ingress-resolve';
@@ -546,7 +548,7 @@ export class LeosService {
 
     const result = await this.appendExternalLine({
       sessionId: place.sessionId,
-      externalRef: payload.externalRef,
+      externalRef: posLineExternalRef('pilot', venue, payload.externalRef),
       externalCheckId: payload.externalCheckId || payload.externalPlaceId,
       catalogueItemId: sku.catalogueItemId,
       labelFallback: payload.labelFallback,
@@ -1298,12 +1300,18 @@ export class LeosService {
       toMinor(Number(payment.tipAmount ?? 0)),
     );
     await this.prisma.$transaction(async (tx) => {
-      const claimed = await tx.payment.updateMany({
-        where: { id: paymentId, status: { in: ['pending', 'expired'] } },
+      // Lock the row so we know which status we are leaving.
+      const locked = await tx.$queryRaw<Array<{ status: string }>>`
+        SELECT status FROM "Payment" WHERE id = ${paymentId} FOR UPDATE
+      `;
+      const prior = locked[0]?.status;
+      if (prior !== 'pending' && prior !== 'expired') return;
+      await tx.payment.update({
+        where: { id: paymentId },
         data: { status: 'amount_mismatch' },
       });
-      if (claimed.count === 0) return;
-      if (baseMinor > 0) {
+      // Expired rows were already released by the expiry sweep — never twice.
+      if (failureReleasesReservation(prior) && baseMinor > 0) {
         await this.releaseSessionPaidMinor(tx, payment.sessionId, baseMinor);
       }
       await this.outbox.append(
@@ -1522,10 +1530,14 @@ export class LeosService {
     return request;
   }
 
-  async listAssistance(opts?: { sessionId?: string; kind?: string }) {
-    const kind = opts?.kind ? normalizeAssistanceKind(opts.kind) : undefined;
+  /** Callers must pass the organisation they proved access to — never list across tenants. */
+  async listAssistance(opts: { organisationId: string; sessionId?: string; kind?: string }) {
+    const organisationId = opts.organisationId?.trim();
+    if (!organisationId) throw new MissingFieldError('organisationId');
+    const kind = opts.kind ? normalizeAssistanceKind(opts.kind) : undefined;
     return this.prisma.assistanceRequest.findMany({
       where: {
+        organisationId,
         status: { in: ['open', 'acknowledged'] },
         ...(opts?.sessionId ? { sessionId: opts.sessionId } : {}),
         ...(kind ? { kind } : {}),

@@ -12,6 +12,25 @@ export type PosSkuResolution = {
   unmapped: boolean;
 };
 
+/**
+ * TransactionLine.externalRef is globally unique, but POS line ids are only
+ * unique per site (Pilot numbers lines per till). Namespace by connector and
+ * venue so venue B's line 1001 is never mistaken for venue A's retry.
+ */
+export function posLineExternalRef(
+  connectorId: string,
+  venueId: string,
+  lineRef: string,
+): string {
+  const connector = connectorId.trim();
+  const venue = venueId.trim();
+  const line = lineRef.trim();
+  if (!connector || !venue || !line) {
+    throw new Error('posLineExternalRef needs connector, venue and line ref');
+  }
+  return `${connector}:${venue}:${line}`;
+}
+
 /** Open-visit statuses that still accept a trailing till punch. */
 export const POS_OPEN_SESSION_STATUSES = ['created', 'active', 'settling'] as const;
 

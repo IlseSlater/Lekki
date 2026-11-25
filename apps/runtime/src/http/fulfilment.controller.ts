@@ -41,10 +41,21 @@ export class FulfilmentController {
     return this.leos.updateFulfilmentStatus(id, body.status);
   }
 
+  /**
+   * Station board — staff only, scoped to the token's organisation.
+   * Station ids are pack-level (`station-kitchen`), shared across tenants, so the
+   * org filter is what keeps one venue's tickets off another venue's screen.
+   */
   @Get('station/:stationId')
-  async listByStation(@Param('stationId') stationId: string) {
+  @UseGuards(StaffAuthGuard)
+  async listByStation(
+    @Param('stationId') stationId: string,
+    @Req() req: { staff?: StaffTokenClaims },
+  ) {
+    const org = req.staff?.org?.trim();
+    if (!org) throw new ForbiddenException('Staff authentication required');
     const rows = await this.prisma.fulfilment.findMany({
-      where: { stationId, status: { not: 'delivered' } },
+      where: { stationId, organisationId: org, status: { not: 'delivered' } },
       include: {
         lines: true,
         transaction: { include: { lines: true } },

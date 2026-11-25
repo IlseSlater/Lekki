@@ -4,6 +4,7 @@ import { PaymentConflictError } from './domain-errors';
 import { mapDomainError } from './error-mapping';
 import {
   canReservePayment,
+  failureReleasesReservation,
   isPendingReservationExpired,
   paidMinorAfterExpiryRelease,
   paidMinorAfterRetake,
@@ -185,4 +186,23 @@ test('row 5: already-settled settle is idempotent', () => {
     }),
     'idempotent',
   );
+});
+
+test('amount mismatch after expiry: no second release (table cannot be paid twice)', () => {
+  // R1000 bill. Guest A paid R500. Guest B reserved R500, then it expired.
+  const bill = 100000;
+  let paid = 50000 + 50000; // A settled + B held
+  paid = paidMinorAfterExpiryRelease(paid, 50000); // expiry sweep releases B
+  assert.equal(paid, 50000);
+  // Tampered ITN for B arrives later — only a pending row may release.
+  assert.equal(failureReleasesReservation('expired'), false);
+  if (failureReleasesReservation('expired')) paid = paidMinorAfterExpiryRelease(paid, 50000);
+  assert.equal(sessionRemainingMinor(bill, paid), 50000);
+});
+
+test('amount mismatch while pending releases the held base once', () => {
+  assert.equal(failureReleasesReservation('pending'), true);
+  for (const s of ['completed', 'settled', 'failed', 'needs_refund', 'amount_mismatch']) {
+    assert.equal(failureReleasesReservation(s), false, s);
+  }
 });

@@ -7,19 +7,25 @@ import {
   Post,
   Query,
   Req,
+  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 import { LeosService } from '../leos/leos.service';
+import { SessionAccessService } from '../leos/session-access.service';
 import {
   OptionalStaff,
   RequireStaffPermission,
   StaffAuthGuard,
 } from '../staff-auth/staff-auth.guard';
-import type { StaffTokenClaims } from '../staff-auth/staff-token.service';
+import { StaffTokenService, type StaffTokenClaims } from '../staff-auth/staff-token.service';
 
 @Controller('assistance')
 export class AssistanceController {
-  constructor(private readonly leos: LeosService) {}
+  constructor(
+    private readonly leos: LeosService,
+    private readonly sessionAccess: SessionAccessService,
+    private readonly staffTokens: StaffTokenService,
+  ) {}
 
   @Post()
   request(
@@ -28,12 +34,31 @@ export class AssistanceController {
     return this.leos.requestAssistance(body);
   }
 
+  /**
+   * With sessionId: guest (x-participant-secret) or staff of that visit's org.
+   * Without: floor-wide list for staff, scoped to their organisation only.
+   */
   @Get()
-  list(
+  async list(
+    @Req() req: { headers: Record<string, string | undefined> },
     @Query('sessionId') sessionId?: string,
     @Query('kind') kind?: string,
   ) {
-    return this.leos.listAssistance({ sessionId, kind });
+    const sid = sessionId?.trim();
+    if (sid) {
+      const session = await this.sessionAccess.assertReadAccess(sid, req.headers);
+      return this.leos.listAssistance({
+        organisationId: session.organisationId,
+        sessionId: sid,
+        kind,
+      });
+    }
+    const header =
+      req.headers['x-staff-token'] || req.headers['authorization'] || req.headers['Authorization'];
+    if (!header) throw new UnauthorizedException('Staff authentication required');
+    const claims = this.staffTokens.verify(header);
+    await this.staffTokens.assertActive(claims);
+    return this.leos.listAssistance({ organisationId: claims.org, kind });
   }
 
   /**

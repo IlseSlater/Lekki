@@ -100,7 +100,7 @@ async function main() {
   });
   console.log('✓ Transaction', tx.transactionId, 'fulfilments', tx.fulfilments?.length);
 
-  const kitchen = await request('/fulfilments/station/station-kitchen');
+  const kitchen = await request('/fulfilments/station/station-kitchen', { headers: staffHeaders });
   if (!kitchen.length) throw new Error('Expected kitchen fulfilment');
 
   const fid = kitchen[0].id;
@@ -197,7 +197,7 @@ async function main() {
     cafeTx.fulfilments[0].fulfilmentId ?? cafeTx.fulfilments[0].id;
   if (!cafeFid) throw new Error('Café fulfilment id missing');
 
-  const counter = await request('/fulfilments/station/station-counter');
+  const counter = await request('/fulfilments/station/station-counter', { headers: staffHeaders });
   if (!counter.some((f) => f.id === cafeFid)) {
     throw new Error('Café fulfilment not routed to station-counter');
   }
@@ -246,7 +246,7 @@ async function main() {
     hotelTx.fulfilments[0].fulfilmentId ?? hotelTx.fulfilments[0].id;
   if (!hotelFid) throw new Error('Hotel fulfilment id missing');
 
-  const roomService = await request('/fulfilments/station/station-room-service');
+  const roomService = await request('/fulfilments/station/station-room-service', { headers: staffHeaders });
   if (!roomService.some((f) => f.id === hotelFid)) {
     throw new Error('Hotel fulfilment not routed to station-room-service');
   }
@@ -294,7 +294,7 @@ async function main() {
     festTx.fulfilments[0].fulfilmentId ?? festTx.fulfilments[0].id;
   if (!festFid) throw new Error('Festival fulfilment id missing');
 
-  const foodTruck = await request('/fulfilments/station/station-food-truck');
+  const foodTruck = await request('/fulfilments/station/station-food-truck', { headers: staffHeaders });
   if (!foodTruck.some((f) => f.id === festFid)) {
     throw new Error('Festival fulfilment not routed to station-food-truck');
   }
@@ -342,7 +342,7 @@ async function main() {
     airTx.fulfilments[0].fulfilmentId ?? airTx.fulfilments[0].id;
   if (!airFid) throw new Error('Airport fulfilment id missing');
 
-  const gateCafe = await request('/fulfilments/station/station-gate-cafe');
+  const gateCafe = await request('/fulfilments/station/station-gate-cafe', { headers: staffHeaders });
   if (!gateCafe.some((f) => f.id === airFid)) {
     throw new Error('Airport fulfilment not routed to station-gate-cafe');
   }
@@ -391,7 +391,7 @@ async function main() {
     hcTx.fulfilments[0].fulfilmentId ?? hcTx.fulfilments[0].id;
   if (!hcFid) throw new Error('Healthcare fulfilment id missing');
 
-  const clinicCafe = await request('/fulfilments/station/station-clinic-cafe');
+  const clinicCafe = await request('/fulfilments/station/station-clinic-cafe', { headers: staffHeaders });
   if (!clinicCafe.some((f) => f.id === hcFid)) {
     throw new Error('Healthcare fulfilment not routed to station-clinic-cafe');
   }

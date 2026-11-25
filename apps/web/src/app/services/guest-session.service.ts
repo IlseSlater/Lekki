@@ -1167,7 +1167,12 @@ export class GuestSessionService {
 
   private refreshHelpStatus() {
     if (!this.state.sessionId) return;
-    this.api.listAssistance({ sessionId: this.state.sessionId }).subscribe({
+    this.api
+      .listAssistance({
+        sessionId: this.state.sessionId,
+        participantSecret: this.state.participantSecret,
+      })
+      .subscribe({
       next: (rows) => {
         const open = rows.filter((r) => r.status === 'open' || r.status === 'acknowledged');
         this.serviceHelpPending = open.some((r) => this.asHelpKind(r.kind) === 'service');

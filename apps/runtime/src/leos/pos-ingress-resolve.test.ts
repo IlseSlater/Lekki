@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  posLineExternalRef,
   POS_OPEN_SESSION_STATUSES,
   resolvePosPlace,
   resolvePosSku,
@@ -54,4 +55,13 @@ test('POS open statuses include settling so trailing punches during pay land', (
     'active',
     'settling',
   ]);
+});
+
+test('POS line ref: same Pilot line id at two venues stays distinct', () => {
+  const a = posLineExternalRef('pilot', 'ven_a', '1001');
+  const b = posLineExternalRef('pilot', 'ven_b', '1001');
+  assert.notEqual(a, b);
+  // Retry at the same venue maps to the same key (idempotent).
+  assert.equal(posLineExternalRef('pilot', ' ven_a ', ' 1001 '), a);
+  assert.throws(() => posLineExternalRef('pilot', 'ven_a', '  '));
 });

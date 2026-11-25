@@ -1,4 +1,16 @@
-import { Body, Controller, Get, Param, Post, Put, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  ForbiddenException,
+  Get,
+  NotFoundException,
+  Param,
+  Post,
+  Put,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import type { StaffTokenClaims } from '../staff-auth/staff-token.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { OutboxService } from '../events/outbox.service';
 import { newEventId, newId } from '@lekki/shared';
@@ -41,7 +53,12 @@ export class CatalogueController {
   @Post('venue/:venueId')
   @UseGuards(StaffAuthGuard)
   @RequireStaffPermission('organisation.manage')
-  async create(@Param('venueId') venueId: string, @Body() body: CatalogueBody) {
+  async create(
+    @Param('venueId') venueId: string,
+    @Body() body: CatalogueBody,
+    @Req() req: { staff?: StaffTokenClaims },
+  ) {
+    await this.requireVenueInOrg(req.staff?.org, venueId);
     const label = (body.label || '').trim();
     const category = (body.category || '').trim();
     if (!label) throw new MissingFieldError('label');
@@ -75,7 +92,17 @@ export class CatalogueController {
   @Put('item/:id')
   @UseGuards(StaffAuthGuard)
   @RequireStaffPermission('organisation.manage')
-  async update(@Param('id') itemId: string, @Body() body: CatalogueBody) {
+  async update(
+    @Param('id') itemId: string,
+    @Body() body: CatalogueBody,
+    @Req() req: { staff?: StaffTokenClaims },
+  ) {
+    const existing = await this.prisma.restaurantCatalogItem.findUnique({
+      where: { id: itemId },
+      select: { venueId: true },
+    });
+    if (!existing) throw new NotFoundException('Menu item not found');
+    await this.requireVenueInOrg(req.staff?.org, existing.venueId);
     const item = await this.prisma.$transaction(async (tx) => {
       const updated = await tx.restaurantCatalogItem.update({
         where: { id: itemId },
@@ -102,6 +129,19 @@ export class CatalogueController {
       return updated;
     });
     return item;
+  }
+
+  /** Menu writes stay inside the staff token's organisation. */
+  private async requireVenueInOrg(
+    organisationId: string | undefined,
+    venueId: string,
+  ): Promise<void> {
+    if (!organisationId?.trim()) throw new MissingFieldError('organisationId');
+    const venue = await this.prisma.venue.findFirst({
+      where: { id: venueId.trim(), organisationId: organisationId.trim() },
+      select: { id: true },
+    });
+    if (!venue) throw new ForbiddenException('Venue is not in your organisation');
   }
 
   private async emitChanged(

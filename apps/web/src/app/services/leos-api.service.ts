@@ -409,7 +409,15 @@ export class LeosApiService {
     }>(`${this.api}/assistance`, body);
   }
 
-  listAssistance(opts?: { sessionId?: string; kind?: 'service' | 'manager' | 'feedback' }) {
+  /** Visit list needs the guest's participant secret (or a staff token); floor list needs staff. */
+  listAssistance(opts?: {
+    sessionId?: string;
+    kind?: 'service' | 'manager' | 'feedback';
+    participantSecret?: string;
+  }) {
+    const headers = opts?.sessionId
+      ? this.sessionAuthHeaders(opts.participantSecret)
+      : this.staffAuthHeaders();
     const params: Record<string, string> = {};
     if (opts?.sessionId) params['sessionId'] = opts.sessionId;
     if (opts?.kind) params['kind'] = opts.kind;
@@ -422,7 +430,7 @@ export class LeosApiService {
         sessionId?: string;
         createdAt?: string;
       }>
-    >(`${this.api}/assistance`, { params });
+    >(`${this.api}/assistance`, { params, headers });
   }
 
   acknowledgeAssistance(id: string, opts?: { asOwner?: boolean }) {

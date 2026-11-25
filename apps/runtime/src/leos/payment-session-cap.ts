@@ -83,6 +83,15 @@ export function settlementCapacityAction(input: {
   return 'overpayment';
 }
 
+/**
+ * Only a `pending` payment still holds its base in paidMinor. Expiry already
+ * released it, so failing an `expired` payment must not release a second time
+ * (that would under-count what other guests paid and let the table be paid twice).
+ */
+export function failureReleasesReservation(priorStatus: string): boolean {
+  return priorStatus === 'pending';
+}
+
 /** After a successful re-take, paidMinor includes the base again. */
 export function paidMinorAfterRetake(
   paidMinor: number,
