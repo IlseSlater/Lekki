@@ -7,15 +7,15 @@
       name="description"
       content="LEOS helps venues welcome guests by QR, take orders, split bills, and pay at table — calm hospitality software for restaurants and experiences."
     />
-    <link rel="canonical" href="https://lekki.io/" />
+    <link rel="canonical" href="https://lekki.co.za/" />
     <meta property="og:title" content="Lekki — LEOS hospitality platform" />
     <meta
       property="og:description"
       content="Go live in minutes with your menu, PayFast, and a guest experience that feels as good as your venue."
     />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://lekki.io/" />
-    <meta property="og:image" content="https://lekki.io/brand/lekki-logo.png" />
+    <meta property="og:url" content="https://lekki.co.za/" />
+    <meta property="og:image" content="https://lekki.co.za/brand/lekki-logo.png" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Lekki — LEOS hospitality platform" />
     <meta
@@ -197,6 +197,13 @@
           }
         });
         observer.observe(root, { childList: true });
+        // Prerendered pages already contain the app. A mutation observer
+        // never fires for nodes that exist before it starts, so the splash
+        // would otherwise cover the marketing site until the 6s fallback.
+        if (root.childNodes.length > 0) {
+          appReady = true;
+          tryRemove();
+        }
         var fallback = setTimeout(function () {
           appReady = true;
           tryRemove();

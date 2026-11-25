@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { lekkiJsonLd, seoForPath } from './marketing-seo';
+import { lekkiJsonLd, PUBLIC_SITE_ORIGIN, seoForPath } from './marketing-seo';
 
 test('Batch 7: home, privacy, and terms have distinct titles', () => {
   const home = seoForPath('/');
@@ -19,4 +19,7 @@ test('Batch 7: JSON-LD includes Organization and SoftwareApplication', () => {
   const types = graph.map((n) => n['@type']);
   assert.ok(types.includes('Organization'));
   assert.ok(types.includes('SoftwareApplication'));
+  const org = graph.find((n) => n['@type'] === 'Organization');
+  assert.equal(org?.['url'], `${PUBLIC_SITE_ORIGIN}/`);
+  assert.equal(PUBLIC_SITE_ORIGIN, 'https://lekki.co.za');
 });

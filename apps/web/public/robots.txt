@@ -11,4 +11,4 @@ Disallow: /splash
 Disallow: /scan
 Disallow: /onboarding
 
-Sitemap: https://lekki.io/sitemap.xml
+Sitemap: https://lekki.co.za/sitemap.xml
