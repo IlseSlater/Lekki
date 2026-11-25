@@ -25,7 +25,7 @@ export const MARKETING_SEO: Record<string, RouteSeo> = {
   },
 };
 
-/** Public marketing origin. Live site is lekki.co.za (Vercel). */
+/** Public marketing origin. Live site is https://lekki.co.za. */
 export const PUBLIC_SITE_ORIGIN = 'https://lekki.co.za';
 
 export function seoForPath(path: string): RouteSeo {
