@@ -68,3 +68,20 @@ test('once live, setup links open the everyday pages; Go live stays for the QR c
   assert.equal(everydayPathForSetupUrl('/studio/setup/golive'), null);
   assert.equal(everydayPathForSetupUrl('/studio/menu'), null);
 });
+
+test('each Studio role sees only its pages', async () => {
+  const { navGroupsFor, studioPathAllowed, studioLandingFor } = await import('./studio-nav');
+  const { ROLE_PERMISSIONS } = await import('./studio-roles');
+  const labels = (perms: readonly string[]) => navGroupsFor(perms).flatMap((g) => g.items.map((i) => i.label));
+  assert.deepEqual(labels(ROLE_PERMISSIONS.analyst), ['Home', 'Grow']);
+  assert.deepEqual(labels(ROLE_PERMISSIONS.staff), ['Home', 'Menu', 'Operate', 'Grow']);
+  assert.deepEqual(labels(ROLE_PERMISSIONS.manager), ['Home', 'Menu', 'Operate', 'Team', 'Grow']);
+  assert.equal(labels(ROLE_PERMISSIONS.admin).length, STUDIO_NAV_ITEMS.length);
+  assert.equal(studioPathAllowed(ROLE_PERMISSIONS.manager, '/studio/payments'), false);
+  assert.equal(studioPathAllowed(ROLE_PERMISSIONS.manager, '/studio/setup/experience'), false);
+  assert.equal(studioPathAllowed(ROLE_PERMISSIONS.staff, '/studio/menu?x=1'), true);
+  assert.equal(studioPathAllowed(['organisation.manage'], '/studio/setup/identity'), true);
+  assert.equal(studioLandingFor(ROLE_PERMISSIONS.analyst), '/studio');
+  // Floor-only people never loop inside Studio.
+  assert.equal(studioLandingFor(['staff.service']), '/staff');
+});

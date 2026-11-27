@@ -97,7 +97,7 @@ export class PushService implements OnModuleInit {
     if (!this.enabled) return 0;
     try {
       const managers = await this.prisma.staffMember.findMany({
-        where: { organisationId, active: true, permissions: { has: 'organisation.manage' } },
+        where: { organisationId, active: true, permissions: { hasSome: ['organisation.manage', 'team.manage'] } },
         select: { id: true },
       });
       if (!managers.length) return 0;

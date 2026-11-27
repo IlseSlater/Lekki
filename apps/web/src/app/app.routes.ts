@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { studioAuthGuard } from './guards/studio-auth.guard';
+import { studioRoleGuard } from './guards/studio-role.guard';
 import { guidedSetupOnlyBeforeLive } from './studio/guided-setup';
 
 export const routes: Routes = [
@@ -100,6 +101,7 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./shells/studio-shell.component').then((m) => m.StudioShellComponent),
     canActivate: [studioAuthGuard],
+    canActivateChild: [studioRoleGuard],
     children: [
       {
         path: '',

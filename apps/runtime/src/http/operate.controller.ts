@@ -17,7 +17,7 @@ import { WaiterTablesService } from '../leos/waiter-tables.service';
 import { KitchenPaceService, type SoldOutMode } from '../leos/kitchen-pace.service';
 import { pauseAlert } from '../leos/order-log';
 import { PushService } from '../push/push.service';
-import { canManage } from '../leos/staff-admin';
+import { STUDIO_PERMISSIONS, grants } from '../leos/studio-roles';
 import { RequireStaffPermission, StaffAuthGuard } from '../staff-auth/staff-auth.guard';
 import type { StaffTokenClaims } from '../staff-auth/staff-token.service';
 import { SessionNotActiveError } from '../leos/domain-errors';
@@ -138,7 +138,7 @@ export class OperateController {
     @Body() body: unknown,
     @Query('venueId') venueId?: string,
   ) {
-    this.requireManager(req.staff);
+    this.require(req.staff, STUDIO_PERMISSIONS.hours);
     return this.kitchenPace.save(req.staff.org, body, venueId);
   }
 
@@ -151,7 +151,7 @@ export class OperateController {
     @Req() req: { staff: StaffTokenClaims },
     @Body() body: { paused?: boolean; minutes?: number; reason?: string; venueId?: string },
   ) {
-    this.requireManager(req.staff);
+    this.require(req.staff, STUDIO_PERMISSIONS.hours);
     const paused = body?.paused === true;
     const pace = await this.kitchenPace.setPaused(req.staff.org, {
       paused,
@@ -220,9 +220,10 @@ export class OperateController {
     return this.leos.fireRound(sessionId.trim(), req.staff.org);
   }
 
-  private requireManager(staff: StaffTokenClaims) {
-    if (!canManage(staff.permissions)) {
-      throw new ForbiddenException('Only a manager can do this.');
+  /** Staff and above edit hours and pause; Analyst and above read the evening. */
+  private require(staff: StaffTokenClaims, need: string) {
+    if (!grants(staff.permissions, need)) {
+      throw new ForbiddenException('Your Studio role does not include this.');
     }
   }
 
@@ -237,7 +238,7 @@ export class OperateController {
   /** The owner's one evening sentence. Empty until the averages are real. */
   @Get('evening')
   async evening(@Req() req: { staff: StaffTokenClaims }) {
-    this.requireManager(req.staff);
+    this.require(req.staff, STUDIO_PERMISSIONS.reports);
     return { sentence: await this.tables.eveningSentence(req.staff.org) };
   }
 

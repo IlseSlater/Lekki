@@ -18,6 +18,15 @@ import {
   sessionOnDevice,
   sessionRevokeCopy,
 } from '../studio/team-confidence';
+import {
+  ROLE_CHOICES,
+  assignableRoles,
+  canEditMember,
+  studioRoleOf,
+  withStudioRole,
+  type StudioRole,
+} from '../studio/studio-roles';
+import { OperateStaffSessionService } from '../services/operate-staff-session.service';
 
 const MANAGE_PERMISSION = 'organisation.manage';
 
@@ -228,25 +237,30 @@ type TeamMember = {
               />
             }
 
-            <label class="studio-team__manage">
-              <input
-                type="checkbox"
-                role="switch"
-                [checked]="canManage"
-                [disabled]="isOnlyManager"
-                (change)="toggleManage($event)"
-              />
-              <span class="studio-team__manage-text">
-                <span class="studio-team__manage-title">Can manage this place</span>
-                <span class="studio-team__manage-hint">
-                  {{
-                    isOnlyManager
-                      ? 'The only manager. Make someone else a manager first.'
-                      : 'Menu, tables, team, and payments in Studio.'
-                  }}
-                </span>
-              </span>
-            </label>
+            <p class="studio-team__label" id="team-studio-role">Studio access</p>
+            @if (!editable) {
+              <p class="studio-team__hint">Only an admin can change an admin.</p>
+            }
+            <div class="studio-team__roles" role="radiogroup" aria-labelledby="team-studio-role">
+              @for (r of roleChoices; track r.role) {
+                <label class="studio-team__manage" [class.studio-team__manage--on]="studioRole === r.role">
+                  <input
+                    type="radio"
+                    name="studio-role"
+                    [checked]="studioRole === r.role"
+                    [disabled]="!roleSelectable(r.role)"
+                    (change)="setStudioRole(r.role)"
+                  />
+                  <span class="studio-team__manage-text">
+                    <span class="studio-team__manage-title">{{ r.label }}</span>
+                    <span class="studio-team__manage-hint">{{ r.detail }}</span>
+                  </span>
+                </label>
+              }
+            </div>
+            @if (isOnlyManager) {
+              <p class="studio-team__hint">The only admin. Make someone else an admin first.</p>
+            }
 
             <p class="studio-team__label">Experience</p>
             <div class="studio-team__experiences" role="radiogroup" aria-label="Experience">
@@ -283,7 +297,7 @@ type TeamMember = {
             </div>
 
             <div class="studio-team__actions studio-team__actions--editor">
-              <button type="button" class="leos-btn leos-btn--primary" [disabled]="busy" (click)="save()">
+              <button type="button" class="leos-btn leos-btn--primary" [disabled]="busy || !editable" (click)="save()">
                 {{ busy ? 'Saving…' : draft.id ? 'Save' : 'Create' }}
               </button>
               <button type="button" class="leos-btn" [disabled]="busy" (click)="cancel()">Cancel</button>
@@ -797,16 +811,26 @@ type TeamMember = {
         display: grid;
         gap: 0.4rem;
       }
+      .studio-team__roles {
+        display: grid;
+        gap: 0.4rem;
+      }
       .studio-team__manage {
         display: flex;
         align-items: center;
         gap: 0.85rem;
         min-height: 3.25rem;
-        padding: 0.75rem 0;
-        margin-top: 0.75rem;
-        border-top: 1px solid var(--studio-line);
-        border-bottom: 1px solid var(--studio-line);
+        padding: 0.6rem 0.85rem;
+        border: 1px solid var(--studio-line);
+        border-radius: 0.85rem;
         cursor: pointer;
+      }
+      .studio-team__manage--on {
+        border-color: var(--leos-gold);
+      }
+      .studio-team__manage:has(input:disabled) {
+        cursor: default;
+        opacity: 0.55;
       }
       .studio-team__manage input {
         width: 1.25rem;
@@ -911,6 +935,7 @@ type TeamMember = {
 export class StudioTeamPageComponent implements OnInit {
   private readonly api = inject(LeosApiService);
   private readonly ctx = inject(StudioContextService);
+  private readonly staffSession = inject(OperateStaffSessionService);
 
   experiences = staffExperiencesForType('restaurant');
   experienceTypeId: ExperienceTypeId = 'restaurant';
@@ -1134,28 +1159,45 @@ export class StudioTeamPageComponent implements OnInit {
 
   onExperienceChange() {
     if (!this.draft) return;
-    const manages = this.canManage;
+    // Changing what they do on the floor keeps their Studio access.
+    const role = this.studioRole;
     this.permissionOptions = permissionsForExperience(this.draft.role, this.experienceTypeId);
-    this.draft.permissions = defaultPermissionsForRole(this.draft.role);
-    if (manages && !this.canManage) this.draft.permissions = [...this.draft.permissions, MANAGE_PERMISSION];
+    this.draft.permissions = withStudioRole(defaultPermissionsForRole(this.draft.role), role);
   }
 
-  get canManage(): boolean {
-    return !!this.draft?.permissions.includes(MANAGE_PERMISSION);
+  readonly roleChoices = ROLE_CHOICES;
+
+  private get myPermissions(): string[] {
+    return this.staffSession.session()?.permissions ?? [];
   }
 
-  /** Last manager keeps the switch on. The server enforces the same rule. */
+  get studioRole(): StudioRole {
+    return studioRoleOf(this.draft?.permissions);
+  }
+
+  /** A Manager can't change an Admin at all. The server enforces the same rule. */
+  get editable(): boolean {
+    if (!this.draft?.id) return true;
+    const member = this.members.find((m) => m.id === this.draft!.id);
+    return canEditMember(this.myPermissions, member?.permissions);
+  }
+
+  roleSelectable(role: StudioRole): boolean {
+    if (!this.editable) return false;
+    if (this.isOnlyManager && role !== 'admin') return false;
+    return assignableRoles(this.myPermissions).includes(role);
+  }
+
+  /** Last admin keeps Admin. The server enforces the same rule. */
   get isOnlyManager(): boolean {
     const id = this.draft?.id;
-    if (!id || !this.canManage) return false;
+    if (!id || this.studioRole !== 'admin') return false;
     return !this.members.some((m) => m.id !== id && m.permissions.includes(MANAGE_PERMISSION));
   }
 
-  toggleManage(event: Event) {
-    if (!this.draft) return;
-    const on = (event.target as HTMLInputElement).checked;
-    const rest = this.draft.permissions.filter((p) => p !== MANAGE_PERMISSION);
-    this.draft.permissions = on ? [...rest, MANAGE_PERMISSION] : rest;
+  setStudioRole(role: StudioRole) {
+    if (!this.draft || !this.roleSelectable(role)) return;
+    this.draft.permissions = withStudioRole(this.draft.permissions, role);
   }
 
   hasPerm(id: string): boolean {

@@ -1,4 +1,4 @@
-import { Component, Input, inject } from '@angular/core';
+import { Component, Input, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LeosApiService } from '../services/leos-api.service';
 import { friendShareText, safeReviewUrl, whatsappShareUrl } from './review-links';
@@ -68,8 +68,11 @@ import { noteWithStars } from './pay-choices';
           {{ busy ? 'Sending…' : 'Send to the manager' }}
         </button>
       }
-      @if (sent) {
+      @if (sent && !reply) {
         <p class="ap__thanks" role="status">Thank you. The manager will read this.</p>
+      }
+      @if (reply) {
+        <p class="ap__thanks" role="status"><strong>{{ reply.by }} replied:</strong> {{ reply.reply }}</p>
       }
     </section>
   `,
@@ -168,8 +171,53 @@ import { noteWithStars } from './pay-choices';
     `,
   ],
 })
-export class GuestAfterPayComponent {
+export class GuestAfterPayComponent implements OnInit, OnDestroy {
   private readonly api = inject(LeosApiService);
+
+  /** The manager's one reply to this guest's note, if they have answered. */
+  reply: { reply: string; by: string } | null = null;
+  private replyTimer?: ReturnType<typeof setInterval>;
+  private replyChecks = 0;
+
+  ngOnInit() {
+    // Back on this screen later: a reply may already be waiting.
+    this.checkReply();
+  }
+
+  ngOnDestroy() {
+    this.stopReplyChecks();
+  }
+
+  /** While they are still here, look for a reply every 20 seconds, for up to 10 minutes. */
+  private watchForReply() {
+    this.stopReplyChecks();
+    this.replyChecks = 0;
+    this.replyTimer = setInterval(() => {
+      if (this.reply || ++this.replyChecks > 30) return this.stopReplyChecks();
+      this.checkReply();
+    }, 20_000);
+  }
+
+  private stopReplyChecks() {
+    if (this.replyTimer) clearInterval(this.replyTimer);
+    this.replyTimer = undefined;
+  }
+
+  private checkReply() {
+    if (!this.sessionId || !this.participantId || !this.participantSecret) return;
+    this.api
+      .myNoteReply(this.sessionId, { participantId: this.participantId, participantSecret: this.participantSecret })
+      .subscribe({
+        next: (r) => {
+          if (r?.reply) {
+            this.reply = r.reply;
+            this.sent = true;
+            this.stopReplyChecks();
+          }
+        },
+        error: () => undefined,
+      });
+  }
 
   @Input() placeName = '';
   /** Venue's Google review link. Hidden when it is not a secure address. */
@@ -218,6 +266,7 @@ export class GuestAfterPayComponent {
         next: () => {
           this.busy = false;
           this.sent = true;
+          this.watchForReply();
         },
         error: () => {
           this.busy = false;

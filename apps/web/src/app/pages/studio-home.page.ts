@@ -3,7 +3,11 @@ import { RouterLink } from '@angular/router';
 import { catchError, of } from 'rxjs';
 import { StudioContextService } from '../services/studio-context.service';
 import { StudioAuthService } from '../services/studio-auth.service';
-import { LeosApiService } from '../services/leos-api.service';
+import { LeosApiService, type GuestNoteRow } from '../services/leos-api.service';
+import { OperateStaffSessionService } from '../services/operate-staff-session.service';
+import { STUDIO_PERMISSIONS, grants } from '../studio/studio-roles';
+import { studioPathAllowed } from '../studio/studio-nav';
+import { FormsModule } from '@angular/forms';
 import { SETUP_STEPS, experienceLabel, getExperience } from '../studio/experience-registry';
 import { spokenArea } from '../studio/golive-confirm';
 import { recessedGateLine } from '../studio/hub-recession';
@@ -18,7 +22,7 @@ type TodayRow = { label: string; value: string; ok?: boolean };
  */
 @Component({
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, FormsModule],
   template: `
     <div class="studio-home studio-motion-appear">
       @if (empty) {
@@ -65,9 +69,48 @@ type TodayRow = { label: string; value: string; ok?: boolean };
           <section class="studio-home__today" aria-label="Private notes from guests">
             <p class="studio-home__today-label">Told to you privately</p>
             @for (n of notes; track n.id) {
-              <div class="studio-home__today-row">
-                <span class="studio-home__today-k">{{ n.placeCode || 'Guest' }}</span>
-                <span class="studio-home__today-v">{{ n.body }}</span>
+              <div class="studio-home__note">
+                <div class="studio-home__today-row">
+                  <span class="studio-home__today-k">{{ n.placeCode || 'Guest' }}</span>
+                  <span class="studio-home__today-v">{{ n.body }}</span>
+                </div>
+                @if (n.reply) {
+                  <p class="studio-home__reply">
+                    <strong>{{ n.repliedBy || 'You' }} replied:</strong> {{ n.reply }}
+                  </p>
+                } @else if (canReply && replyingTo === n.id) {
+                  <div class="studio-home__reply-form">
+                    <label class="leos-field__label" [for]="'reply-' + n.id">Your reply</label>
+                    <textarea
+                      class="leos-field__input"
+                      rows="2"
+                      maxlength="500"
+                      [id]="'reply-' + n.id"
+                      [(ngModel)]="replyText"
+                    ></textarea>
+                    <p class="studio-home__reply-hint">
+                      One reply. They see it on their phone while their table is still open.
+                    </p>
+                    @if (replyError) {
+                      <p class="studio-home__reply-hint" role="alert">{{ replyError }}</p>
+                    }
+                    <div class="studio-home__reply-actions">
+                      <button
+                        type="button"
+                        class="leos-btn leos-btn--primary"
+                        [disabled]="replyBusy || !replyText.trim()"
+                        (click)="sendReply(n)"
+                      >
+                        {{ replyBusy ? 'Sending…' : 'Send reply' }}
+                      </button>
+                      <button type="button" class="leos-btn" [disabled]="replyBusy" (click)="replyingTo = null">
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                } @else if (canReply) {
+                  <button type="button" class="studio-home__reply-open" (click)="startReply(n.id)">Reply</button>
+                }
               </div>
             }
           </section>
@@ -75,18 +118,28 @@ type TodayRow = { label: string; value: string; ok?: boolean };
 
         <div class="studio-home__doors">
           @if (live) {
-            <a class="leos-btn leos-btn--primary" routerLink="/studio/operate">Open Operate</a>
+            @if (can('/studio/operate')) {
+              <a class="leos-btn leos-btn--primary" routerLink="/studio/operate">Open Operate</a>
+            }
             <div class="studio-home__actions" aria-label="When you have a minute">
-              <a class="leos-btn leos-btn--secondary" routerLink="/studio/payments">Payments</a>
-              <a class="leos-btn leos-btn--secondary" routerLink="/studio/menu">Menu</a>
-              <a class="leos-btn leos-btn--secondary" routerLink="/studio/tables">Tables &amp; QR</a>
+              @if (can('/studio/payments')) {
+                <a class="leos-btn leos-btn--secondary" routerLink="/studio/payments">Payments</a>
+              }
+              @if (can('/studio/menu')) {
+                <a class="leos-btn leos-btn--secondary" routerLink="/studio/menu">Menu</a>
+              }
+              @if (can('/studio/tables')) {
+                <a class="leos-btn leos-btn--secondary" routerLink="/studio/tables">Tables &amp; QR</a>
+              }
             </div>
-          } @else {
+          } @else if (can(resumeLink)) {
             <a class="leos-btn leos-btn--primary" [routerLink]="resumeLink">{{ primaryCta }}</a>
             <div class="studio-home__actions" aria-label="Optional">
               <a class="leos-btn leos-btn--secondary" routerLink="/studio/menu">Menu</a>
               <a class="leos-btn leos-btn--secondary" routerLink="/studio/connections">Connections</a>
             </div>
+          } @else {
+            <p class="studio-home__reply-hint">Your place isn’t live yet. An admin finishes setting it up.</p>
           }
         </div>
       }
@@ -97,6 +150,7 @@ export class StudioHomePageComponent implements OnInit {
   private readonly ctx = inject(StudioContextService);
   private readonly auth = inject(StudioAuthService);
   private readonly api = inject(LeosApiService);
+  private readonly staffSession = inject(OperateStaffSessionService);
 
   greeting = 'Good afternoon.';
   venue = '';
@@ -110,7 +164,51 @@ export class StudioHomePageComponent implements OnInit {
   recessedLine = '';
   /** One calm evening sentence. Empty until the averages are real. */
   evening = '';
-  notes: Array<{ id: string; placeCode: string | null; body: string; createdAt: string }> = [];
+  notes: GuestNoteRow[] = [];
+  replyingTo: string | null = null;
+  replyText = '';
+  replyBusy = false;
+  replyError = '';
+
+  private get perms(): string[] {
+    return this.staffSession.session()?.permissions ?? [];
+  }
+
+  /** Managers and Admins answer private notes; Analysts and Staff read them. */
+  get canReply(): boolean {
+    return grants(this.perms, STUDIO_PERMISSIONS.feedbackReply);
+  }
+
+  /** Only offer doors this person's Studio role opens. */
+  can(path: string): boolean {
+    return studioPathAllowed(this.perms, path);
+  }
+
+  startReply(id: string) {
+    this.replyingTo = id;
+    this.replyText = '';
+    this.replyError = '';
+  }
+
+  sendReply(note: GuestNoteRow) {
+    const text = this.replyText.trim();
+    if (!text || this.replyBusy) return;
+    this.replyBusy = true;
+    this.replyError = '';
+    this.api.replyToGuestNote(note.id, text).subscribe({
+      next: (r) => {
+        this.notes = this.notes.map((n) =>
+          n.id === note.id ? { ...n, reply: r.reply, repliedAt: r.repliedAt, repliedBy: r.repliedBy } : n,
+        );
+        this.replyingTo = null;
+        this.replyBusy = false;
+      },
+      error: (err: { error?: { message?: string } }) => {
+        this.replyBusy = false;
+        this.replyError = err?.error?.message || 'Couldn’t send that reply. Try again.';
+      },
+    });
+  }
 
   ngOnInit() {
     this.ctx.touchLastSeen();

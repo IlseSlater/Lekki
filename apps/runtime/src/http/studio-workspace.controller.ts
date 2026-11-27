@@ -29,7 +29,9 @@ import { maxBytesForKind } from '../leos/assets/asset-store';
 export class StudioWorkspaceController {
   constructor(private readonly workspace: WorkspaceService) {}
 
+  // Every Studio role reads the place; only an Admin changes it.
   @Get(':venueId')
+  @RequireStaffPermission('reports.read')
   get(@Req() req: { staff?: StaffTokenClaims }, @Param('venueId') venueId: string) {
     const org = req.staff?.org;
     if (!org?.trim()) throw new MissingFieldError('organisationId');

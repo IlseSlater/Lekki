@@ -11,7 +11,7 @@ export class GrowController {
   constructor(private readonly prisma: PrismaService) {}
 
   @Get('overview')
-  @RequireStaffPermission('organisation.manage')
+  @RequireStaffPermission('reports.read')
   async overview(
     @Req() req: { staff?: StaffTokenClaims },
     @Query('venueId') venueId?: string,

@@ -210,3 +210,11 @@ test('screens: Studio pages pick the guest screen they are about', () => {
   assert.equal(normalisePreviewScreen('nope'), 'arrive');
   assert.equal(previewUrl({ venueId: 'v 1', screen: 'menu', placeCode: 'T7' }), '/preview?venue=v+1&screen=menu&table=T7');
 });
+
+test('asking for a reply to a note never leaves the preview', () => {
+  const t = buildPreviewTable({ venue, menu });
+  assert.deepEqual(
+    answerPreviewRequest(t, 'POST', `http://api:3000/feedback/sessions/${PREVIEW_SESSION_ID}/note/reply`, {}),
+    { handled: true, status: 200, body: { reply: null } },
+  );
+});

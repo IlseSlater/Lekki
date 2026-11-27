@@ -5,7 +5,7 @@ import { OperateStaffSessionService } from '../services/operate-staff-session.se
 import { StudioAuthService } from '../services/studio-auth.service';
 import { StudioContextService, type StudioMode } from '../services/studio-context.service';
 import {
-  STUDIO_NAV_GROUPS,
+  navGroupsFor,
   activeNavItem,
   type StudioNavItem,
 } from '../studio/studio-nav';
@@ -125,7 +125,10 @@ export class StudioShellComponent implements OnInit {
   private readonly auth = inject(StudioAuthService);
   private readonly staffSession = inject(OperateStaffSessionService);
 
-  readonly navGroups = STUDIO_NAV_GROUPS;
+  /** Only the pages this person's Studio role opens. */
+  get navGroups() {
+    return navGroupsFor(this.staffSession.session()?.permissions);
+  }
   activeItem: StudioNavItem | undefined;
 
   mode: StudioMode = 'setup';

@@ -493,6 +493,10 @@ model GuestNote {
   placeCode      String?
   body           String
   createdAt      DateTime @default(now())
+  /// The manager's reply, shown to the guest while they still have the table open.
+  replyBody      String?
+  repliedAt      DateTime?
+  repliedByName  String?
 
   @@index([organisationId, createdAt])
   @@index([sessionId])

@@ -6,6 +6,17 @@ import { OperateStaffSessionService } from './operate-staff-session.service';
 import type { GuestExperienceDesign } from '../studio/guest-experience-design';
 import { guestPreviewActive } from '../preview/preview-storage';
 
+/** A guest's private note to the manager, and the one reply it may have. */
+export type GuestNoteRow = {
+  id: string;
+  placeCode: string | null;
+  body: string;
+  createdAt: string;
+  reply: string | null;
+  repliedAt: string | null;
+  repliedBy: string | null;
+};
+
 /** Kitchen pace as a manager sets it (menu hours, pause, busy minutes, hold-and-fire). */
 export interface KitchenPaceSettings {
   paused: boolean;
@@ -384,11 +395,27 @@ export class LeosApiService {
     });
   }
 
-  /** Studio: what guests told the manager privately. */
+  /** Studio: what guests told the manager privately, with any reply. */
   listGuestNotes() {
-    return this.http.get<Array<{ id: string; placeCode: string | null; body: string; createdAt: string }>>(
-      `${this.api}/feedback/notes`,
+    return this.http.get<GuestNoteRow[]>(`${this.api}/feedback/notes`, {
+      headers: this.staffAuthHeaders(),
+    });
+  }
+
+  /** Studio (Manager or Admin): answer a private note once. */
+  replyToGuestNote(noteId: string, reply: string) {
+    return this.http.post<{ id: string; reply: string; repliedAt: string; repliedBy: string | null }>(
+      `${this.api}/feedback/notes/${encodeURIComponent(noteId)}/reply`,
+      { reply },
       { headers: this.staffAuthHeaders() },
+    );
+  }
+
+  /** Guest: has the manager replied to my note? POST keeps the secret out of the URL. */
+  myNoteReply(sessionId: string, body: { participantId: string; participantSecret: string }) {
+    return this.http.post<{ reply: { reply: string; repliedAt: string; by: string } | null }>(
+      `${this.api}/feedback/sessions/${sessionId}/note/reply`,
+      body,
     );
   }
 

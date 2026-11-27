@@ -67,7 +67,7 @@ export class CatalogueController {
 
   @Post('venue/:venueId')
   @UseGuards(StaffAuthGuard)
-  @RequireStaffPermission('organisation.manage')
+  @RequireStaffPermission('menu.edit')
   async create(
     @Param('venueId') venueId: string,
     @Body() body: CatalogueBody,
@@ -110,7 +110,7 @@ export class CatalogueController {
    */
   @Post('venue/:venueId/starter')
   @UseGuards(StaffAuthGuard)
-  @RequireStaffPermission('organisation.manage')
+  @RequireStaffPermission('menu.edit')
   async seedStarter(
     @Param('venueId') venueId: string,
     @Body() body: { typeId?: string },
@@ -149,7 +149,7 @@ export class CatalogueController {
 
   @Put('item/:id')
   @UseGuards(StaffAuthGuard)
-  @RequireStaffPermission('organisation.manage')
+  @RequireStaffPermission('menu.edit')
   async update(
     @Param('id') itemId: string,
     @Body() body: CatalogueBody,

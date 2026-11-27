@@ -68,6 +68,10 @@ export function answerPreviewRequest(
   if (path.endsWith(`${S}/leave`)) {
     return { handled: true, status: 200, body: { closed: false } };
   }
+  if (path.endsWith('/note/reply')) {
+    // No manager in the preview, so no reply.
+    return { handled: true, status: 200, body: { reply: null } };
+  }
   if (path.endsWith('/assistance')) {
     return { handled: true, status: 200, body: askForHelp(table, b as Parameters<typeof askForHelp>[1]) };
   }
