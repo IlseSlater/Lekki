@@ -17,13 +17,21 @@ export class PaymentController {
     body?: {
       tipAmount?: number;
       tipPercent?: number;
-      scope?: 'visit' | 'mine' | 'equal';
+      scope?: 'visit' | 'mine' | 'equal' | 'amount';
+      amount?: number;
       participantId?: string;
       participantSecret?: string;
+      idempotencyKey?: string;
     },
   ) {
     const scope =
-      body?.scope === 'mine' ? 'mine' : body?.scope === 'equal' ? 'equal' : 'visit';
+      body?.scope === 'mine'
+        ? 'mine'
+        : body?.scope === 'equal'
+          ? 'equal'
+          : body?.scope === 'amount'
+            ? 'amount'
+            : 'visit';
     const participantSecret = body?.participantSecret?.trim();
     if ((scope === 'mine' || scope === 'equal') && !participantSecret) {
       throw new MissingFieldError('participantSecret');
@@ -32,8 +40,10 @@ export class PaymentController {
       tipAmount: typeof body?.tipAmount === 'number' ? body.tipAmount : undefined,
       tipPercent: typeof body?.tipPercent === 'number' ? body.tipPercent : undefined,
       scope,
+      amount: typeof body?.amount === 'number' ? body.amount : undefined,
       participantId: typeof body?.participantId === 'string' ? body.participantId : undefined,
       participantSecret,
+      idempotencyKey: typeof body?.idempotencyKey === 'string' ? body.idempotencyKey : undefined,
     });
   }
 

@@ -428,14 +428,14 @@ export class SetupGoliveEnginePageComponent implements OnInit {
     this.extraRows = [
       {
         id: 'experience',
-        label: 'What guests experience',
+        label: 'What guests order',
         value: design ? guestCanSummary(design) : experienceLabel(active?.typeId),
         ok: !!active?.steps?.experience,
         required: false,
       },
       {
         id: 'pay',
-        label: 'How guests pay',
+        label: 'Taking payment',
         value: payState.value,
         ok: payState.ok,
         required: false,

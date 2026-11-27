@@ -33,6 +33,7 @@ export type GuestMenuSection = {
               [category]="showSectionTitles ? '' : item.category"
               [unitPrice]="item.unitPrice"
               [description]="item.description || ''"
+              [soldOut]="item.available === false"
               [allergenLine]="allergenLine(item)"
               [dietaryLine]="dietaryLine(item)"
               [imageUrl]="item.imageUrl || null"

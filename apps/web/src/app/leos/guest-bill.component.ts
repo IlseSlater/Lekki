@@ -3,6 +3,8 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LeosMoneyPipe } from './leos-money.pipe';
 import { hasOpenBalance, isCleared, fromMinor, toMinor } from './money';
+import { viewCustomAmount, type CustomAmountView } from './custom-amount';
+import { shareCaption } from './line-shares';
 
 export type BillLine = {
   label: string;
@@ -17,9 +19,13 @@ export type BillDisplayLine = BillLine & {
   ownerParticipantId?: string | null;
   /** First name of whoever owns this line (for live chips). */
   ownerName?: string;
+  /** How many guests split this line. 0 when it is not shared. */
+  sharedCount?: number;
+  /** This guest's part of a shared line, in major units. */
+  myShare?: number;
 };
 
-export type BillScope = 'visit' | 'mine' | 'equal';
+export type BillScope = 'visit' | 'mine' | 'equal' | 'amount';
 
 const TIP_OPTIONS = [0, 10, 15, 18, 20];
 
@@ -75,7 +81,36 @@ const TIP_OPTIONS = [0, 10, 15, 18, 20];
               <span class="gb__scope-amt">({{ equalSubtotal | leosMoney: currency }})</span>
             </button>
           }
+          @if (visitHasOpenBalance) {
+            <button
+              type="button"
+              role="tab"
+              class="gb__scope-btn"
+              [class.gb__scope-btn--on]="scope === 'amount'"
+              [attr.aria-selected]="scope === 'amount'"
+              (click)="setScope('amount')"
+            >
+              An amount
+            </button>
+          }
         </div>
+        @if (scope === 'amount') {
+          <label class="gb__amount">
+            <span class="gb__tip-label">What would you like to pay?</span>
+            <input
+              class="leos-field__input gb__amount-input"
+              type="number"
+              inputmode="decimal"
+              min="0"
+              step="0.01"
+              [ngModel]="customAmount"
+              (ngModelChange)="onCustomAmount($event)"
+              placeholder="0.00"
+              aria-describedby="gb-amount-hint"
+            />
+            <span class="gb__share-note" id="gb-amount-hint">{{ amountView.hint }}</span>
+          </label>
+        }
         @if (mineSharePaid && visitHasOpenBalance && scope !== 'equal') {
           <p class="gb__share-note">Your share is paid — you can still cover the visit if you like.</p>
         }
@@ -94,19 +129,39 @@ const TIP_OPTIONS = [0, 10, 15, 18, 20];
             <span class="gb__line-main">
               <span>{{ line.label }} × {{ line.quantity }}</span>
               @if (scope === 'visit') {
-                @if (line.mine) {
-                  <span class="gb__yours" [class.gb__yours--flash]="isJustClaimed(line.id)">✓ Yours</span>
-                } @else if (line.ownerName) {
-                  <span class="gb__owner-chip">Claimed by {{ line.ownerName }}</span>
-                } @else if (canClaimLine(line)) {
+                @if (line.sharedCount) {
+                  <span class="gb__owner-chip">{{ shareCaptionFor(line) }}</span>
                   <button
                     type="button"
                     class="gb__claim"
                     [disabled]="busy || offline || claimingLineId === line.id"
-                    (click)="claimLine.emit(line.id)"
+                    (click)="shareLine.emit({ lineId: line.id, action: line.mine ? 'leave' : 'join' })"
                   >
-                    {{ claimingLineId === line.id ? 'Claiming…' : 'Claim' }}
+                    {{ line.mine ? 'Leave this share' : 'Join this share' }}
                   </button>
+                } @else if (line.mine) {
+                  <span class="gb__yours" [class.gb__yours--flash]="isJustClaimed(line.id)">✓ Yours</span>
+                } @else if (line.ownerName) {
+                  <span class="gb__owner-chip">Claimed by {{ line.ownerName }}</span>
+                } @else if (canClaimLine(line)) {
+                  <span class="gb__claim-row">
+                    <button
+                      type="button"
+                      class="gb__claim"
+                      [disabled]="busy || offline || claimingLineId === line.id"
+                      (click)="claimLine.emit(line.id)"
+                    >
+                      {{ claimingLineId === line.id ? 'Claiming…' : 'Claim' }}
+                    </button>
+                    <button
+                      type="button"
+                      class="gb__claim"
+                      [disabled]="busy || offline || claimingLineId === line.id"
+                      (click)="shareLine.emit({ lineId: line.id, action: 'join' })"
+                    >
+                      Share it
+                    </button>
+                  </span>
                 }
               }
             </span>
@@ -259,6 +314,16 @@ const TIP_OPTIONS = [0, 10, 15, 18, 20];
       .gb__scope-btn:disabled {
         cursor: default;
       }
+      .gb__amount {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+      }
+      .gb__amount-input {
+        font-variant-numeric: tabular-nums;
+        font-size: 1.25rem;
+        min-height: 3rem;
+      }
       .gb__share-note {
         margin: 0;
         font-size: 0.8125rem;
@@ -301,6 +366,10 @@ const TIP_OPTIONS = [0, 10, 15, 18, 20];
         color: var(--leos-gold, #d7a14a);
         cursor: pointer;
         min-height: 2.75rem;
+      }
+      .gb__claim-row {
+        display: inline-flex;
+        gap: 1rem;
       }
       .gb__claim:disabled {
         opacity: 0.5;
@@ -499,6 +568,7 @@ export class GuestBillComponent {
   @Output() serviceHelp = new EventEmitter<void>();
   @Output() managerHelp = new EventEmitter<void>();
   @Output() claimLine = new EventEmitter<string>();
+  @Output() shareLine = new EventEmitter<{ lineId: string; action: 'join' | 'leave' }>();
   @Output() openPaymentMethods = new EventEmitter<void>();
   @Output() totalChange = new EventEmitter<number>();
   @Output() tipChange = new EventEmitter<number>();
@@ -509,6 +579,29 @@ export class GuestBillComponent {
   tipPercent = 0;
   customTip = false;
   customTipAmount = 0;
+  /** What the guest typed for scope 'amount'. */
+  customAmount: number | null = null;
+
+  get amountView(): CustomAmountView {
+    return viewCustomAmount(this.customAmount, this.visitSubtotal);
+  }
+
+  /** Major units to send with scope 'amount'. 0 until it is payable. */
+  get payableAmount(): number {
+    return this.amountView.amount;
+  }
+
+  /** After a part-payment, the field clears and the guest sees what is left on the visit. */
+  resetAmount() {
+    this.customAmount = null;
+    if (this.scope === 'amount') this.setScope('visit');
+  }
+
+  onCustomAmount(value: number | string | null) {
+    const n = typeof value === 'string' ? parseFloat(value) : value;
+    this.customAmount = n != null && Number.isFinite(n) ? n : null;
+    this.emitMoney();
+  }
 
   get showEqualShare(): boolean {
     return this.equalRemaining != null && this.visitHasOpenBalance;
@@ -527,8 +620,13 @@ export class GuestBillComponent {
       this.scope === 'visit' &&
       !!line.id &&
       !line.mine &&
+      !line.sharedCount &&
       !line.ownerName
     );
+  }
+
+  shareCaptionFor(line: BillDisplayLine): string {
+    return shareCaption(line.sharedCount ?? 0, line.mine);
   }
 
   isJustClaimed(lineId: string): boolean {
@@ -536,6 +634,17 @@ export class GuestBillComponent {
   }
 
   get displayLines(): BillDisplayLine[] {
+    if (this.scope === 'amount') {
+      return [
+        {
+          id: 'amount',
+          label: 'An amount toward the table',
+          quantity: 1,
+          total: this.payableAmount,
+          mine: true,
+        },
+      ];
+    }
     if (this.scope === 'equal') {
       return [
         {
@@ -549,7 +658,9 @@ export class GuestBillComponent {
     }
     if (this.detailLines?.length) {
       return this.scope === 'mine'
-        ? this.detailLines.filter((l) => l.mine)
+        ? this.detailLines
+            .filter((l) => l.mine)
+            .map((l) => (l.sharedCount ? { ...l, total: l.myShare ?? l.total } : l))
         : this.detailLines;
     }
     const base = this.scope === 'mine' && this.mineLines ? this.mineLines : this.lines;
@@ -590,6 +701,7 @@ export class GuestBillComponent {
   get subtotal(): number {
     if (this.scope === 'mine') return this.mineSubtotal;
     if (this.scope === 'equal') return this.equalSubtotal;
+    if (this.scope === 'amount') return this.payableAmount;
     return this.visitSubtotal;
   }
 
@@ -608,6 +720,7 @@ export class GuestBillComponent {
     if (scope === 'mine' && this.mineSharePaid && this.visitHasOpenBalance) return;
     if (scope === 'equal' && this.equalSharePaid && this.visitHasOpenBalance) return;
     if (scope === 'equal' && !this.showEqualShare) return;
+    if (scope === 'amount' && !this.visitHasOpenBalance) return;
     this.scope = scope;
     this.scopeChange.emit(scope);
     this.emitMoney();

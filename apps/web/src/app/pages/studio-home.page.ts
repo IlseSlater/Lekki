@@ -23,7 +23,6 @@ type TodayRow = { label: string; value: string; ok?: boolean };
     <div class="studio-home studio-motion-appear">
       @if (empty) {
         <header class="studio-home__hero">
-          <p class="studio-home__eyebrow">Setup</p>
           <h1 class="studio-home__venue">Your Studio</h1>
           <p class="studio-home__readiness">Let’s create your first experience.</p>
         </header>
@@ -32,12 +31,15 @@ type TodayRow = { label: string; value: string; ok?: boolean };
         </div>
       } @else {
         <header class="studio-home__hero">
-          <p class="studio-home__eyebrow">{{ live ? 'Open' : 'Setup' }}</p>
           <h1 class="studio-home__venue">{{ venue }}</h1>
           <p class="studio-home__readiness" [class.studio-home__readiness--ok]="live && readinessOk">
             {{ readiness }}
           </p>
         </header>
+
+        @if (live && evening) {
+          <p class="studio-home__readiness" role="status">{{ evening }}</p>
+        }
 
         @if (live && recessedLine) {
           <p class="studio-home__recess">
@@ -58,6 +60,18 @@ type TodayRow = { label: string; value: string; ok?: boolean };
             </div>
           }
         </section>
+
+        @if (notes.length) {
+          <section class="studio-home__today" aria-label="Private notes from guests">
+            <p class="studio-home__today-label">Told to you privately</p>
+            @for (n of notes; track n.id) {
+              <div class="studio-home__today-row">
+                <span class="studio-home__today-k">{{ n.placeCode || 'Guest' }}</span>
+                <span class="studio-home__today-v">{{ n.body }}</span>
+              </div>
+            }
+          </section>
+        }
 
         <div class="studio-home__doors">
           @if (live) {
@@ -94,6 +108,9 @@ export class StudioHomePageComponent implements OnInit {
   resumeLink = '/studio/setup/identity';
   todayRows: TodayRow[] = [];
   recessedLine = '';
+  /** One calm evening sentence. Empty until the averages are real. */
+  evening = '';
+  notes: Array<{ id: string; placeCode: string | null; body: string; createdAt: string }> = [];
 
   ngOnInit() {
     this.ctx.touchLastSeen();
@@ -155,6 +172,14 @@ export class StudioHomePageComponent implements OnInit {
         { label: station, value: `${station} is calm`, ok: true },
       ];
       this.api
+        .eveningSentence()
+        .pipe(catchError(() => of({ sentence: null })))
+        .subscribe((r) => (this.evening = r.sentence ?? ''));
+      this.api
+        .listGuestNotes()
+        .pipe(catchError(() => of([])))
+        .subscribe((rows) => (this.notes = rows.slice(0, 5)));
+      this.api
         .listFloorTables()
         .pipe(catchError(() => of({ tables: [] })))
         .subscribe(({ tables }) => {
@@ -197,7 +222,7 @@ export class StudioHomePageComponent implements OnInit {
 
     const progress = this.ctx.setupProgress();
     const next = progress.current === 'done' ? 'golive' : progress.current;
-    const nextTitle = SETUP_STEPS.find((s) => s.slug === next)?.title ?? 'Go Live';
+    const nextTitle = SETUP_STEPS.find((s) => s.slug === next)?.title ?? 'Open the doors';
     this.resumeLink = this.ctx.pathForStep(next);
     this.primaryCta = next === 'golive' ? 'Go live' : 'Continue setup';
 
@@ -210,12 +235,12 @@ export class StudioHomePageComponent implements OnInit {
     this.todayRows = [
       { label: 'Next', value: nextTitle, ok: false },
       {
-        label: 'Where guests join',
+        label: 'Your tables',
         value: placesSet ? 'Set' : 'Still to finish',
         ok: placesSet,
       },
       {
-        label: 'How guests pay',
+        label: 'Taking payment',
         value: c.paymentsDone ? 'Healthy' : 'Still to finish',
         ok: c.paymentsDone,
       },

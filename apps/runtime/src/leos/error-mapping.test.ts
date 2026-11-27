@@ -61,3 +61,38 @@ test('a thrown non-Error does not crash the mapper', () => {
   assert.equal(mapDomainError(undefined).status, 500);
   assert.equal(mapDomainError({ message: 'nope' }).status, 500);
 });
+
+test('a custom amount that is not allowed maps to 400 with the authored message', async () => {
+  const { CustomAmountError } = await import('./payment-invariants');
+  const mapped = mapDomainError(new CustomAmountError('Enter an amount to pay'));
+  assert.equal(mapped.status, 400);
+  assert.equal(mapped.code, 'invalid_amount');
+  assert.equal(mapped.message, 'Enter an amount to pay');
+});
+
+test('a locked line maps to 409 line_locked', async () => {
+  const { ClaimLockedError } = await import('./line-shares');
+  const mapped = mapDomainError(new ClaimLockedError());
+  assert.equal(mapped.status, 409);
+  assert.equal(mapped.code, 'line_locked');
+});
+
+test('a refused table move maps to a clear status and the plain message', async () => {
+  const { TableMoveRefusedError } = await import('./table-move');
+  const busy = mapDomainError(new TableMoveRefusedError('target_busy', 'Table 9 already has guests.'));
+  assert.equal(busy.status, 409);
+  assert.equal(busy.code, 'table_move_refused');
+  assert.equal(busy.message, 'Table 9 already has guests.');
+  assert.equal(mapDomainError(new TableMoveRefusedError('not_manager', 'x')).status, 403);
+  assert.equal(mapDomainError(new TableMoveRefusedError('target_missing', 'x')).status, 404);
+});
+
+test('a paused kitchen and closed hours map to 409 with their own codes', async () => {
+  const { OrderRefusedError } = await import('./kitchen-pace');
+  const paused = mapDomainError(new OrderRefusedError({ reason: 'paused' }));
+  assert.equal(paused.status, 409);
+  assert.equal(paused.code, 'orders_paused');
+  const closed = mapDomainError(new OrderRefusedError({ reason: 'out_of_hours', category: 'Breakfast' }));
+  assert.equal(closed.code, 'out_of_hours');
+  assert.match(closed.message, /Breakfast/);
+});

@@ -114,6 +114,7 @@ export type GuestCartClaimUndo = {
           (serviceHelp)="serviceHelp.emit()"
           (managerHelp)="managerHelp.emit()"
           (claimLine)="claimLine.emit($event)"
+          (shareLine)="shareLine.emit($event)"
         />
 
         @if (claimUndo) {
@@ -166,6 +167,7 @@ export class GuestCartDrawerComponent {
   @Output() removeCartLine = new EventEmitter<number>();
   @Output() editCartLine = new EventEmitter<number>();
   @Output() claimLine = new EventEmitter<string>();
+  @Output() shareLine = new EventEmitter<{ lineId: string; action: 'join' | 'leave' }>();
   @Output() unclaimLine = new EventEmitter<void>();
   @Output() initiatePayment = new EventEmitter<void>();
   @Output() serviceHelp = new EventEmitter<void>();

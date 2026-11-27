@@ -5,6 +5,8 @@ import { ConfidenceIndicatorComponent } from '../leos/confidence-indicator.compo
 import { ExperienceScreenComponent } from '../leos/experience-screen.component';
 import { SETUP_STEPS, getExperience } from '../studio/experience-registry';
 import {
+  applyPlaceCount,
+  countNumberedPlaces,
   defaultPlaceSections,
   enabledPlaces,
   generateNumberedPlaces,
@@ -13,9 +15,10 @@ import {
   placeCodesFromSections,
   type PlaceSection,
 } from '../studio/place-sections';
+import { LeosApiService } from '../services/leos-api.service';
 import { StudioContextService } from '../services/studio-context.service';
 
-/** Setup — Where guests join. Signature: selecting a place changes arrival in the phone. */
+/** Setup — Your tables. Signature: selecting a place changes arrival in the phone. */
 @Component({
   standalone: true,
   imports: [FormsModule, ExperienceScreenComponent, RouterLink, ConfidenceIndicatorComponent],
@@ -24,6 +27,29 @@ import { StudioContextService } from '../services/studio-context.service';
       <div config class="pl-edit">
         @if (savedFlash) {
           <p class="studio-autosave" role="status">Saved automatically</p>
+        }
+
+        <div class="pl-count">
+          <label class="pl-count__label" for="pl-count-input">
+            How many {{ placeNounPlural.toLowerCase() }} do you have?
+          </label>
+          <input
+            id="pl-count-input"
+            class="pl-count__input"
+            type="number"
+            inputmode="numeric"
+            min="1"
+            max="60"
+            [ngModel]="tableCount"
+            (ngModelChange)="setTableCount($event)"
+          />
+          <p class="pl-count__hint">
+            We make each one, with its own QR code. You can rename any of them below.
+          </p>
+        </div>
+
+        @if (createError) {
+          <p class="pl-error" role="alert">{{ createError }}</p>
         }
 
         @for (section of sections; track section.id) {
@@ -126,6 +152,46 @@ import { StudioContextService } from '../services/studio-context.service';
         flex-direction: column;
         gap: 1.5rem;
         margin-bottom: 0.5rem;
+      }
+      .pl-count {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      .pl-count__label {
+        font-family: var(--leos-font-display, Fraunces, serif);
+        font-size: 1.25rem;
+        font-weight: 650;
+        letter-spacing: -0.02em;
+        color: var(--studio-ink, var(--leos-ink));
+      }
+      .pl-count__input {
+        width: 6rem;
+        min-height: 3.25rem;
+        padding: 0.5rem 1rem;
+        border: 1px solid var(--studio-line, var(--leos-border));
+        border-radius: var(--leos-radius-input, 12px);
+        background: var(--leos-surface);
+        font: inherit;
+        font-size: 1.25rem;
+        font-variant-numeric: tabular-nums;
+        color: var(--studio-ink, var(--leos-ink));
+      }
+      .pl-count__input:focus {
+        outline: none;
+        border-color: var(--leos-gold-focus);
+        box-shadow: var(--leos-shadow-focus);
+      }
+      .pl-count__hint {
+        margin: 0;
+        font-size: 0.8125rem;
+        color: var(--studio-ink-secondary, var(--leos-ink-secondary));
+      }
+      .pl-error {
+        margin: 0;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--leos-danger);
       }
       .pl-room {
         padding-bottom: 0.25rem;
@@ -243,6 +309,7 @@ import { StudioContextService } from '../services/studio-context.service';
 export class SetupPlacesPageComponent implements OnInit, OnDestroy {
   private readonly ctx = inject(StudioContextService);
   private readonly router = inject(Router);
+  private readonly api = inject(LeosApiService);
   private saveTimer?: ReturnType<typeof setTimeout>;
   private flashTimer?: ReturnType<typeof setTimeout>;
 
@@ -254,6 +321,9 @@ export class SetupPlacesPageComponent implements OnInit, OnDestroy {
   selectedLabel = '';
   savedFlash = false;
   bulkCount = 8;
+  tableCount = 8;
+  createError = '';
+  private creating = false;
 
   get readyCount() {
     return enabledPlaces(this.sections).length;
@@ -287,6 +357,7 @@ export class SetupPlacesPageComponent implements OnInit, OnDestroy {
     this.selectedLabel =
       enabled.find((p) => p.label === active.placeCode)?.label ?? enabled[0]?.label ?? '';
     this.ctx.setLiveFocusPlace(this.selectedLabel || null);
+    this.tableCount = countNumberedPlaces(this.sections, this.singularNoun) || 8;
   }
 
   ngOnDestroy() {
@@ -389,9 +460,31 @@ export class SetupPlacesPageComponent implements OnInit, OnDestroy {
     this.scheduleSave();
   }
 
+  setTableCount(value: number | string) {
+    const next = Math.floor(Number(value));
+    if (!Number.isFinite(next) || next < 1) return;
+    this.tableCount = Math.min(60, next);
+    this.sections = applyPlaceCount(this.sections, this.singularNoun, this.tableCount);
+    this.reselectIfMissing();
+    this.scheduleSave();
+  }
+
   looksGood() {
+    if (this.creating) return;
     this.persist(true);
-    void this.router.navigate(['/studio/setup/payments']);
+    this.creating = true;
+    this.createError = '';
+    this.api.ensurePlaces(placeCodesFromSections(this.sections)).subscribe({
+      next: () => {
+        this.creating = false;
+        void this.router.navigate(['/studio/setup/payments']);
+      },
+      error: () => {
+        this.creating = false;
+        this.createError =
+          'We couldn’t make your QR codes yet. Check you are signed in to Studio, then try again.';
+      },
+    });
   }
 
   private reselectIfMissing() {

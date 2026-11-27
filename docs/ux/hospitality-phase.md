@@ -4,7 +4,7 @@
 **Owns:** Product phase after Setup v1 — craft of moments · feel · trust  
 **Current implementation lock:** [current-product-state.md](current-product-state.md) — SECTION 3 (HCI · Continuity · Frozen · Never)  
 **Complements:** [studio-design-system.md](studio-design-system.md) · [leos-motion-system.md](leos-motion-system.md) · [LEK-040](../LEK-040-human-experience-engineering.md) · [NORTH-STAR](../NORTH-STAR.md)  
-**Change policy:** Phase and pillars frozen. Setup v1 is closed. New craft goes to Operate · Grow · Experience — never more Setup redesign.
+**Change policy:** Pillars stay. Owner onboarding is **storefront** — [studio-storefront-onboarding.md](studio-storefront-onboarding.md). Setup v1’s step order is not binding. Visual system stays.
 
 ---
 
@@ -59,20 +59,19 @@ None of these are software feelings. They are human feelings.
 
 ---
 
-## Setup v1 — COMPLETE (Frozen)
+## Owner onboarding — storefront (current)
 
-Do **not** redesign Setup. It answers exactly:
+Setup v1’s quiz (Who → What → Where → How pay → Go Live) is **retired as a sequence**. It made the owner think in our steps.
+
+Current path — three moments, backend fills the rest:
 
 ```text
-Who are you?
-  → What guests experience?
-  → Where guests join?
-  → How guests pay?
-  → Go Live
+Your place  →  What guests order  →  Open the doors
 ```
 
-Live Experience stays beside config. Motion System and Design System v1 govern it.  
-**Temptation to polish Setup further = resist.**
+Spec: [studio-storefront-onboarding.md](studio-storefront-onboarding.md).
+
+Live Experience stays the real Guest shell. Motion and Design System v1 still govern look and the one gold action.
 
 Craft evidence: [studio-design-system.md](studio-design-system.md) · [craft-motion-home-readiness.md](evidence/craft-motion-home-readiness.md)
 

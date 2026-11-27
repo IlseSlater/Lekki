@@ -36,6 +36,8 @@ model Venue {
   currency       String   @default("ZAR")
   /** Guest-facing toggles synced from Studio (pay, tips, help, specials) */
   guestDesignJson Json?
+  /// Kitchen pace: menu hours, pause, busy minutes, hold-and-fire (see kitchen-pace.ts)
+  kitchenPaceJson Json?
   createdAt      DateTime @default(now())
   organisation   Organisation @relation(fields: [organisationId], references: [id])
   physicalContexts PhysicalContext[]
@@ -223,6 +225,9 @@ model ExperienceSession {
   version           Int      @default(0)
   startedAt         DateTime @default(now())
   completedAt       DateTime?
+  /// The waiter who has this table. Ready alerts, help, and tips follow this person.
+  waiterId          String?
+  waiterName        String?
   physicalContext   PhysicalContext @relation(fields: [physicalContextId], references: [id])
   participants      SessionParticipant[]
   transactions      Transaction[]
@@ -253,16 +258,22 @@ model Transaction {
   status         String
   currency       String
   total          Decimal  @db.Decimal(12, 2)
+  /// The phone's order key. A retry with the same key returns this order and creates no second one.
+  idempotencyKey String?
   createdAt      DateTime @default(now())
   session        ExperienceSession @relation(fields: [sessionId], references: [id])
   lines          TransactionLine[]
   payments       Payment[]
   fulfilments    Fulfilment[]
+
+  @@unique([sessionId, idempotencyKey])
 }
 
 model TransactionLine {
   id              String  @id
   transactionId   String
+  /// Venue scope for POS externalRef uniqueness (Pilot ids are per-site, not global).
+  venueId         String?
   /// Null when POS ingress has no catalogue map yet (Operate unmapped queue).
   catalogueItemId String?
   label           String
@@ -274,6 +285,8 @@ model TransactionLine {
   notes           String?
   /// Guest who ordered — Continuity mine vs visit (optional for legacy lines).
   participantId   String?
+  /// Guests who split this line equally. Empty = the line belongs to participantId (or nobody).
+  sharedWith      String[] @default([])
   /// guest | staff_pos | staff_operate — who originated the line.
   origin          String  @default("guest")
   /// POS line/ticket id — idempotency key for ingress. Null for Lekki-native lines.
@@ -282,8 +295,9 @@ model TransactionLine {
   externalCheckId String?
   transaction     Transaction @relation(fields: [transactionId], references: [id])
 
-  @@unique([externalRef])
+  @@unique([venueId, externalRef])
   @@index([externalCheckId])
+  @@index([venueId])
 }
 
 model Fulfilment {
@@ -321,6 +335,11 @@ model Payment {
   scope          String   @default("visit")
   /// Continuity — guest who paid a mine/equal-scoped share (null for visit / legacy).
   participantId  String?
+  /// The waiter who had the table when this was paid. Their tip, on their phone and in Team.
+  tipWaiterId    String?
+  tipWaiterName  String?
+  /// The phone's payment key. A retry with the same key never creates a second payment.
+  idempotencyKey String?
   currency       String
   status         String
   reference      String
@@ -332,6 +351,8 @@ model Payment {
   transaction    Transaction @relation(fields: [transactionId], references: [id])
 
   @@index([status, expiresAt])
+  @@index([tipWaiterId, createdAt])
+  @@index([sessionId, idempotencyKey])
 }
 
 model OutboxMessage {
@@ -446,4 +467,33 @@ model PaymentConnectorInstall {
 
   @@unique([organisationId, venueId])
   @@index([organisationId, venueId, status, updatedAt])
+}
+
+/// A guest tells the manager something privately. Never shown to other guests.
+/// A waiter's phone that agreed to hear when food is ready (Web Push).
+model PushSubscription {
+  id             String   @id
+  organisationId String
+  staffMemberId  String
+  endpoint       String   @unique
+  p256dh         String
+  auth           String
+  createdAt      DateTime @default(now())
+
+  @@index([organisationId])
+  @@index([staffMemberId])
+}
+
+model GuestNote {
+  id             String   @id
+  organisationId String
+  venueId        String
+  sessionId      String
+  participantId  String?
+  placeCode      String?
+  body           String
+  createdAt      DateTime @default(now())
+
+  @@index([organisationId, createdAt])
+  @@index([sessionId])
 }

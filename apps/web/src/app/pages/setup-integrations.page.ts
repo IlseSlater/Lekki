@@ -47,7 +47,7 @@ import { catchError } from 'rxjs/operators';
 
       <a escape class="leos-btn leos-btn--secondary" routerLink="/studio">Back to Studio</a>
       <a primary class="leos-btn leos-btn--primary" routerLink="/studio/setup/payments"
-        >How guests pay</a
+        >Taking payment</a
       >
     </leos-experience-screen>
   `,

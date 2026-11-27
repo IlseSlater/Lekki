@@ -28,6 +28,8 @@ export type ChoiceSheetResult = {
   choiceSummary: string;
   specialRequest: string;
   selections: Record<string, string[]>;
+  /** The one related add the guest said yes to. */
+  pairedItemId?: string;
 };
 
 /**
@@ -109,6 +111,19 @@ export type ChoiceSheetResult = {
               ></textarea>
             </label>
 
+            @if (pairing && confirmVerb === 'Add') {
+              <button
+                type="button"
+                class="gcs__pair"
+                [class.gcs__pair--on]="addPairing"
+                [attr.aria-pressed]="addPairing"
+                (click)="addPairing = !addPairing"
+              >
+                <span>Add {{ pairing.label }}</span>
+                <span>+{{ pairing.unitPrice | leosMoney: currency }}</span>
+              </button>
+            }
+
             @if (priceLines.length) {
               <div class="gcs__price-confidence" aria-live="polite">
                 @for (line of priceLines; track line.label) {
@@ -153,6 +168,27 @@ export type ChoiceSheetResult = {
         display: flex;
         align-items: flex-end;
         justify-content: center;
+      }
+      .gcs__pair {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        width: 100%;
+        min-height: 2.75rem;
+        padding: 0.65rem 0.9rem;
+        border: 1px dashed var(--leos-border, #e7e2db);
+        border-radius: var(--leos-radius-input, 12px);
+        background: transparent;
+        color: var(--leos-ink);
+        font: inherit;
+        font-size: 0.9375rem;
+        cursor: pointer;
+      }
+      .gcs__pair--on {
+        border-style: solid;
+        border-color: var(--leos-gold);
+        background: var(--leos-gold-soft);
       }
       .gcs__backdrop {
         position: absolute;
@@ -341,6 +377,9 @@ export class GuestChoicesSheetComponent implements OnChanges {
 
   /** When set, sheet is editing an existing cart line. */
   @Input() confirmVerb = 'Add';
+  /** One related add. Hidden when editing a line in the cart. */
+  @Input() pairing: { id: string; label: string; unitPrice: number } | null = null;
+  addPairing = false;
   @Input() editQuantity: number | null = null;
   @Input() editSpecialRequest = '';
   @Input() editSelections: Record<string, string[]> | null = null;
@@ -361,6 +400,7 @@ export class GuestChoicesSheetComponent implements OnChanges {
   ngOnChanges(changes: SimpleChanges) {
     if (changes['open'] || changes['groups'] || changes['itemLabel']) {
       if (this.open) {
+        this.addPairing = false;
         this.quantity = Math.max(1, this.editQuantity ?? 1);
         this.specialRequest = this.editSpecialRequest ?? '';
         this.selected = {};
@@ -453,6 +493,7 @@ export class GuestChoicesSheetComponent implements OnChanges {
       choiceSummary: parts.join('\n'),
       specialRequest: note,
       selections: Object.fromEntries(Object.entries(this.selected).map(([id, opts]) => [id, [...opts]])),
+      pairedItemId: this.pairing && this.addPairing ? this.pairing.id : undefined,
     });
   }
 

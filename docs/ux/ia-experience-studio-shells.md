@@ -52,7 +52,7 @@ Guest never learns Studio or Staff exists. Staff never learn Setup or Grow. Huma
 ```text
 LEOS Studio
 ├── Home
-├── Setup     ★ FROZEN v1 — Who → What → Where · How pay → Go Live
+├── Storefront  place · menu · open doors — [studio-storefront-onboarding](studio-storefront-onboarding.md)
 ├── Operate   Operations Overview (calm mission control — not the kitchen tablet)
 ├── Grow      Trusted manager · almost invisible
 ├── Team      Staff · Experiences · Permissions · Devices · PINs
@@ -87,15 +87,16 @@ Routes: `/entry`, `/e/:token`, `/experience` (alias `/guest`). Minimal chrome.
 
 ---
 
-## Experience Setup Engine (frozen)
+## Experience Setup Engine
 
-**One engine. Infinite markets.** Experience type changes terminology, defaults, validation, capabilities, and Live Experience — never routes or page architecture.
+**One engine. Infinite markets.** Experience type changes terminology, defaults, validation, capabilities, and Live Experience.
 
-**Live Experience** is permanent Studio chrome beside every Setup step — not a nav item, not a route.  
-**Nav tells a human story** (each step answers one question):
+**Onboarding sequence** is the storefront, not the old five-step quiz: [studio-storefront-onboarding.md](studio-storefront-onboarding.md).
+
+**Live Experience** stays beside editing — the real Guest shell, not a mock.
 
 ```text
-Who you are → What guests experience → Where they join → How they pay → Go Live
+Your place → What guests order → Open the doors
 (+ Live Experience always on)
 → Operate → Grow
 ```

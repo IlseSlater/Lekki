@@ -18,4 +18,4 @@
 | [S-09](S-09-grow.md) | Grow | Grow |
 | [S-10](S-10-live-experience.md) | Live Experience chrome | Configure confidence |
 
-Setup v1 screens are **frozen** — deepen Operate/Grow craft; do not reopen Setup redesign.
+Setup v1 screen stories describe what shipped. The journey is now [storefront onboarding](../studio-storefront-onboarding.md) — those stories are not a block.

@@ -14,6 +14,8 @@ import { SessionAccessService } from '../leos/session-access.service';
 import { RequireStaffPermission, StaffAuthGuard } from '../staff-auth/staff-auth.guard';
 import { MissingFieldError } from '../leos/domain-errors';
 import { venueHasActivePaymentInstall } from '../leos/payments-active';
+import { KitchenPaceService } from '../leos/kitchen-pace.service';
+import { guestPaceView, minutesOnVenueClock } from '../leos/kitchen-pace';
 
 @Controller('sessions')
 export class SessionController {
@@ -21,6 +23,7 @@ export class SessionController {
     private readonly leos: LeosService,
     private readonly prisma: PrismaService,
     private readonly sessionAccess: SessionAccessService,
+    private readonly kitchenPace: KitchenPaceService,
   ) {}
 
   @Get(':id')
@@ -72,6 +75,29 @@ export class SessionController {
 
     const paymentsActive = await venueHasActivePaymentInstall(this.prisma, session.venueId);
 
+    // Kitchen pace as the guest needs it: what is off the menu now, and how long mains take.
+    const { pace, timezone } = await this.kitchenPace.forVenue(session.venueId);
+    const venueItems = await this.prisma.restaurantCatalogItem.findMany({
+      where: { venueId: session.venueId },
+      select: { id: true, category: true },
+    });
+    const categoryById = new Map(venueItems.map((i) => [i.id, i.category] as const));
+    const openTxLineIds = new Set(
+      session.fulfilments
+        .filter((f) => !['delivered', 'completed', 'cancelled'].includes(f.status))
+        .flatMap((f) => f.lines.map((l) => l.transactionLineId)),
+    );
+    const openCategories = session.transactions
+      .flatMap((t) => t.lines ?? [])
+      .filter((l) => openTxLineIds.has(l.id) && l.catalogueItemId)
+      .map((l) => categoryById.get(l.catalogueItemId as string))
+      .filter((c): c is string => !!c);
+    const guestPace = guestPaceView(pace, {
+      allCategories: venueItems.map((i) => i.category),
+      openCategories,
+      minutes: minutesOnVenueClock(new Date(), timezone),
+    });
+
     const labelByTxLine = new Map(
       session.transactions.flatMap((t) =>
         (t.lines ?? []).map((l) => [l.id, l.label] as const),
@@ -94,6 +120,7 @@ export class SessionController {
       location: venue?.location || '',
       guestDesign,
       paymentsActive,
+      pace: guestPace,
       fulfilments: session.fulfilments.map((f) => ({
         id: f.id,
         status: f.status,
@@ -129,6 +156,22 @@ export class SessionController {
   @RequireStaffPermission('session.close')
   close(@Param('id') id: string) {
     return this.leos.closeSession(id);
+  }
+
+  /** One dish, shared: join or leave the share of a line. */
+  @Post(':id/share-line')
+  shareLine(
+    @Param('id') id: string,
+    @Body() body: { lineId?: string; action?: string; participantSecret?: string },
+  ) {
+    const participantSecret = body?.participantSecret?.trim();
+    if (!participantSecret) throw new MissingFieldError('participantSecret');
+    return this.leos.shareLine({
+      sessionId: id,
+      lineId: body?.lineId ?? '',
+      action: body?.action === 'leave' ? 'leave' : 'join',
+      participantSecret,
+    });
   }
 
   @Post(':id/claim-lines')

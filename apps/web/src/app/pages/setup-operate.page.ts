@@ -69,7 +69,6 @@ type TablePulse = {
     >
       <div class="studio-operate__main">
         <header class="studio-operate__header">
-          <p class="studio-operate__eyebrow">Operate</p>
           <h1 class="studio-operate__venue">{{ venue }}</h1>
           @if (!live) {
             <p class="studio-operate__calm">Go live first — then oversight fills as guests arrive.</p>

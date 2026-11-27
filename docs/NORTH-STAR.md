@@ -17,7 +17,7 @@ LEOS pillars (engineering): Experience · Operations · Neo Intelligence · Ecos
                             Platform (invisible — enables; never the centre)
 
 Product language (humans):  Experience — “I’m in the right place.”
-                            Studio Setup ★ frozen v1 — ready to welcome guests
+                            Studio storefront — place, menu, go live (see studio-storefront-onboarding)
                             Operate — “Everything is under control.”
                             Grow — trusted manager · almost invisible
 ```
@@ -72,12 +72,12 @@ Also:
 - Businesses can **go live in minutes**  
 - Guests **understand what to do immediately**  
 - Engineers can **extend LEOS without increasing complexity**  
-- **Setup v1 is complete** — craft goes to Operate · Grow · Experience  
+- **Storefront onboarding** is the owner path — [studio-storefront-onboarding](ux/studio-storefront-onboarding.md). Setup v1’s five-step quiz is not binding.
 
 ## Prefer finishing
 
 If two options exist: **finish an interaction** rather than start another. Depth over breadth. Shipping over theory.  
-**Do not redesign frozen Setup.**
+**Owner onboarding may change** when it makes the company think. Visual system (one gold, live phone, tokens) stays.
 
 ## Dual journeys (equal)
 

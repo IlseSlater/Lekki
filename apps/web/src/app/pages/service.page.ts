@@ -1,4 +1,5 @@
 import { Component, Input, OnDestroy, OnInit, inject } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
@@ -20,6 +21,10 @@ import {
 } from '../studio/operate-status';
 import { ageLabel as formatAgeLabel, isTableIdlePulsing } from '../studio/operate-pressure';
 import { staffPlaceLabel } from '../studio/place-continuity';
+import { isSpecificAsk } from '../leos/help-presets';
+import { StaffAlertsService } from '../services/staff-alerts.service';
+import { helpVisibleTo } from '../leos/staff-alerts';
+import { myTipsLine } from '../leos/tips-today';
 
 type FloorTab = 'tables' | 'ready' | 'help' | 'history';
 type DetailItemsTab = 'active' | 'history';
@@ -69,7 +74,10 @@ type TableRow = {
   readyCount: number;
   preparingCount?: number;
   pendingCount?: number;
+  heldCount?: number;
   helpCount: number;
+  waiterId?: string | null;
+  waiterName?: string | null;
   items?: Array<{
     fulfilmentId: string;
     status: string;
@@ -102,7 +110,7 @@ type HelpReq = {
 @Component({
   standalone: true,
   selector: 'leos-service-board',
-  imports: [RouterLink],
+  imports: [RouterLink, FormsModule],
   host: {
     class: 'leos-layout-operator leos-layout-waiter-board',
     '[class.leos-service-board--embed]': 'embedMonitor',
@@ -126,6 +134,27 @@ type HelpReq = {
         </div>
         <h1 class="waiter__venue">{{ venue }}</h1>
         <p class="waiter__calm">{{ calmLine }}</p>
+        @if (isManager && !monitorMode) {
+          <p class="waiter__alerts">
+            {{ ordersPaused ? 'New orders are paused. Guests can still pay.' : 'Taking orders.' }}
+            <button type="button" class="waiter__alerts-btn" [disabled]="busy" (click)="togglePause()">
+              {{ ordersPaused ? 'Resume orders' : 'Pause new orders' }}
+            </button>
+          </p>
+        }
+        @if (!monitorMode && tipsLine) {
+          <p class="waiter__alerts">{{ tipsLine }}</p>
+        }
+        @if (!monitorMode && alerts.advice.line) {
+          <p class="waiter__alerts">
+            {{ alerts.advice.line }}
+            @if (alerts.advice.canEnable) {
+              <button type="button" class="waiter__alerts-btn" (click)="enableAlerts()">
+                Turn on
+              </button>
+            }
+          </p>
+        }
       </header>
 
       <div class="waiter-seg" role="tablist" [attr.aria-label]="roleLabel">
@@ -189,6 +218,62 @@ type HelpReq = {
                 <span class="waiter-card__table">{{ placeNoun }} {{ t.placeCode }}</span>
                 <span class="waiter-card__age">Idle {{ ageLabel(t.idleMinutes) }}</span>
               </div>
+              @if (isManager && !monitorMode) {
+                @if (moveSessionId === t.sessionId) {
+                  <div class="waiter-move" role="group" aria-label="Move bill">
+                    <label class="waiter-bill__field">
+                      <span>Move to which {{ placeNoun.toLowerCase() }}?</span>
+                      <input
+                        class="waiter-bill__input"
+                        type="text"
+                        [(ngModel)]="moveToCode"
+                        [disabled]="busy"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      class="waiter-btn waiter-btn--ghost"
+                      [disabled]="busy || !moveToCode.trim()"
+                      (click)="submitMove(t)"
+                    >
+                      Move
+                    </button>
+                  </div>
+                } @else {
+                  <button
+                    type="button"
+                    class="waiter-card__owner-btn"
+                    [disabled]="busy"
+                    (click)="startMove(t)"
+                  >
+                    Move to another {{ placeNoun.toLowerCase() }}
+                  </button>
+                }
+              }
+              @if (t.heldCount && !monitorMode) {
+                <button
+                  type="button"
+                  class="waiter-card__owner-btn"
+                  [disabled]="busy"
+                  (click)="fireTable(t)"
+                >
+                  Send the round to the kitchen
+                </button>
+              }
+              @if (t.waiterId) {
+                <p class="waiter-card__owner">
+                  {{ isMine(t) ? 'Yours' : t.waiterName || 'Another waiter' }}
+                </p>
+              } @else if (!monitorMode) {
+                <button
+                  type="button"
+                  class="waiter-card__owner-btn"
+                  [disabled]="busy"
+                  (click)="takeTable(t)"
+                >
+                  I’ve got this {{ placeNoun.toLowerCase() }}
+                </button>
+              }
               <div class="waiter-card__pills">
                 @if (t.readyCount) {
                   <span class="waiter-pill" data-tone="ready">{{ t.readyCount }} ready</span>
@@ -199,10 +284,13 @@ type HelpReq = {
                 @if (t.pendingCount) {
                   <span class="waiter-pill" data-tone="new">{{ t.pendingCount }} new</span>
                 }
+                @if (t.heldCount) {
+                  <span class="waiter-pill" data-tone="new">{{ t.heldCount }} held</span>
+                }
                 @if (t.helpCount) {
                   <span class="waiter-pill" data-tone="help">Help</span>
                 }
-                @if (!t.readyCount && !t.preparingCount && !t.pendingCount && !t.helpCount) {
+                @if (!t.readyCount && !t.preparingCount && !t.pendingCount && !t.heldCount && !t.helpCount) {
                   <span class="waiter-pill" data-tone="muted">
                     {{ t.orderCount ? t.orderCount + ' orders' : 'Open' }}
                   </span>
@@ -248,6 +336,61 @@ type HelpReq = {
                     Clear {{ placeNoun.toLowerCase() }}
                   </button>
                 </div>
+                @if (billEntrySessionId === t.sessionId) {
+                  <div class="waiter-bill" role="group" aria-label="Add to bill">
+                    <p class="waiter-bill__q">What should we add to this bill?</p>
+                    <label class="waiter-bill__field">
+                      <span>Item</span>
+                      <input
+                        class="waiter-bill__input"
+                        type="text"
+                        [(ngModel)]="billEntryLabel"
+                        placeholder="e.g. Table total"
+                        [disabled]="busy"
+                      />
+                    </label>
+                    <label class="waiter-bill__field">
+                      <span>Amount (ZAR)</span>
+                      <input
+                        class="waiter-bill__input"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        [(ngModel)]="billEntryAmount"
+                        [disabled]="busy"
+                      />
+                    </label>
+                    <div class="waiter-card__actions waiter-card__actions--split">
+                      <button
+                        type="button"
+                        class="waiter-btn waiter-btn--gold"
+                        [disabled]="busy || !canSubmitBillEntry()"
+                        (click)="submitBillEntry(t)"
+                      >
+                        Add to bill
+                      </button>
+                      <button
+                        type="button"
+                        class="waiter-btn waiter-btn--ghost"
+                        [disabled]="busy"
+                        (click)="cancelBillEntry()"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                } @else {
+                  <div class="waiter-card__actions">
+                    <button
+                      type="button"
+                      class="waiter-btn waiter-btn--ghost"
+                      [disabled]="busy"
+                      (click)="startBillEntry(t)"
+                    >
+                      Key bill
+                    </button>
+                  </div>
+                }
               }
             </article>
           } @empty {
@@ -313,6 +456,9 @@ type HelpReq = {
                 <span class="waiter-card__age">{{ helpStatusLabel(req) }}</span>
               </div>
               <p class="waiter-card__kind">{{ kindLabel(req.kind) }}</p>
+              @if (isSpecificAsk(req.message)) {
+                <p class="waiter-card__ask">{{ req.message }}</p>
+              }
               @if (isManagerHelp(req)) {
                 <p class="waiter-card__studio">{{ managerPulseNoun }} — claimed in Studio Operate</p>
               } @else if (!monitorMode) {
@@ -667,6 +813,34 @@ type HelpReq = {
         flex-wrap: wrap;
         gap: 0.35rem;
       }
+      .waiter__alerts {
+        margin: 0.35rem 0 0;
+        font-size: 0.85rem;
+        color: var(--leos-muted, #6b5c4d);
+      }
+      .waiter__alerts-btn,
+      .waiter-card__owner-btn {
+        border: 0;
+        background: none;
+        padding: 0.25rem 0;
+        font: inherit;
+        font-weight: 650;
+        text-decoration: underline;
+        cursor: pointer;
+        color: inherit;
+        min-height: 2.75rem;
+      }
+      .waiter-card__owner {
+        margin: 0;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--leos-muted, #6b5c4d);
+      }
+      .waiter-card__ask {
+        margin: 0.15rem 0 0;
+        font-size: 1rem;
+        font-weight: 650;
+      }
       .waiter-card__kind {
         margin: 0;
         font-size: 0.9rem;
@@ -867,6 +1041,46 @@ type HelpReq = {
         margin: 0 0.35rem;
       }
 
+      .waiter-bill {
+        margin-top: 0.65rem;
+        padding-top: 0.65rem;
+        border-top: 1px solid rgba(27, 34, 48, 0.08);
+        display: flex;
+        flex-direction: column;
+        gap: 0.55rem;
+      }
+      .waiter-bill__q {
+        margin: 0;
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: var(--w-ink);
+      }
+      .waiter-bill__field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        font-size: 0.75rem;
+        font-weight: 650;
+        color: var(--w-muted);
+      }
+      .waiter-bill__input {
+        min-height: 2.5rem;
+        padding: 0.45rem 0.65rem;
+        border: 1px solid rgba(27, 34, 48, 0.14);
+        border-radius: 0.65rem;
+        font: inherit;
+        font-size: 0.95rem;
+        color: var(--w-ink);
+        background: #fff;
+      }
+      .waiter-btn--gold {
+        background: #d7a14a;
+        color: #1b2230;
+      }
+      .waiter-btn--gold:disabled {
+        opacity: 0.45;
+      }
+
       .waiter-sticky {
         position: fixed;
         left: 0;
@@ -923,6 +1137,8 @@ export class ServicePageComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   readonly state = inject(SessionStateService);
   readonly terms = inject(TerminologyService);
+  readonly alerts = inject(StaffAlertsService);
+  private staffId = '';
 
   venue = 'Your experience';
   tab: FloorTab = 'tables';
@@ -947,6 +1163,9 @@ export class ServicePageComponent implements OnInit, OnDestroy {
   detailItems: TableItem[] = [];
   detailItemsTab: DetailItemsTab = 'active';
   detailLoading = false;
+  billEntrySessionId: string | null = null;
+  billEntryLabel = '';
+  billEntryAmount: number | null = null;
   placeNoun = 'Table';
   placeNounPlural = 'Tables';
   private experienceTypeId: ExperienceTypeId = 'restaurant';
@@ -1045,6 +1264,8 @@ export class ServicePageComponent implements OnInit, OnDestroy {
     const who = this.staffSession.read();
     this.staffName = who?.displayName?.split('·')[0]?.trim() || who?.displayName || '';
     this.organisationId = who?.organisationId || '';
+    this.staffId = who?.id || '';
+    if (!this.embedMonitor) void this.alerts.refresh();
     this.emptyLine = `${this.roleLabel} is calm — Assist will appear here.`;
 
     this.experienceTypeId = typeId;
@@ -1074,6 +1295,94 @@ export class ServicePageComponent implements OnInit, OnDestroy {
     this.tab = tab;
   }
 
+  tipsLine = '';
+  ordersPaused = false;
+
+  togglePause() {
+    if (this.busy) return;
+    this.busy = true;
+    this.api.pauseOrders(!this.ordersPaused).subscribe({
+      next: (p) => {
+        this.busy = false;
+        this.ordersPaused = p.paused;
+      },
+      error: (err) => {
+        this.busy = false;
+        this.error = err?.error?.message || 'Couldn’t change this — try again.';
+      },
+    });
+  }
+
+  fireTable(t: TableRow) {
+    if (this.busy) return;
+    this.busy = true;
+    this.api.fireRound(t.sessionId).subscribe({
+      next: () => {
+        this.busy = false;
+        this.message = 'Round sent to the kitchen.';
+        this.refresh(true);
+      },
+      error: (err) => {
+        this.busy = false;
+        this.error = err?.error?.message || 'Couldn’t send the round — try again.';
+      },
+    });
+  }
+  moveSessionId: string | null = null;
+  moveToCode = '';
+
+  get isManager(): boolean {
+    return !!this.staffSession.read()?.permissions?.includes('organisation.manage');
+  }
+
+  startMove(t: TableRow) {
+    this.moveSessionId = t.sessionId;
+    this.moveToCode = '';
+  }
+
+  submitMove(t: TableRow) {
+    const toCode = this.moveToCode.trim();
+    if (!toCode || this.busy) return;
+    this.busy = true;
+    this.api.moveTable(t.sessionId, toCode).subscribe({
+      next: (r) => {
+        this.busy = false;
+        this.moveSessionId = null;
+        this.message = `Moved to ${this.placeNoun.toLowerCase()} ${r.placeCode}.`;
+        this.refresh(true);
+      },
+      error: (err) => {
+        this.busy = false;
+        this.error = err?.error?.message || 'Couldn’t move this bill — try again.';
+      },
+    });
+  }
+
+  isMine(t: TableRow): boolean {
+    return !!this.staffId && t.waiterId === this.staffId;
+  }
+
+  enableAlerts() {
+    void this.alerts.enable();
+  }
+
+  takeTable(t: TableRow) {
+    if (this.busy) return;
+    this.busy = true;
+    this.api.takeTable(t.sessionId).subscribe({
+      next: (r) => {
+        this.busy = false;
+        t.waiterId = r.waiterId;
+        t.waiterName = r.waiterName;
+        this.refresh(true);
+      },
+      error: (err) => {
+        this.busy = false;
+        this.error = err?.error?.message || 'Couldn’t take this table — try again.';
+      },
+    });
+  }
+
   private bindOperateSocket() {
     this.unsubPlatform?.();
     if (!this.organisationId) return;
@@ -1092,6 +1401,7 @@ export class ServicePageComponent implements OnInit, OnDestroy {
       'AssistanceRequested',
       'AssistanceAcknowledged',
       'AssistanceResolved',
+      'SessionMoved',
     ]);
     if (!refreshOn.has(name)) return;
     this.socketLive = true;
@@ -1143,6 +1453,8 @@ export class ServicePageComponent implements OnInit, OnDestroy {
     return req.kind === 'manager';
   }
 
+  isSpecificAsk = isSpecificAsk;
+
   get managerPulseNoun(): string {
     const label = guestManagerAssistCopy(this.experienceTypeId).label;
     const stripped = label.replace(/^Speak to (the )?/i, '').trim();
@@ -1180,9 +1492,15 @@ export class ServicePageComponent implements OnInit, OnDestroy {
       ...calls,
       assistance: this.api.listAssistance().pipe(catchError(() => of([]))),
       floor: this.api.listFloorTables().pipe(catchError(() => of({ tables: [] }))),
+      tips: this.api.myTips().pipe(catchError(() => of(null))),
+      pace: this.isManager ? this.api.getPace().pipe(catchError(() => of(null))) : of(null),
     }).subscribe({
       next: (bundle) => {
         if (!silent) this.error = '';
+        const tips = (bundle as { tips: { tipMinor: number; count: number } | null }).tips;
+        const pace = (bundle as { pace: { paused: boolean } | null }).pace;
+        if (pace) this.ordersPaused = pace.paused;
+        this.tipsLine = tips ? myTipsLine(tips.tipMinor, tips.count) : '';
         const assistance = (
           bundle as { assistance: HelpReq[] }
         ).assistance;
@@ -1200,8 +1518,18 @@ export class ServicePageComponent implements OnInit, OnDestroy {
           ...t,
           preparingCount: t.preparingCount ?? 0,
           pendingCount: t.pendingCount ?? 0,
+          heldCount: t.heldCount ?? 0,
           items: t.items ?? [],
         }));
+
+        // Help for a table goes to that table's waiter.
+        if (!this.embedMonitor && !this.monitorMode && this.staffId) {
+          const waiterBySession = new Map(this.tables.map((t) => [t.sessionId, t.waiterId]));
+          const manager = !!this.staffSession.read()?.permissions?.includes('organisation.manage');
+          this.assistance = this.assistance.filter((a) =>
+            helpVisibleTo(a.sessionId ? waiterBySession.get(a.sessionId) : null, this.staffId, manager),
+          );
+        }
 
         if (this.detail) {
           const live = this.tables.find((t) => t.sessionId === this.detail!.sessionId);
@@ -1396,6 +1724,46 @@ export class ServicePageComponent implements OnInit, OnDestroy {
   closeDetail() {
     this.detail = null;
     this.detailItems = [];
+  }
+
+  startBillEntry(t: TableRow) {
+    this.billEntrySessionId = t.sessionId;
+    this.billEntryLabel = '';
+    this.billEntryAmount = null;
+    this.error = '';
+  }
+
+  cancelBillEntry() {
+    this.billEntrySessionId = null;
+    this.billEntryLabel = '';
+    this.billEntryAmount = null;
+  }
+
+  canSubmitBillEntry(): boolean {
+    const label = this.billEntryLabel.trim();
+    const amount = Number(this.billEntryAmount);
+    return !!label && Number.isFinite(amount) && amount >= 0;
+  }
+
+  submitBillEntry(t: TableRow) {
+    if (!this.canSubmitBillEntry() || this.busy) return;
+    const label = this.billEntryLabel.trim();
+    const unitPrice = Number(this.billEntryAmount);
+    this.busy = true;
+    this.error = '';
+    this.api.addStaffBillLine(t.sessionId, { label, unitPrice, quantity: 1 }).subscribe({
+      next: () => {
+        this.busy = false;
+        this.message = `Added ${label} (R${unitPrice.toFixed(2)}) to ${this.placeNoun} ${t.placeCode}`;
+        this.cancelBillEntry();
+        this.refresh(true);
+      },
+      error: (err) => {
+        this.busy = false;
+        this.error =
+          err?.error?.message || err?.message || 'Could not add to bill — try again';
+      },
+    });
   }
 
   loadDetail(sessionId: string, silent = false) {

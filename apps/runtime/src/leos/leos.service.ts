@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import type { EventEnvelope, ResolvedContext } from '@lekki/contracts';
 import { id } from '@lekki/contracts';
@@ -18,6 +18,7 @@ import { addMinor, fromMinor, subtractMinor, toMinor } from './money';
 import {
   applyTipToBase,
   assertRemainingToPay,
+  customAmountBaseMinor,
 } from './payment-invariants';
 import {
   canReservePayment,
@@ -27,7 +28,32 @@ import {
   settlementCapacityAction,
 } from './payment-session-cap';
 import { equalShareForParticipant } from './equal-share-candidates';
-import { MissingFieldError, PaymentConflictError, SessionNotActiveError } from './domain-errors';
+import {
+  InvalidParticipantError,
+  MissingFieldError,
+  PaymentConflictError,
+  SessionNotActiveError,
+} from './domain-errors';
+import {
+  ShareNotAllowedError,
+  assertLinesNotLocked,
+  anyLineAttributed,
+  guestsPaying,
+  mineOrderedMinor,
+  nextShare,
+  type ShareAction,
+} from './line-shares';
+import { cleanAssistanceMessage, isSameAsk } from './assistance-message';
+import { TableMoveRefusedError, moveRefusalMessage, planTableMove } from './table-move';
+import { canManage } from './staff-admin';
+import { cleanIdempotencyKey, paymentReplay } from './idempotency';
+import { KitchenPaceService } from './kitchen-pace.service';
+import {
+  OrderRefusedError,
+  initialFulfilmentStatus,
+  minutesOnVenueClock,
+  orderRefusal,
+} from './kitchen-pace';
 import { venueHasActivePaymentInstall } from './payments-active';
 import {
   assertExternalLineInput,
@@ -62,6 +88,7 @@ export class LeosService {
     private readonly outbox: OutboxService,
     private readonly sessionAccess: SessionAccessService,
     private readonly paymentExpiry: PaymentExpiryService,
+    private readonly kitchenPace: KitchenPaceService,
   ) {}
 
   private paymentTenant(session: { organisationId: string; venueId: string }): PaymentTenantRef {
@@ -319,6 +346,7 @@ export class LeosService {
     sessionId: string;
     participantId?: string;
     participantSecret: string;
+    idempotencyKey?: string;
     lines: Array<{
       catalogueItemId: string;
       quantity: number;
@@ -331,9 +359,6 @@ export class LeosService {
       include: { participants: true },
     });
     if (!session) throw new Error('Session not found');
-    if (session.status === 'completed' || session.status === 'archived') {
-      throw new Error('Session is no longer active');
-    }
 
     const participantId = input.participantId?.trim();
     if (!participantId) throw new Error('Participant required');
@@ -343,11 +368,31 @@ export class LeosService {
       input.participantSecret,
     );
 
+    // A retry of an order that already landed returns that order. It creates no second one.
+    const idempotencyKey = cleanIdempotencyKey(input.idempotencyKey);
+    if (idempotencyKey) {
+      const replay = await this.findOrderByKey(session.id, idempotencyKey);
+      if (replay) return replay;
+    }
+
+    if (session.status === 'completed' || session.status === 'archived') {
+      throw new Error('Session is no longer active');
+    }
+
     const catalogueIds = [...new Set(input.lines.map((l) => l.catalogueItemId))];
     const catalogue = await this.prisma.restaurantCatalogItem.findMany({
       where: { venueId: session.venueId, id: { in: catalogueIds }, available: true },
     });
     const byId = new Map(catalogue.map((c) => [c.id, c]));
+
+    // Paused kitchens and categories outside their hours refuse new orders.
+    const { pace, timezone } = await this.kitchenPace.forVenue(session.venueId);
+    const refusal = orderRefusal(
+      pace,
+      catalogue.map((c) => c.category),
+      minutesOnVenueClock(new Date(), timezone),
+    );
+    if (refusal) throw new OrderRefusedError(refusal);
 
     const pricedLines = input.lines.map((line) => {
       if (line.quantity < 1) throw new Error('Invalid quantity');
@@ -400,6 +445,7 @@ export class LeosService {
     });
     if (!fulfilments.ok) throw new Error(fulfilments.error);
 
+    try {
     await this.prisma.$transaction(async (tx) => {
       await tx.transaction.create({
         data: {
@@ -409,6 +455,7 @@ export class LeosService {
           status: aggregate.status,
           currency: aggregate.currency,
           total: aggregate.total,
+          idempotencyKey: idempotencyKey ?? null,
           lines: {
             create: aggregate.lines.map((line, idx) => ({
               id: line.id,
@@ -433,7 +480,7 @@ export class LeosService {
             sessionId: session.id,
             organisationId: session.organisationId,
             stationId: fulfilment.stationId,
-            status: fulfilment.status,
+            status: initialFulfilmentStatus(pace, fulfilment.status),
             lines: {
               create: fulfilment.lines.map((line) => ({
                 id: newId('fl'),
@@ -482,8 +529,33 @@ export class LeosService {
         );
       }
     });
+    } catch (err) {
+      // Two taps landed together: the first order wins, the second returns it.
+      if (idempotencyKey && (err as { code?: string }).code === 'P2002') {
+        const replay = await this.findOrderByKey(session.id, idempotencyKey);
+        if (replay) return replay;
+      }
+      throw err;
+    }
 
     return { transactionId: aggregate.id, fulfilments: fulfilments.value };
+  }
+
+  private async findOrderByKey(sessionId: string, idempotencyKey: string) {
+    const existing = await this.prisma.transaction.findUnique({
+      where: { sessionId_idempotencyKey: { sessionId, idempotencyKey } },
+      include: { fulfilments: { select: { id: true, stationId: true, status: true } } },
+    });
+    if (!existing) return null;
+    return {
+      transactionId: existing.id,
+      replayed: true as const,
+      fulfilments: existing.fulfilments.map((f) => ({
+        fulfilmentId: f.id,
+        stationId: f.stationId,
+        status: f.status,
+      })),
+    };
   }
 
   /**
@@ -563,6 +635,112 @@ export class LeosService {
   }
 
   /**
+   * Staff Operate — key a bill line without Pilot or guest order.
+   * One label + amount; origin staff_operate; no kitchen ticket (pay-at-table path).
+   */
+  async appendStaffOperateLine(input: {
+    sessionId: string;
+    organisationId: string;
+    label: string;
+    unitPrice: number;
+    quantity?: number;
+  }): Promise<{ transactionId: string }> {
+    const sessionId = input.sessionId?.trim();
+    const label = input.label?.trim();
+    const quantity = input.quantity ?? 1;
+    if (!sessionId) throw new MissingFieldError('sessionId');
+    if (!label) throw new MissingFieldError('label');
+    if (!Number.isFinite(input.unitPrice) || input.unitPrice < 0) {
+      throw new Error('Invalid unitPrice');
+    }
+    if (!Number.isFinite(quantity) || quantity < 1) {
+      throw new Error('Invalid quantity');
+    }
+
+    const session = await this.prisma.experienceSession.findUnique({
+      where: { id: sessionId },
+      select: {
+        id: true,
+        venueId: true,
+        organisationId: true,
+        status: true,
+        correlationId: true,
+      },
+    });
+    if (!session || session.status === 'completed' || session.status === 'archived') {
+      throw new SessionNotActiveError();
+    }
+    if (session.organisationId !== input.organisationId) {
+      throw new Error('Wrong organisation');
+    }
+
+    const totalMajor = externalLineTotalMajor(quantity, input.unitPrice);
+    const billDeltaMinor = externalLineBillMinorDelta(quantity, input.unitPrice);
+    const txId = newId('tx');
+    const lineId = newId('txl');
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.transaction.create({
+        data: {
+          id: txId,
+          sessionId: session.id,
+          organisationId: session.organisationId,
+          status: 'committed',
+          currency: 'ZAR',
+          total: totalMajor,
+          lines: {
+            create: {
+              id: lineId,
+              venueId: session.venueId,
+              catalogueItemId: null,
+              label,
+              quantity,
+              unitPrice: input.unitPrice,
+              routingTags: [],
+              origin: 'staff_operate',
+            },
+          },
+        },
+      });
+
+      await tx.experienceSession.update({
+        where: { id: session.id },
+        data: {
+          billMinor: { increment: billDeltaMinor },
+          version: { increment: 1 },
+        },
+      });
+
+      await this.outbox.append(
+        this.envelope(
+          'TransactionCreated',
+          session.organisationId,
+          session.venueId,
+          session.correlationId,
+          {
+            transactionId: txId,
+            total: totalMajor,
+            sessionId: session.id,
+            origin: 'staff_operate',
+            lines: [
+              {
+                id: lineId,
+                label,
+                quantity,
+                unitPrice: input.unitPrice,
+                isUnmapped: true,
+              },
+            ],
+          },
+        ),
+        tx,
+      );
+    });
+
+    return { transactionId: txId };
+  }
+
+  /**
    * POS ingress — idempotent append of a till-punched line onto an open visit.
    * Does not create Fulfilment tickets: Pilot already owns kitchen for that punch.
    * Guest phone updates via TransactionCreated → existing Socket.IO rooms.
@@ -584,8 +762,21 @@ export class LeosService {
     const label = input.labelFallback.trim();
     const catalogueItemId = input.catalogueItemId?.trim() || null;
 
+    const sessionPreview = await this.prisma.experienceSession.findUnique({
+      where: { id: input.sessionId.trim() },
+      select: { venueId: true, status: true },
+    });
+    if (
+      !sessionPreview ||
+      sessionPreview.status === 'completed' ||
+      sessionPreview.status === 'archived'
+    ) {
+      throw new SessionNotActiveError();
+    }
+    const venueId = sessionPreview.venueId;
+
     const existing = await this.prisma.transactionLine.findUnique({
-      where: { externalRef },
+      where: { venueId_externalRef: { venueId, externalRef } },
       select: { transactionId: true },
     });
     if (existing) {
@@ -617,7 +808,9 @@ export class LeosService {
 
         // Re-check inside the txn in case two webhooks raced past the fast path.
         const raced = await tx.transactionLine.findUnique({
-          where: { externalRef },
+          where: {
+            venueId_externalRef: { venueId: session.venueId, externalRef },
+          },
           select: { transactionId: true },
         });
         if (raced) {
@@ -637,6 +830,7 @@ export class LeosService {
             lines: {
               create: {
                 id: lineId,
+                venueId: session.venueId,
                 catalogueItemId,
                 label,
                 quantity: input.quantity,
@@ -685,7 +879,7 @@ export class LeosService {
         );
       });
     } catch (err) {
-      // Concurrent webhook: unique(externalRef) won the race.
+      // Concurrent webhook: unique(venueId, externalRef) won the race.
       if (
         err &&
         typeof err === 'object' &&
@@ -693,7 +887,7 @@ export class LeosService {
         (err as { code?: string }).code === 'P2002'
       ) {
         const again = await this.prisma.transactionLine.findUnique({
-          where: { externalRef },
+          where: { venueId_externalRef: { venueId, externalRef } },
           select: { transactionId: true },
         });
         if (again) return { transactionId: again.transactionId, duplicated: true };
@@ -726,7 +920,7 @@ export class LeosService {
         participants: true,
         transactions: {
           where: { status: 'committed' },
-          include: { lines: true },
+          include: { lines: true, payments: true },
         },
       },
     });
@@ -747,9 +941,16 @@ export class LeosService {
 
     const existing = await this.prisma.transactionLine.findMany({
       where: { id: { in: validIds } },
-      select: { id: true, participantId: true },
+      select: { id: true, participantId: true, sharedWith: true },
     });
+    if (existing.some((row) => row.sharedWith.length > 0)) {
+      throw new ShareNotAllowedError('That item is shared. Use your share to change it.');
+    }
     assertClaimLinesAllowed(caller, participantId, existing);
+    assertLinesNotLocked(
+      existing,
+      guestsPaying(session.transactions.flatMap((t) => t.payments ?? [])),
+    );
 
     const undo = existing.map((row) => ({
       lineId: row.id,
@@ -783,6 +984,155 @@ export class LeosService {
     );
 
     return { ok: true as const, claimed: validIds.length, lineIds: validIds, undo };
+  }
+
+  /**
+   * One dish, shared. A guest joins or leaves the share of a line (one bottle, three ways).
+   * The share locks while any of its owners has a payment in flight.
+   */
+  async shareLine(input: {
+    sessionId: string;
+    lineId: string;
+    action: ShareAction;
+    participantSecret: string;
+  }) {
+    const sessionId = input.sessionId?.trim();
+    const lineId = input.lineId?.trim();
+    if (!sessionId) throw new MissingFieldError('sessionId');
+    if (!lineId) throw new MissingFieldError('lineId');
+    if (input.action !== 'join' && input.action !== 'leave') {
+      throw new MissingFieldError('action');
+    }
+
+    const session = await this.prisma.experienceSession.findUnique({
+      where: { id: sessionId },
+      include: {
+        participants: true,
+        transactions: {
+          where: { status: 'committed' },
+          include: { lines: true, payments: true },
+        },
+      },
+    });
+    if (!session) throw new Error('Session not found');
+
+    const caller = resolveParticipantBySecret(session.participants, input.participantSecret);
+    if (!caller) throw new InvalidParticipantError();
+
+    const line = session.transactions.flatMap((t) => t.lines ?? []).find((l) => l.id === lineId);
+    if (!line) throw new Error('That item isn’t on the open visit');
+
+    assertLinesNotLocked(
+      [line],
+      guestsPaying(session.transactions.flatMap((t) => t.payments ?? [])),
+    );
+
+    const next = nextShare(line, caller.id, input.action);
+    await this.prisma.transactionLine.update({
+      where: { id: lineId },
+      data: { participantId: next.participantId, sharedWith: next.sharedWith },
+    });
+
+    await this.outbox.append(
+      this.envelope(
+        'LinesClaimed',
+        session.organisationId,
+        session.venueId,
+        session.correlationId,
+        {
+          sessionId: session.id,
+          lineIds: [lineId],
+          participantId: input.action === 'join' ? caller.id : null,
+          claimerName:
+            session.participants
+              .find((p) => p.id === caller.id)
+              ?.displayName?.trim()
+              .split(/\s+/)[0] || 'Guest',
+          shared: next.sharedWith.length,
+        },
+      ),
+    );
+
+    return { ok: true as const, lineId, sharedWith: next.sharedWith };
+  }
+
+  /** Fire a held round: every held ticket for the table goes to its station together. */
+  async fireRound(sessionId: string, organisationId: string) {
+    const session = await this.prisma.experienceSession.findUnique({
+      where: { id: sessionId },
+      select: { id: true, organisationId: true },
+    });
+    if (!session || session.organisationId !== organisationId) {
+      throw new NotFoundException('Table not found');
+    }
+    const held = await this.prisma.fulfilment.findMany({
+      where: { sessionId, status: 'held' },
+      select: { id: true },
+    });
+    for (const f of held) {
+      await this.updateFulfilmentStatus(f.id, 'pending');
+    }
+    return { fired: held.length };
+  }
+
+  /**
+   * A manager moves an open Lekki bill to another table. Guests, lines, and payments stay on
+   * the session; no POS call is made.
+   */
+  async moveTable(input: {
+    sessionId: string;
+    toCode: string;
+    organisationId: string;
+    permissions: string[];
+  }) {
+    const toCode = input.toCode?.trim();
+    if (!toCode) throw new MissingFieldError('toCode');
+    const session = await this.prisma.experienceSession.findUnique({
+      where: { id: input.sessionId },
+      include: { physicalContext: true },
+    });
+    if (!session || session.organisationId !== input.organisationId) {
+      throw new NotFoundException('Table not found');
+    }
+    const candidates = await this.prisma.physicalContext.findMany({
+      where: { venueId: session.venueId, organisationId: session.organisationId },
+    });
+    const target = candidates.find((c) => c.code.toLowerCase() === toCode.toLowerCase()) ?? null;
+    const fromCode = session.physicalContext?.code ?? '';
+
+    const plan = planTableMove({
+      isManager: canManage(input.permissions),
+      sessionStatus: session.status,
+      fromCode,
+      target: target ? { code: target.code, activeSessionId: target.activeSessionId } : null,
+      sessionId: session.id,
+    });
+    if (!plan.ok) throw new TableMoveRefusedError(plan.reason, moveRefusalMessage(plan.reason, toCode));
+
+    await this.prisma.$transaction([
+      this.prisma.physicalContext.updateMany({
+        where: { id: session.physicalContextId, activeSessionId: session.id },
+        data: { activeSessionId: null },
+      }),
+      this.prisma.physicalContext.update({
+        where: { id: target!.id },
+        data: { activeSessionId: session.id },
+      }),
+      this.prisma.experienceSession.update({
+        where: { id: session.id },
+        data: { physicalContextId: target!.id },
+      }),
+    ]);
+
+    await this.outbox.append(
+      this.envelope('SessionMoved', session.organisationId, session.venueId, session.correlationId, {
+        sessionId: session.id,
+        fromCode,
+        toCode: target!.code,
+      }),
+    );
+
+    return { sessionId: session.id, placeCode: target!.code, fromCode };
   }
 
   async updateFulfilmentStatus(fulfilmentId: string, status: string) {
@@ -831,13 +1181,37 @@ export class LeosService {
     options?: {
       tipAmount?: number;
       tipPercent?: number;
-      scope?: 'visit' | 'mine' | 'equal';
+      scope?: 'visit' | 'mine' | 'equal' | 'amount';
+      amount?: number;
       participantId?: string;
       participantSecret?: string;
+      idempotencyKey?: string;
     },
   ) {
     // Free abandoned gateway reservations before reading remaining capacity.
     await this.paymentExpiry.expireAbandoned();
+
+    // A retry of a payment that already started answers with that payment. It starts no second one.
+    const paymentKey = cleanIdempotencyKey(options?.idempotencyKey);
+    if (paymentKey) {
+      const prior = await this.prisma.payment.findFirst({
+        where: {
+          sessionId,
+          idempotencyKey: paymentKey,
+          status: { in: ['pending', 'completed', 'settled'] },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+      const replay = paymentReplay(prior);
+      if (replay.kind !== 'fresh') {
+        return {
+          paymentId: replay.paymentId,
+          status: replay.status,
+          reference: replay.reference,
+          replayed: true as const,
+        };
+      }
+    }
 
     const session = await this.prisma.experienceSession.findUnique({
       where: { id: sessionId },
@@ -852,10 +1226,16 @@ export class LeosService {
     });
     if (!session) throw new Error('Session not found');
 
-    const scope: 'visit' | 'mine' | 'equal' =
-      options?.scope === 'mine' ? 'mine' : options?.scope === 'equal' ? 'equal' : 'visit';
+    const scope: 'visit' | 'mine' | 'equal' | 'amount' =
+      options?.scope === 'mine'
+        ? 'mine'
+        : options?.scope === 'equal'
+          ? 'equal'
+          : options?.scope === 'amount'
+            ? 'amount'
+            : 'visit';
     const participantId = options?.participantId?.trim() || '';
-    if ((scope === 'mine' || scope === 'equal') && participantId) {
+    if ((scope === 'mine' || scope === 'equal' || scope === 'amount') && participantId) {
       const secret = options?.participantSecret?.trim();
       if (!secret) throw new MissingFieldError('participantSecret');
       await this.sessionAccess.assertGuestParticipant(sessionId, participantId, secret);
@@ -877,13 +1257,15 @@ export class LeosService {
     let baseMinor = remainingMinor;
     if (scope === 'mine') {
       const allLines = committed.flatMap((t) => t.lines ?? []);
-      const attributed = allLines.some((l) => !!l.participantId);
+      const shareable = allLines.map((l) => ({
+        id: l.id,
+        participantId: l.participantId,
+        sharedWith: l.sharedWith,
+        totalMinor: toMinor(Number(l.unitPrice)) * l.quantity,
+      }));
+      const attributed = anyLineAttributed(shareable);
       if (attributed && participantId) {
-        const mineOrderedMinor = addMinor(
-          ...allLines
-            .filter((l) => l.participantId === participantId)
-            .map((l) => toMinor(Number(l.unitPrice)) * l.quantity),
-        );
+        const mineOwedMinor = mineOrderedMinor(shareable, participantId);
         const mineAlreadyPaidMinor = addMinor(
           ...completed
             .filter((p) => {
@@ -895,7 +1277,7 @@ export class LeosService {
         );
         baseMinor = Math.min(
           remainingMinor,
-          Math.max(0, subtractMinor(mineOrderedMinor, mineAlreadyPaidMinor)),
+          Math.max(0, subtractMinor(mineOwedMinor, mineAlreadyPaidMinor)),
         );
       }
       if (baseMinor <= 0) throw new Error('Nothing on your share to pay');
@@ -923,6 +1305,8 @@ export class LeosService {
         Math.round(remainingMinor / unpaidSlots),
       );
       if (baseMinor <= 0) throw new Error('Nothing left for an equal share');
+    } else if (scope === 'amount') {
+      baseMinor = customAmountBaseMinor(options?.amount, remainingMinor);
     }
 
     if (
@@ -971,7 +1355,9 @@ export class LeosService {
     if (!connector.ok) throw new Error(connector.error);
 
     const scopedParticipant =
-      (scope === 'mine' || scope === 'equal') && participantId ? participantId : null;
+      (scope === 'mine' || scope === 'equal' || scope === 'amount') && participantId
+        ? participantId
+        : null;
 
     await this.prisma.$transaction(async (tx) => {
       const reserved = await tx.$executeRaw`
@@ -992,6 +1378,9 @@ export class LeosService {
           organisationId: session.organisationId,
           amount,
           tipAmount: tip,
+          tipWaiterId: session.waiterId ?? null,
+          tipWaiterName: session.waiterName ?? null,
+          idempotencyKey: paymentKey ?? null,
           scope,
           participantId: scopedParticipant,
           currency: transaction.currency,
@@ -1279,7 +1668,8 @@ export class LeosService {
 
   /**
    * Form-tamper / underpay ITN — never settle claims or emit PaymentCompleted.
-   * Releases the pending reservation so the guest can retry the full amount.
+   * Releases the reservation only when leaving `pending` (still holding capacity).
+   * Already-`expired` rows already released on expiry — do not release again.
    */
   private async failPayFastAmountMismatch(
     paymentId: string,
@@ -1298,13 +1688,21 @@ export class LeosService {
       toMinor(Number(payment.tipAmount ?? 0)),
     );
     await this.prisma.$transaction(async (tx) => {
-      const claimed = await tx.payment.updateMany({
-        where: { id: paymentId, status: { in: ['pending', 'expired'] } },
+      const claimedPending = await tx.payment.updateMany({
+        where: { id: paymentId, status: 'pending' },
         data: { status: 'amount_mismatch' },
       });
-      if (claimed.count === 0) return;
-      if (baseMinor > 0) {
-        await this.releaseSessionPaidMinor(tx, payment.sessionId, baseMinor);
+      if (claimedPending.count === 1) {
+        if (baseMinor > 0) {
+          await this.releaseSessionPaidMinor(tx, payment.sessionId, baseMinor);
+        }
+      } else {
+        const claimedExpired = await tx.payment.updateMany({
+          where: { id: paymentId, status: 'expired' },
+          data: { status: 'amount_mismatch' },
+        });
+        if (claimedExpired.count === 0) return;
+        // Expired already released reservation — stamp only, no second release.
       }
       await this.outbox.append(
         this.envelope(
@@ -1477,8 +1875,10 @@ export class LeosService {
 
     const kind = normalizeAssistanceKind(input.kind);
 
-    // One open assistance per kind per session (service and manager can coexist).
-    const existingOpen = await this.prisma.assistanceRequest.findFirst({
+    // One open assistance per kind and wording per session (service and manager can coexist,
+    // and a table can ask for water and cutlery together).
+    const message = cleanAssistanceMessage(input.message);
+    const openAsks = await this.prisma.assistanceRequest.findMany({
       where: {
         sessionId: session.id,
         kind,
@@ -1486,6 +1886,7 @@ export class LeosService {
       },
       orderBy: { createdAt: 'desc' },
     });
+    const existingOpen = openAsks.find((open) => isSameAsk(open, { kind, message }));
     if (existingOpen) return existingOpen;
 
     const request = await this.prisma.assistanceRequest.create({
@@ -1495,7 +1896,7 @@ export class LeosService {
         organisationId: session.organisationId,
         venueId: session.venueId,
         kind,
-        message: input.message,
+        message,
         status: 'open',
       },
     });
@@ -1518,13 +1919,23 @@ export class LeosService {
     return request;
   }
 
-  async listAssistance(opts?: { sessionId?: string; kind?: string }) {
-    const kind = opts?.kind ? normalizeAssistanceKind(opts.kind) : undefined;
+  async listAssistance(opts: {
+    organisationId: string;
+    sessionId?: string;
+    kind?: string;
+    venueId?: string;
+  }) {
+    const organisationId = opts.organisationId?.trim();
+    if (!organisationId) throw new MissingFieldError('organisationId');
+    const kind = opts.kind ? normalizeAssistanceKind(opts.kind) : undefined;
+    const venueId = opts.venueId?.trim() || undefined;
     return this.prisma.assistanceRequest.findMany({
       where: {
+        organisationId,
         status: { in: ['open', 'acknowledged'] },
-        ...(opts?.sessionId ? { sessionId: opts.sessionId } : {}),
+        ...(opts.sessionId ? { sessionId: opts.sessionId } : {}),
         ...(kind ? { kind } : {}),
+        ...(venueId ? { venueId } : {}),
       },
       orderBy: { createdAt: 'asc' },
     });

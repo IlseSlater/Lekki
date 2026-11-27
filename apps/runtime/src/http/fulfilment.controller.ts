@@ -1,6 +1,7 @@
 import { Body, Controller, ForbiddenException, Get, Param, Patch, Req, UseGuards } from '@nestjs/common';
 import { LeosService } from '../leos/leos.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { WaiterTablesService } from '../leos/waiter-tables.service';
 import { StaffAuthGuard, RequireStaffPermission } from '../staff-auth/staff-auth.guard';
 import { StaffTokenService, type StaffTokenClaims } from '../staff-auth/staff-token.service';
 import { restaurantStationAccess } from '@lekki/pack-restaurant';
@@ -12,6 +13,7 @@ export class FulfilmentController {
     private readonly leos: LeosService,
     private readonly prisma: PrismaService,
     private readonly tokens: StaffTokenService,
+    private readonly tables: WaiterTablesService,
   ) {}
 
   @Patch(':id/status')
@@ -38,13 +40,30 @@ export class FulfilmentController {
     ) {
       throw new ForbiddenException('Serve role can only mark served');
     }
-    return this.leos.updateFulfilmentStatus(id, body.status);
+    const updated = await this.leos.updateFulfilmentStatus(id, body.status);
+    if (body.status === 'delivered' && /waiter|staff/i.test(staff.role)) {
+      await this.tables.takeIfFree(existing.sessionId, staff).catch(() => null);
+    }
+    return updated;
   }
 
   @Get('station/:stationId')
-  async listByStation(@Param('stationId') stationId: string) {
+  @UseGuards(StaffAuthGuard)
+  @RequireStaffPermission('fulfilment.read')
+  async listByStation(
+    @Param('stationId') stationId: string,
+    @Req() req: { staff?: StaffTokenClaims },
+  ) {
+    const staff = req.staff!;
+    if (!this.tokens.canAccessStation(staff.role, stationId)) {
+      throw new ForbiddenException('Experience cannot read this station');
+    }
     const rows = await this.prisma.fulfilment.findMany({
-      where: { stationId, status: { not: 'delivered' } },
+      where: {
+        stationId,
+        organisationId: staff.org,
+        status: { notIn: ['delivered', 'held'] },
+      },
       include: {
         lines: true,
         transaction: { include: { lines: true } },

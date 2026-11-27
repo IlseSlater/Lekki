@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { canEnterWithToken, isReturningByVisits } from '../studio/guest-entry-gate';
+import { cleanAllergies, readMemory, type GuestMemory } from '../leos/guest-memory';
 
 /** @deprecated Kept for localStorage shape only — never collected in Batch 6+. */
 export type GuestGender = 'man' | 'woman' | 'nonbinary' | 'prefer_not' | '';
@@ -23,6 +24,10 @@ export type OnboardingProfile = {
   lastVisitAt: string;
   /** Last venue label remembered for Continuity. */
   lastVenueLabel: string;
+  /** Allergies the guest asked us to remember on this phone. */
+  allergies: string;
+  /** The first few dishes from the last visit. */
+  lastOrder: string[];
 };
 
 const KEY = 'leos.onboarding';
@@ -43,6 +48,8 @@ const EMPTY: OnboardingProfile = {
   visitCount: 0,
   lastVisitAt: '',
   lastVenueLabel: '',
+  allergies: '',
+  lastOrder: [],
 };
 
 /**
@@ -100,6 +107,21 @@ export class OnboardingService {
       lastVisitAt: new Date().toISOString(),
       lastVenueLabel: (venueLabel || p.lastVenueLabel || '').trim(),
     });
+  }
+
+  /** What this phone remembers, with the guest's say-so. */
+  memory(): GuestMemory {
+    return readMemory(this.read());
+  }
+
+  rememberAllergies(raw: string) {
+    return this.save({ allergies: cleanAllergies(raw) });
+  }
+
+  rememberOrder(venueLabel: string, dishes: string[]) {
+    const label = venueLabel.trim();
+    if (!label || !dishes.length) return;
+    this.save({ lastVenueLabel: label, lastOrder: dishes });
   }
 
   /** Once per browser tab session — avoid re-banner on refresh. */

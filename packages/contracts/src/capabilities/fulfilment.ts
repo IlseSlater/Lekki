@@ -1,6 +1,7 @@
 import type { FulfilmentId, TransactionId } from '../ids';
 
 export type FulfilmentStatus =
+  | 'held'
   | 'created'
   | 'pending'
   | 'preparing'

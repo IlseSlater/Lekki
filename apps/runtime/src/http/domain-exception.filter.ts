@@ -1,4 +1,4 @@
-import { ArgumentsHost, Catch, ExceptionFilter, HttpException } from '@nestjs/common';
+import { ArgumentsHost, Catch, ExceptionFilter, HttpException, Logger } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import type { Request, Response } from 'express';
 import { mapDomainError } from '../leos/error-mapping';
@@ -16,6 +16,8 @@ import { mapDomainError } from '../leos/error-mapping';
  */
 @Catch()
 export class DomainExceptionFilter implements ExceptionFilter {
+  private readonly log = new Logger(DomainExceptionFilter.name);
+
   catch(err: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const res = ctx.getResponse<Response>();
@@ -36,9 +38,14 @@ export class DomainExceptionFilter implements ExceptionFilter {
       return;
     }
 
-    res.status(mapDomainError(err).status).json({
-      ...mapDomainError(err),
-      correlationId,
-    });
+    const mapped = mapDomainError(err);
+    if (mapped.status >= 500) {
+      // The wire text is fixed on purpose; the cause stays in our log, tied to the correlationId.
+      this.log.error(
+        `${req?.method} ${req?.url} correlationId=${correlationId}`,
+        err instanceof Error ? err.stack : String(err),
+      );
+    }
+    res.status(mapped.status).json({ ...mapped, correlationId });
   }
 }

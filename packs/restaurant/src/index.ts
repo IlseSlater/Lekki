@@ -294,6 +294,66 @@ export const seedCatalogue: RestaurantCatalogItem[] = [
   },
 ];
 
+/** What a venue sees on its first menu — short, priced, correctable. Pack content. */
+export type StarterCatalogItem = Omit<RestaurantCatalogItem, 'id'>;
+
+const restaurantStarter: StarterCatalogItem[] = [
+  {
+    label: 'Classic Burger',
+    description: 'Beef patty, cheddar, pickles',
+    unitPrice: 120,
+    currency: 'ZAR',
+    routingTags: ['food', 'mains'],
+    category: 'Mains',
+  },
+  {
+    label: 'Garden Salad',
+    description: 'Seasonal greens and house dressing',
+    unitPrice: 85,
+    currency: 'ZAR',
+    routingTags: ['food', 'mains'],
+    category: 'Mains',
+  },
+  {
+    label: 'Chips',
+    unitPrice: 40,
+    currency: 'ZAR',
+    routingTags: ['food', 'mains'],
+    category: 'Sides',
+  },
+  {
+    label: 'Craft Lager',
+    unitPrice: 45,
+    currency: 'ZAR',
+    routingTags: ['beverage', 'drinks'],
+    category: 'Drinks',
+  },
+  {
+    label: 'Soft Drink',
+    unitPrice: 28,
+    currency: 'ZAR',
+    routingTags: ['beverage', 'drinks'],
+    category: 'Drinks',
+  },
+  {
+    label: 'Flat White',
+    unitPrice: 35,
+    currency: 'ZAR',
+    routingTags: ['beverage', 'drinks'],
+    category: 'Drinks',
+  },
+];
+
+const cafeStarter: StarterCatalogItem[] = cafeSeedCatalogue.map(({ id: _id, choiceGroups: _c, ...rest }) => rest);
+
+/** Starter menu for an experience type. Types without a starter return an empty list. */
+export function starterCatalogue(typeId: string | null | undefined): StarterCatalogItem[] {
+  const key = (typeId ?? 'restaurant').trim().toLowerCase();
+  if (key === 'cafe') return cafeStarter.map((i) => ({ ...i, routingTags: [...i.routingTags] }));
+  if (key === 'restaurant') return restaurantStarter.map((i) => ({ ...i, routingTags: [...i.routingTags] }));
+  return [];
+}
+
 export function registerRestaurantPack(store: {
   register: (profile: ExperienceProfileDefinition) => void;
 }): void {

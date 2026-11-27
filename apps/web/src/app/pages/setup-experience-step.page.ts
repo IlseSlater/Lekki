@@ -14,6 +14,8 @@ import {
   type GuestDesignKey,
   type GuestExperienceDesign,
 } from '../studio/guest-experience-design';
+import { CatalogueLiveService } from '../services/catalogue-live.service';
+import { LeosApiService } from '../services/leos-api.service';
 import { StudioContextService } from '../services/studio-context.service';
 
 /** Setup — What guests experience. Signature: menu comes alive in the phone. */
@@ -145,6 +147,8 @@ import { StudioContextService } from '../services/studio-context.service';
 export class SetupExperienceStepPageComponent implements OnInit, OnDestroy {
   private readonly ctx = inject(StudioContextService);
   private readonly router = inject(Router);
+  private readonly api = inject(LeosApiService);
+  private readonly catalogueLive = inject(CatalogueLiveService);
   private saveTimer?: ReturnType<typeof setTimeout>;
   private flashTimer?: ReturnType<typeof setTimeout>;
 
@@ -216,6 +220,19 @@ export class SetupExperienceStepPageComponent implements OnInit, OnDestroy {
     if (active.steps?.experience && active.experienceUpdatedAt) {
       this.mode = 'summary';
     }
+    this.seedStarterMenu(active.venueId, active.typeId);
+  }
+
+  /** What guests order starts from a short list, not an empty page. */
+  private seedStarterMenu(venueId: string | undefined, typeId: string) {
+    const id = venueId?.trim();
+    if (!id) return;
+    this.api.seedStarterMenu(id, typeId).subscribe({
+      next: (res) => {
+        if (res.seeded > 0) this.catalogueLive.bump();
+      },
+      error: () => undefined,
+    });
   }
 
   ngOnDestroy() {

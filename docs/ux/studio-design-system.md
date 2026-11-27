@@ -13,8 +13,9 @@
 
 | Weight | Reference | Borrow |
 |--------|-----------|--------|
-| 70% | Shopify Admin | Calm onboarding · step progression · breathing room · editable feel |
-| 20% | Airbnb Host | Live guest mindset · configure → see outcome · human language · hospitality |
+| 50% | Uber Eats storefront | Owner edits the page the guest sees: cover, logo, categories, photos, price — [storefront onboarding](studio-storefront-onboarding.md) |
+| 30% | Shopify Admin | Calm · breathing room · editable feel |
+| 20% | Airbnb Host | Live guest mindset · human language · hospitality |
 | 10% | Material 3 philosophy | Whitespace · typography · simplicity — not Material components |
 | Tertiary | Stripe | Hierarchy · spacing · premium feel — not developer language or dark gradients |
 

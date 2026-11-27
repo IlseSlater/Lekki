@@ -2073,3 +2073,17 @@ a:hover {
 .leos-workspace__main:has(leos-experience-screen) {
   max-width: 56rem;
 }
+
+/* Sold-out dishes stay on the menu, dimmed. Hiding them makes the menu look wrong. */
+.leos-menu-card--sold-out .leos-menu-card__thumb,
+.leos-menu-card--sold-out .leos-menu-card__body {
+  opacity: 0.5;
+}
+
+.leos-menu-card__sold-out {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--leos-ink-secondary);
+  white-space: nowrap;
+}

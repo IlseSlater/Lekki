@@ -4,7 +4,7 @@
 **Purpose:** One card per Studio screen so Acceptance Specs can be written without re-reading the conversation export.  
 **Sources:** `lekki-Conversation.txt` (~L3414–3840 + SECTION 2) · [LEOS-Studio-Design-Blueprint.md](LEOS-Studio-Design-Blueprint.md) · [operate-craft.md](operate-craft.md) · [grow-craft.md](grow-craft.md) · [live-experience.md](live-experience.md) · [hospitality-phase.md](hospitality-phase.md)  
 **Stories:** [stories/S-00-welcome.md](stories/S-00-welcome.md) …  
-**Policy:** Setup v1 frozen — summarise & story; do not redesign.
+**Policy:** Screen cards below describe Setup v1 as it shipped. Journey order is superseded by [studio-storefront-onboarding.md](studio-storefront-onboarding.md). Do not treat these cards as a block on a storefront redesign.
 
 ---
 

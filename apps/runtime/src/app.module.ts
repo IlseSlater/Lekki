@@ -18,6 +18,7 @@ import { HealthController } from './http/health.controller';
 import { SetupPaymentsController } from './http/setup-payments.controller';
 import { SetupBrandController } from './http/setup-brand.controller';
 import { SetupEntryController } from './http/setup-entry.controller';
+import { FeedbackController } from './http/feedback.controller';
 import { SetupPosController } from './http/setup-pos.controller';
 import {
   StudioVenueAssetsController,
@@ -28,6 +29,7 @@ import { OperateController } from './http/operate.controller';
 import { EventsModule } from './events/events.module';
 import { WsModule } from './ws/ws.module';
 import { StaffAuthModule } from './staff-auth/staff-auth.module';
+import { PushModule } from './push/push.module';
 
 @Module({
   imports: [
@@ -43,6 +45,7 @@ import { StaffAuthModule } from './staff-auth/staff-auth.module';
     EventsModule,
     WsModule,
     StaffAuthModule,
+    PushModule,
   ],
   controllers: [
     EntryController,
@@ -60,6 +63,7 @@ import { StaffAuthModule } from './staff-auth/staff-auth.module';
     SetupPaymentsController,
     SetupBrandController,
     SetupEntryController,
+    FeedbackController,
     SetupPosController,
     StudioWorkspaceController,
     StudioVenueAssetsController,

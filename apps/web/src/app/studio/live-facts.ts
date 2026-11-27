@@ -117,9 +117,9 @@ export function spokenPlaceLine(facts: Pick<LiveFacts, 'venueName' | 'placeCode'
 export function missingFactCopy(field: LiveFactsField): string {
   switch (field) {
     case 'venueName':
-      return 'No venue name yet · Add it in Your venue';
+      return 'No venue name yet · Add it in Your place';
     case 'placeCode':
-      return 'No place yet · Add it in Where guests join';
+      return 'No place yet · Add it in Your tables';
     case 'catalogue':
       return 'No priced menu yet · Add an item guests can order';
   }

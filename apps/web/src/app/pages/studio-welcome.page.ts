@@ -43,11 +43,11 @@ import { experienceLabel } from '../studio/experience-registry';
         >
           <ol class="leos-studio-steps" config>
             <li>Choose what you’re creating</li>
-            <li>Who you are</li>
-            <li>What guests experience</li>
-            <li>Where guests join</li>
-            <li>How guests pay</li>
-            <li>Go Live</li>
+            <li>Your place</li>
+            <li>What guests order</li>
+            <li>Your tables</li>
+            <li>Taking payment</li>
+            <li>Open the doors</li>
           </ol>
           <p class="leos-muted">Most teams finish in under ten minutes.</p>
           <a escape class="leos-btn leos-btn--secondary" routerLink="/studio">Home</a>

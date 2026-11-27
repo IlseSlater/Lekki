@@ -23,7 +23,7 @@ type FoodIcon =
   standalone: true,
   imports: [CommonModule, LeosMoneyPipe, QuantityStepperComponent],
   template: `
-    <div class="leos-menu-card" role="listitem">
+    <div class="leos-menu-card" [class.leos-menu-card--sold-out]="soldOut" role="listitem">
       <div
         class="leos-menu-card__thumb"
         aria-hidden="true"
@@ -117,7 +117,9 @@ type FoodIcon =
       </div>
 
       <div class="leos-menu-card__action">
-        @if (requiresChoices) {
+        @if (soldOut) {
+          <p class="leos-menu-card__sold-out">Sold out today</p>
+        } @else if (requiresChoices) {
           <button
             type="button"
             class="leos-menu-card__add leos-menu-card__add--choices"
@@ -168,6 +170,8 @@ export class MenuCardComponent {
   @Input() quantity = 0;
   /** When true, always show + and open G-04 choices (never inline qty merge). */
   @Input() requiresChoices = false;
+  /** Out for today. The dish stays visible, dimmed, and cannot be added. */
+  @Input() soldOut = false;
   @Output() add = new EventEmitter<void>();
   @Output() quantityChange = new EventEmitter<number>();
   @Output() remove = new EventEmitter<void>();

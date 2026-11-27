@@ -147,3 +147,58 @@
     border: 1px solid #d8d2c9;
   }
 }
+
+/* Table layers (guest + waiter): ground, light sheet, one glass card on the seam.
+   Menu, bill lines, and lists live on the sheet. The decision (pay, help, tip, amount) sits on the card. */
+.leos-table {
+  min-height: 100dvh;
+  background: var(--leos-table-ground);
+  color: var(--leos-ink);
+  font-family: var(--leos-font-sans);
+}
+
+.leos-table__sheet {
+  background: var(--leos-table-sheet);
+  color: var(--leos-ink);
+  border-radius: 1.75rem 1.75rem 0 0;
+  padding: 1.25rem 1.25rem calc(8rem + env(safe-area-inset-bottom, 0px));
+}
+
+.leos-table__card {
+  position: sticky;
+  bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  margin: 0 1rem;
+  padding: 1.25rem 1.25rem 1.1rem;
+  border-radius: 1.75rem;
+  background: var(--leos-table-glass);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: var(--leos-table-glass-shadow);
+  color: var(--leos-table-glass-ink);
+}
+
+.leos-table__card-title {
+  margin: 0 0 0.25rem;
+  font-family: var(--leos-font-display);
+  font-size: 1.25rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.leos-table__card-note {
+  margin: 0 0 0.75rem;
+  font-size: 0.875rem;
+  color: var(--leos-table-glass-ink-muted);
+}
+
+.leos-table__figure {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-contrast: more) {
+  .leos-table__card {
+    background: #0c1016;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}

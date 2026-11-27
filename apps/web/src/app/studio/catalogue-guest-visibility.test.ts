@@ -5,19 +5,31 @@ import {
   formatAllergenLine,
   formatDietaryLine,
   guestVisibleCatalogueItems,
+  orderableCatalogueItems,
 } from './catalogue-guest-visibility';
 
-test('Batch 5 web: 86’d items stay off guest browse', () => {
+test('86’d items stay on the guest menu so it still looks right', () => {
   assert.deepEqual(
     guestVisibleCatalogueItems([
       { id: '1', available: true },
       { id: '2', available: false },
     ]).map((r) => r.id),
-    ['1'],
+    ['1', '2'],
   );
 });
 
-test('Batch 5 web: live CatalogueItemChanged removes 86 without reload', () => {
+test('only available dishes can be ordered', () => {
+  assert.deepEqual(
+    orderableCatalogueItems([
+      { id: '1', available: true },
+      { id: '2', available: false },
+      { id: '3' },
+    ]).map((r) => r.id),
+    ['1', '3'],
+  );
+});
+
+test('live CatalogueItemChanged marks a dish sold out without reload', () => {
   const next = applyCatalogueItemChange(
     [
       { id: '1', available: true },
@@ -26,8 +38,11 @@ test('Batch 5 web: live CatalogueItemChanged removes 86 without reload', () => {
     { id: '2', available: false },
   );
   assert.deepEqual(
-    next.map((r) => r.id),
-    ['1'],
+    next.map((r) => [r.id, r.available]),
+    [
+      ['1', true],
+      ['2', false],
+    ],
   );
 });
 

@@ -42,6 +42,11 @@ export class CreateTransactionDto {
   @MinLength(1)
   participantSecret!: string;
 
+  /** The phone's order key — a retry with the same key returns the first order. */
+  @IsOptional()
+  @IsString()
+  idempotencyKey?: string;
+
   @IsArray()
   @ArrayMinSize(1)
   @ValidateNested({ each: true })

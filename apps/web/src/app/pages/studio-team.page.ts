@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { LeosApiService } from '../services/leos-api.service';
 import { StudioContextService } from '../services/studio-context.service';
+import { teamTipFor, type WaiterTipsRow } from '../leos/tips-today';
 import {
   STAFF_EXPERIENCES,
   defaultPermissionsForRole,
@@ -17,6 +18,8 @@ import {
   sessionOnDevice,
   sessionRevokeCopy,
 } from '../studio/team-confidence';
+
+const MANAGE_PERMISSION = 'organisation.manage';
 
 type TeamMember = {
   id: string;
@@ -42,11 +45,15 @@ type TeamMember = {
     >
       <div class="studio-team__main">
         <header class="studio-team__header">
-          <p class="studio-team__eyebrow">Team</p>
           <h1 class="studio-team__title">{{ venue }}</h1>
           <p class="studio-team__calm">
             {{ question }}
           </p>
+          <div class="floor-tabs studio-team__tabs" role="tablist" aria-label="Team areas">
+            <button type="button" class="floor-tabs__btn" [class.floor-tabs__btn--on]="area === 'people'" (click)="setArea('people')">People</button>
+            <button type="button" class="floor-tabs__btn" [class.floor-tabs__btn--on]="area === 'devices'" (click)="setArea('devices')">Devices</button>
+            <button type="button" class="floor-tabs__btn" [class.floor-tabs__btn--on]="area === 'sessions'" (click)="setArea('sessions')">Sessions</button>
+          </div>
         </header>
 
         @if (error) {
@@ -100,6 +107,9 @@ type TeamMember = {
                               {{ personCardMeta(m) }}
                             }
                           </span>
+                          @if (tipFor(m)) {
+                            <span class="studio-team__card-meta">{{ tipFor(m) }}</span>
+                          }
                         </span>
                       </button>
                     }
@@ -125,12 +135,6 @@ type TeamMember = {
             Add staff
           </button>
           <a class="leos-btn" routerLink="/staff">Open Staff Experience</a>
-        </div>
-
-        <div class="floor-tabs studio-team__tabs" role="tablist" aria-label="Team areas">
-          <button type="button" class="floor-tabs__btn" [class.floor-tabs__btn--on]="area === 'people'" (click)="setArea('people')">People</button>
-          <button type="button" class="floor-tabs__btn" [class.floor-tabs__btn--on]="area === 'devices'" (click)="setArea('devices')">Devices</button>
-          <button type="button" class="floor-tabs__btn" [class.floor-tabs__btn--on]="area === 'sessions'" (click)="setArea('sessions')">Sessions</button>
         </div>
 
         @if (area === 'devices') {
@@ -223,6 +227,26 @@ type TeamMember = {
                 placeholder="Leave blank to keep"
               />
             }
+
+            <label class="studio-team__manage">
+              <input
+                type="checkbox"
+                role="switch"
+                [checked]="canManage"
+                [disabled]="isOnlyManager"
+                (change)="toggleManage($event)"
+              />
+              <span class="studio-team__manage-text">
+                <span class="studio-team__manage-title">Can manage this place</span>
+                <span class="studio-team__manage-hint">
+                  {{
+                    isOnlyManager
+                      ? 'The only manager. Make someone else a manager first.'
+                      : 'Menu, tables, team, and payments in Studio.'
+                  }}
+                </span>
+              </span>
+            </label>
 
             <p class="studio-team__label">Experience</p>
             <div class="studio-team__experiences" role="radiogroup" aria-label="Experience">
@@ -384,11 +408,9 @@ type TeamMember = {
         color: #1b2230;
       }
       .studio-team__tray {
-        padding: 0.85rem;
-        border-radius: 1.5rem;
-        background: #fff;
-        border: 1px solid var(--studio-line, #e7e2db);
-        box-shadow: 0 1px 2px rgba(27, 34, 48, 0.04);
+        padding: 0;
+        background: transparent;
+        border: 0;
       }
       .studio-team__grid {
         display: grid;
@@ -425,8 +447,9 @@ type TeamMember = {
         text-align: left;
         padding: 0.9rem 0.85rem 0.85rem;
         border-radius: 1rem;
-        border: 1px solid transparent;
-        background: #f4f1ec;
+        border: 1px solid var(--studio-line, #e7e2db);
+        background: var(--studio-surface, #fff);
+        box-shadow: var(--studio-shadow, 0 1px 3px rgba(15, 23, 42, 0.05));
         font: inherit;
         color: inherit;
         cursor: pointer;
@@ -436,7 +459,7 @@ type TeamMember = {
           box-shadow 160ms ease;
       }
       .studio-team__card:hover {
-        background: #efeae3;
+        box-shadow: var(--studio-shadow-hover, 0 8px 24px rgba(15, 23, 42, 0.08));
       }
       .studio-team__card--active {
         border-color: rgba(215, 161, 74, 0.65);
@@ -774,6 +797,35 @@ type TeamMember = {
         display: grid;
         gap: 0.4rem;
       }
+      .studio-team__manage {
+        display: flex;
+        align-items: center;
+        gap: 0.85rem;
+        min-height: 3.25rem;
+        padding: 0.75rem 0;
+        margin-top: 0.75rem;
+        border-top: 1px solid var(--studio-line);
+        border-bottom: 1px solid var(--studio-line);
+        cursor: pointer;
+      }
+      .studio-team__manage input {
+        width: 1.25rem;
+        height: 1.25rem;
+        accent-color: var(--leos-gold);
+      }
+      .studio-team__manage-text {
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+      }
+      .studio-team__manage-title {
+        font-weight: 600;
+        font-size: 0.9375rem;
+      }
+      .studio-team__manage-hint {
+        font-size: 0.8125rem;
+        color: var(--studio-ink-secondary);
+      }
       .studio-team__perm {
         display: flex;
         align-items: center;
@@ -781,7 +833,7 @@ type TeamMember = {
         font-size: 0.9rem;
       }
       .studio-team__tabs {
-        margin-top: 1.25rem;
+        margin-top: 1rem;
         display: flex;
         flex-wrap: wrap;
         gap: 0.45rem;
@@ -1082,8 +1134,28 @@ export class StudioTeamPageComponent implements OnInit {
 
   onExperienceChange() {
     if (!this.draft) return;
+    const manages = this.canManage;
     this.permissionOptions = permissionsForExperience(this.draft.role, this.experienceTypeId);
     this.draft.permissions = defaultPermissionsForRole(this.draft.role);
+    if (manages && !this.canManage) this.draft.permissions = [...this.draft.permissions, MANAGE_PERMISSION];
+  }
+
+  get canManage(): boolean {
+    return !!this.draft?.permissions.includes(MANAGE_PERMISSION);
+  }
+
+  /** Last manager keeps the switch on. The server enforces the same rule. */
+  get isOnlyManager(): boolean {
+    const id = this.draft?.id;
+    if (!id || !this.canManage) return false;
+    return !this.members.some((m) => m.id !== id && m.permissions.includes(MANAGE_PERMISSION));
+  }
+
+  toggleManage(event: Event) {
+    if (!this.draft) return;
+    const on = (event.target as HTMLInputElement).checked;
+    const rest = this.draft.permissions.filter((p) => p !== MANAGE_PERMISSION);
+    this.draft.permissions = on ? [...rest, MANAGE_PERMISSION] : rest;
   }
 
   hasPerm(id: string): boolean {
@@ -1129,9 +1201,12 @@ export class StudioTeamPageComponent implements OnInit {
           this.draft = null;
           this.reload();
         },
-        error: () => {
+        error: (err: { status?: number; error?: { message?: string } }) => {
           this.busy = false;
-          this.error = 'Couldn’t save — try again.';
+          this.error =
+            err?.status === 409 && err.error?.message
+              ? err.error.message
+              : 'Couldn’t save — try again.';
         },
       });
       return;
@@ -1177,12 +1252,22 @@ export class StudioTeamPageComponent implements OnInit {
         this.loading = false;
         this.reloadDevices();
         this.reloadSessions();
+        this.api.staffTips().subscribe({
+          next: (r) => (this.tipRows = r.waiters),
+          error: () => (this.tipRows = []),
+        });
       },
       error: () => {
         this.loading = false;
         this.error = 'Couldn’t load team — is the API running?';
       },
     });
+  }
+
+  tipRows: WaiterTipsRow[] = [];
+
+  tipFor(m: { id: string }): string {
+    return teamTipFor(this.tipRows, m.id);
   }
 
   private reloadDevices() {
