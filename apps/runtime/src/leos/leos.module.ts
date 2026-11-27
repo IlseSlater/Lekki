@@ -15,8 +15,20 @@ import { SecretsVaultService } from './secrets-vault.service';
 import { SessionAccessService } from './session-access.service';
 import { PaymentExpiryService } from './payment-expiry.service';
 import { WorkspaceService } from './workspace.service';
+import { PlacesService } from './places.service';
+import { WaiterTablesService } from './waiter-tables.service';
+import { KitchenPaceService } from './kitchen-pace.service';
 import { ASSET_STORE } from './assets/asset-store';
 import { LocalDiskAssetStore } from './assets/local-disk-asset-store';
+import { AzureBlobAssetStore } from './assets/azure-blob-asset-store';
+
+function createAssetStore() {
+  const mode = (process.env.ASSET_STORE ?? '').trim().toLowerCase();
+  if (mode === 'azure-blob' || mode === 'azure') {
+    return new AzureBlobAssetStore();
+  }
+  return new LocalDiskAssetStore();
+}
 
 @Module({
   imports: [forwardRef(() => EventsModule), StaffAuthModule],
@@ -33,9 +45,12 @@ import { LocalDiskAssetStore } from './assets/local-disk-asset-store';
     SessionAccessService,
     PaymentExpiryService,
     WorkspaceService,
+    PlacesService,
+    WaiterTablesService,
+    KitchenPaceService,
     {
       provide: ASSET_STORE,
-      useFactory: () => new LocalDiskAssetStore(),
+      useFactory: () => createAssetStore(),
     },
   ],
   exports: [
@@ -47,6 +62,9 @@ import { LocalDiskAssetStore } from './assets/local-disk-asset-store';
     SessionAccessService,
     PaymentExpiryService,
     WorkspaceService,
+    PlacesService,
+    WaiterTablesService,
+    KitchenPaceService,
     ASSET_STORE,
   ],
 })

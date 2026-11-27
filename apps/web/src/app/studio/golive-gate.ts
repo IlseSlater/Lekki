@@ -51,7 +51,7 @@ export function gateLabel(id: GateConditionId): string {
     case 'venue':
       return 'Your venue';
     case 'places':
-      return 'Where guests join';
+      return 'Your tables';
     case 'menu':
       return 'Your menu';
     case 'orders':

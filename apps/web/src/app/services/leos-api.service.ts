@@ -4,6 +4,37 @@ import { io, Socket } from 'socket.io-client';
 import { resolveApiBaseUrl } from './public-origin';
 import { OperateStaffSessionService } from './operate-staff-session.service';
 import type { GuestExperienceDesign } from '../studio/guest-experience-design';
+import { guestPreviewActive } from '../preview/preview-storage';
+
+/** A guest's private note to the manager, and the one reply it may have. */
+export type GuestNoteRow = {
+  id: string;
+  placeCode: string | null;
+  body: string;
+  createdAt: string;
+  reply: string | null;
+  repliedAt: string | null;
+  repliedBy: string | null;
+};
+
+/** Kitchen pace as a manager sets it (menu hours, pause, busy minutes, hold-and-fire). */
+export interface KitchenPaceSettings {
+  paused: boolean;
+  /** When a pause ends by itself (ISO). Null = until reopened. */
+  pausedUntil?: string | null;
+  pauseReason?: string;
+  holdRounds: boolean;
+  categoryHours: Record<string, { from: string; to: string }>;
+  busyMinutes: Record<string, number>;
+  /** When busy minutes stop applying (ISO). */
+  busyUntil?: string | null;
+  /** Days the venue is closed ("YYYY-MM-DD"). */
+  closedDates?: Array<{ date: string; note: string }>;
+  /** Item id → the day it is sold out for. */
+  soldOutToday?: Record<string, string>;
+  /** Read-only: today is a closed day. */
+  closedToday?: boolean;
+}
 
 @Injectable({ providedIn: 'root' })
 export class LeosApiService {
@@ -167,6 +198,14 @@ export class LeosApiService {
     });
   }
 
+  /** The owner says how many places. The backend creates each place and its QR. */
+  ensurePlaces(codes: string[]) {
+    return this.http.post<{
+      venueId: string;
+      places: Array<{ code: string; physicalContextId: string; token: string }>;
+    }>(`${this.api}/setup/entry/places`, { codes }, { headers: this.staffAuthHeaders() });
+  }
+
   resolveSetupEntryContext(placeCode?: string) {
     const params = placeCode ? `?placeCode=${encodeURIComponent(placeCode)}` : '';
     return this.http.get<{
@@ -190,6 +229,8 @@ export class LeosApiService {
         routingTags: string[];
         category: string;
         available?: boolean;
+        /** When sold out: back 'tomorrow' by itself, or only when 'changed'. */
+        soldOutUntil?: 'tomorrow' | 'changed' | null;
         allergens?: string[];
         dietaryTags?: string[];
         ageRestricted?: boolean;
@@ -214,6 +255,8 @@ export class LeosApiService {
     sessionId: string;
     participantId?: string;
     participantSecret: string;
+    /** Same key on every retry of one order. */
+    idempotencyKey?: string;
     lines: Array<{
       catalogueItemId: string;
       quantity: number;
@@ -232,9 +275,13 @@ export class LeosApiService {
     body?: {
       tipAmount?: number;
       tipPercent?: number;
-      scope?: 'visit' | 'mine' | 'equal';
+      scope?: 'visit' | 'mine' | 'equal' | 'amount';
+      /** Major units. Used with scope 'amount'. */
+      amount?: number;
       participantId?: string;
       participantSecret?: string;
+      /** Same key on every retry of one payment attempt. */
+      idempotencyKey?: string;
     },
   ) {
     return this.http.post<{
@@ -285,6 +332,15 @@ export class LeosApiService {
     });
   }
 
+  /** Empty menu → short priced starter. A venue with any dish is left alone. */
+  seedStarterMenu(venueId: string, typeId?: string) {
+    return this.http.post<{ seeded: number }>(
+      `${this.api}/catalogue/venue/${venueId}/starter`,
+      { typeId },
+      { headers: this.staffAuthHeaders() },
+    );
+  }
+
   updateCatalogueItem(
     id: string,
     body: {
@@ -324,6 +380,56 @@ export class LeosApiService {
     }>(`${this.api}/sessions/${sessionId}/claim-lines`, body);
   }
 
+  /** After the meal: tell the manager privately. */
+  leaveGuestNote(
+    sessionId: string,
+    body: { participantId: string; participantSecret: string; note: string },
+  ) {
+    return this.http.post<{ ok: boolean }>(`${this.api}/feedback/sessions/${sessionId}/note`, body);
+  }
+
+  /** Studio: one calm sentence about tonight. Null while the averages are not real yet. */
+  eveningSentence() {
+    return this.http.get<{ sentence: string | null }>(`${this.api}/operate/evening`, {
+      headers: this.staffAuthHeaders(),
+    });
+  }
+
+  /** Studio: what guests told the manager privately, with any reply. */
+  listGuestNotes() {
+    return this.http.get<GuestNoteRow[]>(`${this.api}/feedback/notes`, {
+      headers: this.staffAuthHeaders(),
+    });
+  }
+
+  /** Studio (Manager or Admin): answer a private note once. */
+  replyToGuestNote(noteId: string, reply: string) {
+    return this.http.post<{ id: string; reply: string; repliedAt: string; repliedBy: string | null }>(
+      `${this.api}/feedback/notes/${encodeURIComponent(noteId)}/reply`,
+      { reply },
+      { headers: this.staffAuthHeaders() },
+    );
+  }
+
+  /** Guest: has the manager replied to my note? POST keeps the secret out of the URL. */
+  myNoteReply(sessionId: string, body: { participantId: string; participantSecret: string }) {
+    return this.http.post<{ reply: { reply: string; repliedAt: string; by: string } | null }>(
+      `${this.api}/feedback/sessions/${sessionId}/note/reply`,
+      body,
+    );
+  }
+
+  /** One dish, shared: join or leave the share of a line. */
+  shareLine(
+    sessionId: string,
+    body: { lineId: string; action: 'join' | 'leave'; participantSecret: string },
+  ) {
+    return this.http.post<{ ok: boolean; lineId: string; sharedWith: string[] }>(
+      `${this.api}/sessions/${sessionId}/share-line`,
+      body,
+    );
+  }
+
   getSession(sessionId: string, participantSecret?: string) {
     return this.http.get<{
       id: string;
@@ -338,6 +444,12 @@ export class LeosApiService {
       location?: string | null;
       guestDesign?: Record<string, unknown> | null;
       paymentsActive?: boolean;
+      pace?: {
+        paused: boolean;
+        holdRounds: boolean;
+        hiddenCategories: string[];
+        busyNotes: string[];
+      };
       participants?: Array<{
         id: string;
         displayName?: string;
@@ -354,12 +466,16 @@ export class LeosApiService {
         id: string;
         total: number;
         status?: string;
+        createdAt?: string;
         lines: Array<{
           id: string;
           label: string;
           quantity: number;
           unitPrice: number;
+          catalogueItemId?: string | null;
+          selectionsJson?: unknown;
           participantId?: string | null;
+          sharedWith?: string[];
         }>;
       }>;
       payments?: Array<{
@@ -573,6 +689,175 @@ export class LeosApiService {
     return this.http.post<{ ok: boolean }>(`${this.api}/identity/staff/sessions/${id}/revoke`, {});
   }
 
+  /** Staff Operate — key a bill line (origin staff_operate) before Pilot sync exists. */
+  addStaffBillLine(
+    sessionId: string,
+    body: { label: string; unitPrice: number; quantity?: number },
+  ) {
+    return this.http.post<{ transactionId: string }>(
+      `${this.api}/operate/sessions/${sessionId}/bill-lines`,
+      body,
+      { headers: this.staffAuthHeaders() },
+    );
+  }
+
+  /** "I've got this table." */
+  takeTable(sessionId: string) {
+    return this.http.post<{ id: string; waiterId: string | null; waiterName: string | null }>(
+      `${this.api}/operate/sessions/${sessionId}/take`,
+      {},
+      { headers: this.staffAuthHeaders() },
+    );
+  }
+
+  /** One venue's kitchen pace. Without a venue, the organisation's first venue. */
+  getPace(venueId?: string | null) {
+    return this.http.get<KitchenPaceSettings>(`${this.api}/operate/pace`, {
+      headers: this.staffAuthHeaders(),
+      params: venueId ? { venueId } : {},
+    });
+  }
+
+  savePace(pace: KitchenPaceSettings, venueId?: string | null) {
+    return this.http.put<KitchenPaceSettings>(`${this.api}/operate/pace`, pace, {
+      headers: this.staffAuthHeaders(),
+      params: venueId ? { venueId } : {},
+    });
+  }
+
+  /**
+   * Pause or resume new orders — for a set number of minutes (or until reopened) with a reason.
+   * Seated guests can still see and pay. Managers are told.
+   */
+  pauseOrders(
+    paused: boolean,
+    opts?: { minutes?: number | null; reason?: string; venueId?: string | null },
+  ) {
+    return this.http.post<KitchenPaceSettings>(
+      `${this.api}/operate/pace/pause`,
+      {
+        paused,
+        minutes: opts?.minutes ?? null,
+        reason: opts?.reason ?? '',
+        ...(opts?.venueId ? { venueId: opts.venueId } : {}),
+      },
+      { headers: this.staffAuthHeaders() },
+    );
+  }
+
+  /** Sold out for today (back tomorrow by itself), until changed, or back on now. */
+  setItemAvailability(itemId: string, mode: 'today' | 'until_changed' | 'back') {
+    return this.http.post<{ venueId: string; available: boolean }>(
+      `${this.api}/operate/items/${encodeURIComponent(itemId)}/availability`,
+      { mode },
+      { headers: this.staffAuthHeaders() },
+    );
+  }
+
+  /** A waiter records what the venue's own card machine took (empty amount = everything left). */
+  recordCardMachinePayment(
+    sessionId: string,
+    body: { amount?: number | null; tipAmount?: number | null },
+  ) {
+    return this.http.post<{ paymentId: string; status: string; paidMinor: number; tipMinor: number }>(
+      `${this.api}/operate/sessions/${sessionId}/card-machine`,
+      {
+        amount: body.amount === null || body.amount === undefined || (body.amount as unknown) === '' ? null : Number(body.amount),
+        tipAmount: body.tipAmount === null || body.tipAmount === undefined || (body.tipAmount as unknown) === '' ? null : Number(body.tipAmount),
+      },
+      { headers: this.staffAuthHeaders() },
+    );
+  }
+
+  /** Today's payments: table, bill, paid, full or part, still owed. */
+  paymentFeed() {
+    return this.http.get<
+      Array<{
+        paymentId: string;
+        at: string;
+        placeCode: string | null;
+        billMinor: number;
+        paidMinor: number;
+        tipMinor: number;
+        kind: 'full' | 'part';
+        leftMinor: number;
+        settled: boolean;
+      }>
+    >(`${this.api}/operate/payments`, { headers: this.staffAuthHeaders() });
+  }
+
+  /** Push one order back by 5, 10, 20 or 30 minutes — once. */
+  delayFulfilment(id: string, minutes: number) {
+    return this.http.post<{ fulfilmentId: string; delayedMinutes: number }>(
+      `${this.api}/fulfilments/${id}/delay`,
+      { minutes },
+      { headers: this.staffAuthHeaders() },
+    );
+  }
+
+  /** Cancel an order. A reason is required; "Other" needs a note. */
+  cancelFulfilment(id: string, reason: string, note?: string) {
+    return this.http.patch(
+      `${this.api}/fulfilments/${id}/status`,
+      { status: 'cancelled', reason, note: note ?? '' },
+      { headers: this.staffAuthHeaders() },
+    );
+  }
+
+  /** Every step of one order with its time and who did it. */
+  fulfilmentTimeline(id: string) {
+    return this.http.get<Array<{ at: string; step: string; by: string | null; detail: string | null }>>(
+      `${this.api}/fulfilments/${id}/timeline`,
+      { headers: this.staffAuthHeaders() },
+    );
+  }
+
+  /** Fire a held round: every ticket for the table goes to its station together. */
+  fireRound(sessionId: string) {
+    return this.http.post<{ fired: number }>(
+      `${this.api}/operate/sessions/${sessionId}/fire`,
+      {},
+      { headers: this.staffAuthHeaders() },
+    );
+  }
+
+  /** My tips this shift (waiter phone). */
+  myTips() {
+    return this.http.get<{ since: string; tipMinor: number; count: number }>(
+      `${this.api}/operate/tips/mine`,
+      { headers: this.staffAuthHeaders() },
+    );
+  }
+
+  /** Tips this shift per waiter (Team, manager only). */
+  staffTips() {
+    return this.http.get<{
+      since: string;
+      waiters: Array<{ waiterId: string; name: string; tipMinor: number; count: number }>;
+    }>(`${this.api}/identity/staff/tips`, { headers: this.staffAuthHeaders() });
+  }
+
+  /** A manager moves an open bill to another table. */
+  moveTable(sessionId: string, toCode: string) {
+    return this.http.post<{ sessionId: string; placeCode: string; fromCode: string }>(
+      `${this.api}/operate/sessions/${sessionId}/move`,
+      { toCode },
+      { headers: this.staffAuthHeaders() },
+    );
+  }
+
+  getPushKey() {
+    return this.http.get<{ publicKey: string | null }>(`${this.api}/push/key`);
+  }
+
+  subscribePush(subscription: PushSubscriptionJSON) {
+    return this.http.post<{ ok: true }>(
+      `${this.api}/push/subscribe`,
+      { subscription },
+      { headers: this.staffAuthHeaders() },
+    );
+  }
+
   listFloorTables(params?: { venueId?: string; organisationId?: string }) {
     return this.http.get<{
       tables: Array<{
@@ -589,8 +874,11 @@ export class LeosApiService {
         readyCount: number;
         preparingCount?: number;
         pendingCount?: number;
+        heldCount?: number;
         helpCount: number;
         helpKinds: string[];
+        waiterId?: string | null;
+        waiterName?: string | null;
         items?: Array<{
           fulfilmentId: string;
           status: string;
@@ -840,6 +1128,8 @@ export class LeosApiService {
 
   private ensureIoConnected() {
     if (this.socket) return;
+    // Studio's preview phone talks to a sample table — never a live room.
+    if (guestPreviewActive()) return;
     const staffToken = this.staffTokenForOperate();
     this.socket = io(this.api, {
       query: {

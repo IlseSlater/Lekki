@@ -16,7 +16,6 @@ import { composeGrowBreath } from '../studio/grow-breath';
   template: `
     <div class="studio-grow studio-motion-appear">
       <header class="studio-grow__hero">
-        <p class="studio-grow__eyebrow">Grow</p>
         <h1 class="studio-grow__title">{{ venue }}</h1>
         @if (!live) {
           <p class="studio-grow__calm">Go live first. Memory fills in after you welcome guests.</p>

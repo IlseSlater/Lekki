@@ -37,6 +37,12 @@ import {
   specialsCarouselItems,
 } from '../studio/specials-continuity';
 import { LeosMoneyPipe } from '../leos/leos-money.pipe';
+import { GuestAfterPayComponent } from '../leos/guest-after-pay.component';
+import { googleReviewUrlFrom } from '../leos/review-links';
+import { tipPercentsFrom } from '../leos/pay-choices';
+import { pausedLine, waitLine } from '../leos/kitchen-pace-view';
+import { lastTimeLine } from '../leos/guest-memory';
+import { receiptText, whatsappReceiptUrl } from '../leos/receipt-text';
 
 /**
  * LEOS Experience Heartbeat — Guest surface (Restaurant Pack as reference implementation).
@@ -59,6 +65,7 @@ import { LeosMoneyPipe } from '../leos/leos-money.pipe';
     GuestChoicesSheetComponent,
     GuestMenuListComponent,
     GuestCartDrawerComponent,
+    GuestAfterPayComponent,
     LeosMoneyPipe,
   ],
   template: `
@@ -91,6 +98,14 @@ import { LeosMoneyPipe } from '../leos/leos-money.pipe';
             <p class="leos-muted" aria-live="polite">
               Getting {{ terms.term('catalogue', 'menu') }} ready…
             </p>
+          }
+
+          @if (pausedNote) {
+            <p class="leos-muted guest-pace-note" role="status" aria-live="polite">{{ pausedNote }}</p>
+          }
+
+          @if (lastTimeNote) {
+            <p class="leos-muted guest-pace-note">{{ lastTimeNote }}</p>
           }
 
           @if (tablePeople.length >= 2) {
@@ -172,7 +187,7 @@ import { LeosMoneyPipe } from '../leos/leos-money.pipe';
             [showSectionTitles]="showSectionTitles"
             [showFoodImages]="showFoodImages"
             [catalogueLoading]="catalogueLoading"
-            [catalogueEmpty]="!catalogue.length"
+            [catalogueEmpty]="!session.menuNow.length"
             [catalogueNoun]="terms.term('catalogue', 'menu')"
             (selectItem)="addFromMenu($event)"
             (quantityChange)="setMenuQty($event.item, $event.quantity)"
@@ -263,6 +278,19 @@ import { LeosMoneyPipe } from '../leos/leos-money.pipe';
         }
 
         @if (phase === 'cart') {
+          <label class="guest-allergies">
+            <span class="leos-muted">Allergies — the kitchen sees this on every order</span>
+            <input
+              class="leos-field__input"
+              name="allergies"
+              maxlength="80"
+              placeholder="For example: gluten, nuts"
+              autocomplete="off"
+              [ngModel]="allergies"
+              (ngModelChange)="allergies = $event"
+              (blur)="saveAllergies()"
+            />
+          </label>
           <lekki-guest-cart-drawer
             cartPhase="draft"
             [cartLines]="cart"
@@ -299,6 +327,21 @@ import { LeosMoneyPipe } from '../leos/leos-money.pipe';
           @if (timelineGuidance) {
             <p class="leos-muted" role="status" aria-live="polite">{{ timelineGuidance }}</p>
           }
+          @if (pausedNote) {
+            <p class="leos-muted guest-pace-note" role="status" aria-live="polite">{{ pausedNote }}</p>
+          } @else if (waitNote) {
+            <p class="leos-muted guest-pace-note" role="status" aria-live="polite">{{ waitNote }}</p>
+          }
+          @if (sameAgainLines.length) {
+            <button
+              type="button"
+              class="leos-btn leos-btn--secondary guest-same-again"
+              [disabled]="submitting || offline || ordersPaused"
+              (click)="orderSameAgain()"
+            >
+              Same again · {{ sameAgainLabel }}
+            </button>
+          }
         }
 
         @if (phase === 'payment' && allowPay) {
@@ -313,6 +356,10 @@ import { LeosMoneyPipe } from '../leos/leos-money.pipe';
             [visitRemaining]="visitRemaining"
             [mineRemaining]="mineRemaining"
             [equalRemaining]="equalRemaining"
+            [tipPercents]="tipPercents"
+            [tablePeopleCount]="tablePeople.length"
+            [billChangedNote]="session.billChangedNote"
+            (billChangeSeen)="session.acknowledgeBillChange()"
             [visitLabel]="billVisitLabel"
             [allowTip]="allowTip"
             [allowHelp]="allowHelp"
@@ -331,6 +378,7 @@ import { LeosMoneyPipe } from '../leos/leos-money.pipe';
             (serviceHelp)="requestHelp('service')"
             (managerHelp)="requestHelp('manager')"
             (claimLine)="claimOneLine($event)"
+            (shareLine)="shareOneLine($event.lineId, $event.action)"
             (unclaimLine)="undoClaim()"
             (billAttached)="onBillAttached($event)"
           />
@@ -349,6 +397,14 @@ import { LeosMoneyPipe } from '../leos/leos-money.pipe';
             </p>
             @if (receiptPaidTotal > 0) {
               <p class="leos-muted">Paid {{ receiptPaidTotal | leosMoney: state.currency }}</p>
+              <a
+                class="leos-btn leos-btn--secondary"
+                [href]="receiptHref"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Send my receipt on WhatsApp
+              </a>
             } @else {
               <p class="leos-muted">Settle with the team before you go.</p>
             }
@@ -356,6 +412,15 @@ import { LeosMoneyPipe } from '../leos/leos-money.pipe';
               When you’re ready, {{ leavePrompt }} and return to the welcome screen.
             </p>
           </div>
+          @if (state.sessionId && state.participantId) {
+            <leos-guest-after-pay
+              [placeName]="state.venueName"
+              [reviewUrl]="googleReviewUrl"
+              [sessionId]="state.sessionId"
+              [participantId]="state.participantId"
+              [participantSecret]="state.participantSecret"
+            />
+          }
         }
 
         @if (phase === 'leave') {
@@ -479,6 +544,7 @@ import { LeosMoneyPipe } from '../leos/leos-money.pipe';
       [managerIdleHint]="managerAssist.idleHint"
       [managerPendingHint]="managerAssist.pendingHint"
       (choose)="requestHelp($event)"
+      (preset)="requestHelpPreset($event)"
       (dismiss)="helpSheetOpen = false"
     />
 
@@ -490,6 +556,7 @@ import { LeosMoneyPipe } from '../leos/leos-money.pipe';
       [groups]="choicesItem?.choiceGroups || []"
       [showFoodImages]="showFoodImages"
       [confirmVerb]="editingCartIndex != null ? 'Update' : 'Add'"
+      [pairing]="choicesPairing"
       [editQuantity]="editingCartLine?.quantity ?? null"
       [editSpecialRequest]="editingCartLine?.specialRequest || ''"
       [editSelections]="editingCartLine?.selections || null"
@@ -522,6 +589,28 @@ export class GuestPageComponent implements OnInit, OnDestroy {
   get showSpecials() { return this.session.showSpecials; }
   set showSpecials(v: boolean) { this.session.showSpecials = v; }
   get catalogue() { return this.session.catalogue; }
+  allergies = this.session.memory.allergies;
+  get lastTimeNote() {
+    return lastTimeLine(this.session.memory, this.state.venueName || this.state.profileLabel || '');
+  }
+  saveAllergies() {
+    this.session.rememberAllergies(this.allergies);
+    this.allergies = this.session.memory.allergies;
+  }
+  get receiptHref(): string {
+    const lines = this.mineBillLines.length ? this.mineBillLines : this.billLines;
+    return whatsappReceiptUrl(
+      receiptText({
+        place: this.state.venueName,
+        lines,
+        paid: this.receiptPaidTotal,
+        currency: this.state.currency || 'ZAR',
+      }),
+    );
+  }
+  get pausedNote() { return pausedLine(this.session.pace); }
+  get waitNote() { return waitLine(this.session.pace); }
+  get ordersPaused() { return this.session.pace.paused; }
   set catalogue(v: CatalogueItem[]) { this.session.catalogue = v; }
   get catalogueLoading() { return this.session.catalogueLoading; }
   set catalogueLoading(v: boolean) { this.session.catalogueLoading = v; }
@@ -565,6 +654,17 @@ export class GuestPageComponent implements OnInit, OnDestroy {
   set awaitingPaymentConfirm(v: boolean) { this.session.awaitingPaymentConfirm = v; }
   get shareSettledMoment() { return this.session.shareSettledMoment; }
   set shareSettledMoment(v: boolean) { this.session.shareSettledMoment = v; }
+  get choicesPairing() { return this.session.choicesPairing; }
+  get sameAgainLines() { return this.session.sameAgain; }
+  get sameAgainLabel() { return this.session.sameAgainLabel; }
+  orderSameAgain() { this.session.orderSameAgain(); }
+  /** The venue's tip percents, from the guest design the guest already receives. */
+  get tipPercents(): number[] {
+    return tipPercentsFrom(this.state.guestDesign as Record<string, unknown> | null);
+  }
+  get googleReviewUrl(): string {
+    return googleReviewUrlFrom(this.state.guestDesign as Record<string, unknown> | null);
+  }
   get receiptPaidTotal() { return this.session.receiptPaidTotal; }
   set receiptPaidTotal(v: number) { this.session.receiptPaidTotal = v; }
   get search() { return this.session.search; }
@@ -642,8 +742,10 @@ export class GuestPageComponent implements OnInit, OnDestroy {
   retryConnection() { this.session.retryConnection(); }
   openBill() { this.session.openBill(); }
   claimOneLine(lineId: string) { this.session.claimOneLine(lineId); }
+  shareOneLine(lineId: string, action: 'join' | 'leave') { this.session.shareOneLine(lineId, action); }
   undoClaim() { this.session.undoClaim(); }
   requestHelp(kind: GuestHelpKind) { this.session.requestHelp(kind); }
+  requestHelpPreset(message: string) { this.session.requestHelp('service', message); }
   callService() { this.session.callService(); }
   pay() { this.session.pay(); }
   returnToOrdersAfterShare() { this.session.returnToOrdersAfterShare(); }
@@ -695,13 +797,13 @@ export class GuestPageComponent implements OnInit, OnDestroy {
   }
 
   get categories(): string[] {
-    const base = menuWithoutSpecialsSurface(this.catalogue, this.showSpecials);
+    const base = menuWithoutSpecialsSurface(this.session.menuNow, this.showSpecials);
     return [...new Set(base.map((i) => i.category))].sort();
   }
 
   get filteredCatalogue(): CatalogueItem[] {
     const q = this.search.trim().toLowerCase();
-    const base = menuWithoutSpecialsSurface(this.catalogue, this.showSpecials);
+    const base = menuWithoutSpecialsSurface(this.session.menuNow, this.showSpecials);
     return base.filter((i) => {
       if (this.categoryFilter && i.category !== this.categoryFilter) return false;
       if (!q) return true;
@@ -710,11 +812,11 @@ export class GuestPageComponent implements OnInit, OnDestroy {
   }
 
   get specialsCarousel(): CatalogueItem[] {
-    return specialsCarouselItems(this.catalogue);
+    return specialsCarouselItems(this.session.menuNow.filter((i) => i.available !== false));
   }
 
   get featuredSpecials(): CatalogueItem[] {
-    return featuredMenuItems(this.catalogue);
+    return featuredMenuItems(this.session.menuNow.filter((i) => i.available !== false));
   }
 
   get browseSections(): Array<{ category: string; items: CatalogueItem[] }> {

@@ -1,0 +1,21 @@
+node_modules
+**/node_modules
+**/dist
+**/.angular
+.git
+.tmp
+.tmp*
+.env
+.env.*
+*.log
+lekki
+coverage
+.turbo
+playwright-report
+test-results
+docs
+.cursor
+.agents
+Lekki Experience Design system
+*.md
+!package.json

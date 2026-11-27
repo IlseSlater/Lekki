@@ -10,6 +10,7 @@
 
 .leos-studio-shell {
   --studio-bg: var(--leos-warm-sand, #ffffff);
+  --studio-canvas: #f3f1ed;
   --studio-surface: var(--leos-surface, #ffffff);
   --studio-surface-secondary: var(--leos-surface-secondary, #f9f8f6);
   --studio-ink: var(--leos-ink, #0f172a);
@@ -102,10 +103,110 @@
 .leos-studio-shell[data-mode='operate']:not([data-setup-engine='true']) .leos-studio-shell__main,
 .leos-studio-shell[data-mode='grow']:not([data-setup-engine='true']) .leos-studio-shell__main,
 .leos-studio-shell[data-mode='team']:not([data-setup-engine='true']) .leos-studio-shell__main {
+  /* Admin canvas (Linktree-style): flat quiet ground, white cards, bar on top. */
   max-width: none;
   width: auto;
-  margin: 1.25rem;
-  padding: var(--studio-pad-outer) clamp(1.25rem, 3vw, var(--studio-pad-outer));
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  background: var(--studio-canvas);
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.leos-studio-shell__bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 3.5rem;
+  padding: 0 clamp(1.25rem, 3vw, 2rem);
+  background: var(--studio-surface);
+  border-bottom: 1px solid var(--studio-line);
+}
+
+.leos-studio-shell__bar-title {
+  margin: 0;
+  font-family: inherit;
+  font-size: 1.0625rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: var(--studio-ink);
+}
+
+.leos-studio-shell__bar-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.35rem 0.9rem;
+  border: 1px solid var(--studio-line);
+  border-radius: var(--leos-radius-pill, 999px);
+  font-size: 0.8125rem;
+  font-weight: 550;
+  color: var(--studio-ink-secondary);
+  max-width: 50%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.leos-studio-shell__bar-dot {
+  flex: 0 0 auto;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: var(--studio-ink-tertiary);
+}
+
+.leos-studio-shell__bar-status--live .leos-studio-shell__bar-dot {
+  background: var(--studio-success);
+  box-shadow: 0 0 0 3px var(--studio-success-soft);
+}
+
+.leos-studio-shell__body {
+  flex: 1;
+  min-width: 0;
+  padding: clamp(1.25rem, 3vw, 2rem) clamp(1rem, 3vw, 2rem) 3rem;
+}
+
+.leos-studio-shell__body--flush {
+  padding: 0;
+}
+
+/* Nav: one flat list, a hairline between the two groups (Uber Eats Manager rhythm) */
+.leos-studio-shell__divider {
+  display: block;
+  height: 1px;
+  margin: 0.5rem 0.7rem;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Group names on the rail: What guests see · Run the floor · The business */
+.leos-studio-shell__group {
+  margin: 0.15rem 0.85rem 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.leos-studio-shell[data-nav-collapsed='true'] .leos-studio-shell__group {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  .leos-studio-shell__group {
+    display: none;
+  }
 }
 
 .leos-studio-shell[data-setup-engine='true'] .leos-studio-shell__main,
@@ -321,11 +422,6 @@
   color: #fff;
   font-weight: 650;
   box-shadow: none;
-}
-
-.leos-studio-shell__modes a.leos-studio-shell__mode--quiet {
-  font-weight: 500;
-  opacity: 0.9;
 }
 
 .leos-studio-shell__mode-icon {
@@ -554,6 +650,32 @@
   .leos-studio-shell__modes a.active {
     background: rgba(255, 255, 255, 0.16);
     color: #fff;
+  }
+
+  /* Nine places on a phone: one scrolling line, venue chip hidden (the bar already names the venue). */
+  .leos-studio-shell__modes {
+    order: 3;
+    flex: 1 0 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .leos-studio-shell__modes a {
+    flex: 0 0 auto;
+  }
+
+  .leos-studio-shell__divider {
+    display: none;
+  }
+
+  .leos-studio-shell__nav-foot {
+    order: 2;
+  }
+
+  .leos-studio-shell__venue-chip {
+    display: none;
   }
 
   .leos-studio-shell__nav-foot {
@@ -1130,6 +1252,80 @@
   user-select: none;
 }
 
+/* Admin canvas — a page that is itself a stack of cards does not sit inside another card */
+.leos-studio-shell .leos-card:has(> .menu-editor) {
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+/* Integrations — the list is the content; no wrapper card around the gateway rows */
+.leos-studio-shell .leos-card:has(> .int-hub) {
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.leos-studio-shell .int-card {
+  border-radius: var(--studio-radius);
+  padding: 1.15rem 1.25rem;
+  background: var(--studio-surface);
+  box-shadow: var(--studio-shadow);
+}
+
+/* Pages in the admin canvas: the screen footer sits on the page, not in a band */
+.leos-studio-shell:not([data-setup-engine='true']):not([data-pre-engine='true']) .leos-screen__footer {
+  position: static;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-top: 0;
+  padding: 1.25rem 0 0;
+  margin-top: 1.5rem;
+}
+
+/* Admin canvas — Home reads as one calm column of white cards */
+.studio-home {
+  width: 100%;
+  margin: 0 auto;
+  gap: 1.25rem;
+}
+
+.studio-home__hero {
+  padding: 0.25rem 0.25rem 0;
+}
+
+.studio-home__today {
+  padding: 0.25rem 1.5rem;
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-line);
+  border-radius: var(--studio-radius);
+  box-shadow: var(--studio-shadow);
+}
+
+.studio-home__today-row {
+  padding: 0.85rem 0;
+}
+
+.studio-home__doors {
+  align-items: stretch;
+  gap: 0.75rem;
+}
+
+.studio-home__doors > .leos-btn--primary {
+  width: 100%;
+}
+
+.studio-home__actions .leos-btn--secondary {
+  min-height: 2.5rem;
+  padding: 0.45rem 1rem;
+  border-radius: var(--leos-radius-pill, 999px);
+  background: var(--studio-surface);
+  font-size: 0.875rem;
+}
+
 /* Mode switcher lives in left rail — Setup Engine progress story stays in-page */
 
 /* Operate — same surgical white, slightly denser (never dark · never cream) */
@@ -1211,10 +1407,15 @@
   max-width: 40rem;
 }
 
+/* Each board is one white card (Linktree rhythm): a title, then its rows. */
 .studio-operate__board {
   display: flex;
   flex-direction: column;
-  border-top: 1px solid var(--studio-line);
+  padding: 0.25rem 1.25rem 0.5rem;
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-line);
+  border-radius: var(--studio-radius);
+  box-shadow: var(--studio-shadow);
 }
 
 .studio-operate__board-head {
@@ -1474,6 +1675,11 @@
 
 .studio-grow__hero {
   max-width: 40rem;
+  padding: 1.5rem 1.75rem;
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-line);
+  border-radius: var(--studio-radius-lg);
+  box-shadow: var(--studio-shadow);
 }
 
 .studio-grow__eyebrow {
@@ -1588,8 +1794,12 @@
 }
 
 .studio-grow__suggest {
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--studio-line);
+  max-width: 40rem;
+  padding: 1.25rem 1.75rem;
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-line);
+  border-radius: var(--studio-radius);
+  box-shadow: var(--studio-shadow);
 }
 
 .studio-grow__suggest-label {
@@ -1624,4 +1834,46 @@
 .leos-studio-shell .studio-grow__cta.leos-btn--primary:hover {
   box-shadow: none;
   filter: brightness(1.04);
+}
+/* Private notes: the one reply a Manager or Admin may send. */
+.studio-home__note {
+  border-bottom: 1px solid var(--studio-line);
+  padding-bottom: 0.5rem;
+}
+.studio-home__note:last-child {
+  border-bottom: 0;
+}
+.studio-home__note .studio-home__today-row {
+  border-bottom: 0;
+}
+.studio-home__reply {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--studio-ink-secondary);
+}
+.studio-home__reply-open {
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  border: 1px solid var(--studio-line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--studio-ink);
+  font-weight: 600;
+  cursor: pointer;
+}
+.studio-home__reply-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.studio-home__reply-hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--studio-ink-secondary);
+}
+.studio-home__reply-actions {
+  display: flex;
+  gap: 0.5rem;
 }

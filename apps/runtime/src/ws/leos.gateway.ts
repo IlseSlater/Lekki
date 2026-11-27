@@ -184,6 +184,7 @@ export class LeosGateway implements OnGatewayInit, OnGatewayConnection, OnModule
       name === 'TransactionCreated' ||
       name === 'LinesClaimed' ||
       name === 'SessionCompleted' ||
+      name === 'SessionMoved' ||
       name === 'AssistanceRequested' ||
       name === 'AssistanceAcknowledged' ||
       name === 'AssistanceResolved'

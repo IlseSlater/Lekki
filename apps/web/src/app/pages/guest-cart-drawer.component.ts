@@ -101,6 +101,10 @@ export type GuestCartClaimUndo = {
           [visitLabel]="visitLabel"
           [showScope]="true"
           [allowTip]="allowTip"
+          [tipPercents]="tipPercents"
+          [tablePeopleCount]="tablePeopleCount"
+          [billChangedNote]="billChangedNote"
+          (billChangeSeen)="billChangeSeen.emit()"
           [allowHelp]="allowHelp"
           [trustLine]="trustLine"
           [savedPaymentMethodStatus]="savedPaymentMethodStatus"
@@ -114,6 +118,7 @@ export type GuestCartClaimUndo = {
           (serviceHelp)="serviceHelp.emit()"
           (managerHelp)="managerHelp.emit()"
           (claimLine)="claimLine.emit($event)"
+          (shareLine)="shareLine.emit($event)"
         />
 
         @if (claimUndo) {
@@ -147,6 +152,13 @@ export class GuestCartDrawerComponent {
   @Input() visitRemaining: number | null = null;
   @Input() mineRemaining: number | null = null;
   @Input() equalRemaining: number | null = null;
+  /** The venue's tip percents (from its guest design). */
+  @Input() tipPercents: number[] = [];
+  /** Guests at the table — where equal shares start counting. */
+  @Input() tablePeopleCount = 0;
+  /** The bill changed while the guest was on Pay. */
+  @Input() billChangedNote = '';
+  @Output() billChangeSeen = new EventEmitter<void>();
   @Input() visitLabel = 'This visit';
   @Input() allowTip = true;
   @Input() allowHelp = true;
@@ -166,6 +178,7 @@ export class GuestCartDrawerComponent {
   @Output() removeCartLine = new EventEmitter<number>();
   @Output() editCartLine = new EventEmitter<number>();
   @Output() claimLine = new EventEmitter<string>();
+  @Output() shareLine = new EventEmitter<{ lineId: string; action: 'join' | 'leave' }>();
   @Output() unclaimLine = new EventEmitter<void>();
   @Output() initiatePayment = new EventEmitter<void>();
   @Output() serviceHelp = new EventEmitter<void>();

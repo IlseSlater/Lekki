@@ -13,3 +13,14 @@ apps/runtime/.data/
 packages/**/dist/
 connectors/**/dist/
 packs/**/dist/
+
+# Credentials / scratch — never commit
+.tmp/
+.tmp*
+*.tmp.*
+*-creds*
+*creds*.mjs
+*creds*.js
+*creds*.json
+.payfast*
+*-sandbox-creds*

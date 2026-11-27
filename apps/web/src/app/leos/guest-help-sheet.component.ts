@@ -1,5 +1,6 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { HELP_PRESETS, noteMessage } from './help-presets';
 
 export type GuestHelpKind = 'service' | 'manager';
 
@@ -47,6 +48,39 @@ export type GuestHelpKind = 'service' | 'manager';
               {{ managerPending ? managerPendingHint : managerIdleHint }}
             </span>
           </button>
+
+          <p class="leos-help-sheet__blurb leos-help-sheet__blurb--small">Or just something small</p>
+          <div class="leos-help-sheet__presets">
+            @for (p of presets; track p.id) {
+              <button
+                type="button"
+                class="leos-help-sheet__preset"
+                [disabled]="busy"
+                (click)="preset.emit(p.message)"
+              >
+                {{ p.label }}
+              </button>
+            }
+          </div>
+          <div class="leos-help-sheet__note">
+            <input
+              class="leos-help-sheet__note-input"
+              type="text"
+              maxlength="120"
+              [value]="note"
+              (input)="note = $any($event.target).value"
+              placeholder="Or write a note"
+              aria-label="A note for the waiter"
+            />
+            <button
+              type="button"
+              class="leos-help-sheet__preset"
+              [disabled]="busy || !note.trim()"
+              (click)="sendNote()"
+            >
+              Send
+            </button>
+          </div>
 
           <button type="button" class="leos-help-sheet__cancel" (click)="dismiss.emit()">
             Not now
@@ -102,6 +136,43 @@ export type GuestHelpKind = 'service' | 'manager';
         margin: 0 0 1rem;
         font-size: 0.95rem;
         color: var(--leos-muted, #6b5c4d);
+      }
+      .leos-help-sheet__blurb--small {
+        margin: 0.25rem 0 0.5rem;
+        font-size: 0.8125rem;
+      }
+      .leos-help-sheet__presets {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.5rem;
+        margin-bottom: 0.65rem;
+      }
+      .leos-help-sheet__preset {
+        min-height: 2.75rem;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid var(--leos-border, rgba(42, 33, 24, 0.1));
+        border-radius: 0.85rem;
+        background: var(--leos-surface, #fff);
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .leos-help-sheet__preset:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .leos-help-sheet__note {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 0.65rem;
+      }
+      .leos-help-sheet__note-input {
+        flex: 1;
+        min-height: 2.75rem;
+        padding: 0 0.75rem;
+        border: 1px solid var(--leos-border, rgba(42, 33, 24, 0.1));
+        border-radius: 0.85rem;
+        font: inherit;
       }
       .leos-help-sheet__action {
         display: flex;
@@ -164,5 +235,16 @@ export class GuestHelpSheetComponent {
   @Input() managerIdleHint = 'A private matter';
   @Input() managerPendingHint = 'Manager notified';
   @Output() choose = new EventEmitter<GuestHelpKind>();
+  /** A small ask named to the table's waiter. Carries the message to show them. */
+  @Output() preset = new EventEmitter<string>();
+  readonly presets = HELP_PRESETS;
+  note = '';
+
+  sendNote() {
+    const message = noteMessage(this.note);
+    if (!message) return;
+    this.preset.emit(message);
+    this.note = '';
+  }
   @Output() dismiss = new EventEmitter<void>();
 }

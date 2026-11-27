@@ -1,7 +1,9 @@
 import {
   BadRequestException,
   Body,
+  ConflictException,
   Controller,
+  ForbiddenException,
   Get,
   Headers,
   Ip,
@@ -22,6 +24,9 @@ import { StaffTokenService } from '../staff-auth/staff-token.service';
 import { RequireStaffPermission, StaffAuthGuard } from '../staff-auth/staff-auth.guard';
 import type { StaffTokenClaims } from '../staff-auth/staff-token.service';
 import { PinLoginGuardService } from '../staff-auth/pin-login-guard.service';
+import { isAdmin, normalisePermissions, wouldLeaveNoManager } from '../leos/staff-admin';
+import { canAssign } from '../leos/studio-roles';
+import { WaiterTablesService } from '../leos/waiter-tables.service';
 
 /** Staff Experience homes — ADR-004 (not Studio). */
 const ROLE_PATH: Record<string, string> = {
@@ -39,6 +44,7 @@ export class IdentityController {
     private readonly prisma: PrismaService,
     private readonly staffTokens: StaffTokenService,
     private readonly pinLogin: PinLoginGuardService,
+    private readonly tables: WaiterTablesService,
   ) {}
 
   @Post('guest')
@@ -73,6 +79,14 @@ export class IdentityController {
       ...s,
       homePath: ROLE_PATH[s.role] ?? ROLE_PATH.staff,
     }));
+  }
+
+  /** Tips this shift per waiter, for the manager in Team. */
+  @Get('staff/tips')
+  @UseGuards(StaffAuthGuard)
+  @RequireStaffPermission('team.manage')
+  async staffTips(@Req() req: { staff?: StaffTokenClaims }) {
+    return this.tables.tipsThisShift(req.staff!.org);
   }
 
   @Post('staff/login')
@@ -137,7 +151,7 @@ export class IdentityController {
   /** Studio Team — devices */
   @Get('staff/devices')
   @UseGuards(StaffAuthGuard)
-  @RequireStaffPermission('organisation.manage')
+  @RequireStaffPermission('team.manage')
   async listDevices(@Req() req: { staff?: StaffTokenClaims }) {
     const organisationId = req.staff?.org;
     const where = organisationId ? { organisationId } : undefined;
@@ -168,7 +182,7 @@ export class IdentityController {
   }
   @Post('staff/devices')
   @UseGuards(StaffAuthGuard)
-  @RequireStaffPermission('organisation.manage')
+  @RequireStaffPermission('team.manage')
   async createDevice(
     @Req() req: { staff?: StaffTokenClaims },
     @Body() body: { organisationId?: string; label: string },
@@ -192,7 +206,7 @@ export class IdentityController {
   /** Studio Team — active sessions + login history */
   @Get('staff/sessions')
   @UseGuards(StaffAuthGuard)
-  @RequireStaffPermission('organisation.manage')
+  @RequireStaffPermission('team.manage')
   async listSessions(
     @Req() req: { staff?: StaffTokenClaims },
     @Query('active') active?: string,
@@ -226,15 +240,24 @@ export class IdentityController {
   }
   @Post('staff/sessions/:id/revoke')
   @UseGuards(StaffAuthGuard)
-  @RequireStaffPermission('organisation.manage')
-  async revokeSession(@Param('id') id: string) {
+  @RequireStaffPermission('team.manage')
+  async revokeSession(@Req() req: { staff?: StaffTokenClaims }, @Param('id') id: string) {
+    const row = await this.prisma.staffSession.findUnique({
+      where: { id },
+      include: { staffMember: { select: { permissions: true } } },
+    });
+    // Only this place's sessions; only an Admin signs out an Admin.
+    if (!row || row.organisationId !== req.staff?.org) throw new NotFoundException('Session not found');
+    if (isAdmin(row.staffMember?.permissions) && !isAdmin(req.staff?.permissions)) {
+      throw new ForbiddenException('Only an admin can sign out an admin.');
+    }
     await this.staffTokens.revoke(id);
     return { ok: true };
   }
   /** Studio Team — create staff with Experience Assignment. */
   @Post('staff')
   @UseGuards(StaffAuthGuard)
-  @RequireStaffPermission('organisation.manage')
+  @RequireStaffPermission('team.manage')
   async createStaff(
     @Req() req: { staff?: StaffTokenClaims },
     @Body()
@@ -253,7 +276,8 @@ export class IdentityController {
     }
     const email = (body.email || '').trim().toLowerCase();
     const pin = (body.pin || '').trim();
-    let organisationId = (body.organisationId || req.staff?.org || '').trim();
+    // A manager adds people to their own place only.
+    let organisationId = (req.staff?.org || body.organisationId || '').trim();
     if (!organisationId) {
       const org = await this.prisma.organisation.findFirst({ orderBy: { createdAt: 'asc' } });
       organisationId = org?.id ?? '';
@@ -261,6 +285,9 @@ export class IdentityController {
     if (!organisationId || !body.displayName?.trim() || !email || pin.length < 4) {
       throw new BadRequestException('Name, email, and PIN (4+) required');
     }
+    const permissions = normalisePermissions(body.permissions);
+    const allowed = canAssign(req.staff?.permissions, { before: [], after: permissions });
+    if (!allowed.ok) throw new ForbiddenException(allowed.reason);
     const created = await this.prisma.staffMember.create({
       data: {
         id: newId('staff'),
@@ -269,7 +296,7 @@ export class IdentityController {
         email,
         passwordHash: await bcrypt.hash(pin, 10),
         role,
-        permissions: body.permissions?.length ? body.permissions : [],
+        permissions,
       },
       select: {
         id: true,
@@ -285,8 +312,9 @@ export class IdentityController {
   /** Studio Team — update Experience + permissions (+ optional PIN). */
   @Patch('staff/:id')
   @UseGuards(StaffAuthGuard)
-  @RequireStaffPermission('organisation.manage')
+  @RequireStaffPermission('team.manage')
   async updateStaff(
+    @Req() req: { staff?: StaffTokenClaims },
     @Param('id') id: string,
     @Body()
     body: {
@@ -297,7 +325,29 @@ export class IdentityController {
     },
   ) {
     const existing = await this.prisma.staffMember.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException('Staff not found');
+    const callerOrg = req.staff?.org;
+    if (!existing || (callerOrg && existing.organisationId !== callerOrg)) {
+      throw new NotFoundException('Staff not found');
+    }
+    // A Manager may not touch an Admin at all — not their name, PIN or role.
+    const allowed = canAssign(req.staff?.permissions, {
+      before: existing.permissions,
+      after: body.permissions ? normalisePermissions(body.permissions) : existing.permissions,
+    });
+    if (!allowed.ok) throw new ForbiddenException(allowed.reason);
+    if (body.permissions) {
+      const nextPermissions = normalisePermissions(body.permissions);
+      const members = await this.prisma.staffMember.findMany({
+        where: { organisationId: existing.organisationId },
+        select: { id: true, permissions: true },
+      });
+      if (wouldLeaveNoManager(members, { staffId: id, nextPermissions })) {
+        throw new ConflictException(
+          'Keep at least one admin for this place. Make someone else an admin first.',
+        );
+      }
+      body = { ...body, permissions: nextPermissions };
+    }
     const role = body.role ? body.role.trim().toLowerCase() : undefined;
     if (role && !VALID_ROLES.has(role)) {
       throw new BadRequestException('Invalid experience role');

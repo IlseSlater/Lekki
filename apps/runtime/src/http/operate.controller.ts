@@ -1,7 +1,26 @@
-import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  ForbiddenException,
+  Get,
+  Param,
+  Post,
+  Put,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { LeosService } from '../leos/leos.service';
+import { WaiterTablesService } from '../leos/waiter-tables.service';
+import { KitchenPaceService, type SoldOutMode } from '../leos/kitchen-pace.service';
+import { pauseAlert } from '../leos/order-log';
+import { PushService } from '../push/push.service';
+import { STUDIO_PERMISSIONS, grants } from '../leos/studio-roles';
 import { RequireStaffPermission, StaffAuthGuard } from '../staff-auth/staff-auth.guard';
 import type { StaffTokenClaims } from '../staff-auth/staff-token.service';
+import { SessionNotActiveError } from '../leos/domain-errors';
 
 /**
  * Operate floor — live places/sessions for Waiter (LEK-027 Floor / Live Sessions).
@@ -11,7 +30,13 @@ import type { StaffTokenClaims } from '../staff-auth/staff-token.service';
 @UseGuards(StaffAuthGuard)
 @RequireStaffPermission('session.read')
 export class OperateController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly leos: LeosService,
+    private readonly tables: WaiterTablesService,
+    private readonly kitchenPace: KitchenPaceService,
+    private readonly push: PushService,
+  ) {}
 
   @Get('floor')
   async floor(
@@ -55,6 +80,7 @@ export class OperateController {
         const pendingCount = active.filter(
           (f) => f.status === 'pending' || f.status === 'created',
         ).length;
+        const heldCount = active.filter((f) => f.status === 'held').length;
         const idleMinutes = Math.max(0, Math.floor((now - s.startedAt.getTime()) / 60000));
 
         const items = active.flatMap((f) => {
@@ -87,11 +113,205 @@ export class OperateController {
           readyCount,
           preparingCount,
           pendingCount,
+          heldCount,
           helpCount: s.assistanceRequests.length,
           helpKinds: s.assistanceRequests.map((a) => a.kind),
+          waiterId: s.waiterId ?? null,
+          waiterName: s.waiterName ?? null,
           items,
         };
       }),
     };
+  }
+
+  /** The kitchen's pace right now: hours, pause, busy minutes, hold-and-fire. */
+  @Get('pace')
+  async pace(@Req() req: { staff: StaffTokenClaims }, @Query('venueId') venueId?: string) {
+    const { pace } = await this.kitchenPace.forOrganisation(req.staff.org, venueId);
+    return pace;
+  }
+
+  /** A manager saves one venue's pace (?venueId=; the first venue when left out). */
+  @Put('pace')
+  async savePace(
+    @Req() req: { staff: StaffTokenClaims },
+    @Body() body: unknown,
+    @Query('venueId') venueId?: string,
+  ) {
+    this.require(req.staff, STUDIO_PERMISSIONS.hours);
+    return this.kitchenPace.save(req.staff.org, body, venueId);
+  }
+
+  /**
+   * A manager pauses or resumes new orders, for a set time or until reopened, with a reason.
+   * Seated guests can still see and pay. Managers are told who paused and why.
+   */
+  @Post('pace/pause')
+  async pause(
+    @Req() req: { staff: StaffTokenClaims },
+    @Body() body: { paused?: boolean; minutes?: number; reason?: string; venueId?: string },
+  ) {
+    this.require(req.staff, STUDIO_PERMISSIONS.hours);
+    const paused = body?.paused === true;
+    const pace = await this.kitchenPace.setPaused(req.staff.org, {
+      paused,
+      minutes: body?.minutes ?? null,
+      reason: body?.reason ?? null,
+      venueId: body?.venueId ?? null,
+    });
+    if (paused) {
+      void this.push.notifyManagers(
+        req.staff.org,
+        pauseAlert({ by: req.staff.name, minutes: body?.minutes, reason: pace.pauseReason }),
+      );
+    }
+    return pace;
+  }
+
+  /**
+   * "Paid on the card machine": the waiter records what the venue's own machine took —
+   * all that is left by default, or an amount — and the bill updates for everyone.
+   */
+  @Post('sessions/:sessionId/card-machine')
+  async cardMachine(
+    @Req() req: { staff: StaffTokenClaims },
+    @Param('sessionId') sessionId: string,
+    @Body() body: { amount?: number | null; tipAmount?: number | null },
+  ) {
+    const perms = req.staff.permissions ?? [];
+    if (!perms.includes('staff.service') && !perms.includes('payment.complete')) {
+      throw new ForbiddenException('Only floor staff can record a card-machine payment.');
+    }
+    return this.leos.recordCardMachinePayment({
+      sessionId: sessionId.trim(),
+      organisationId: req.staff.org,
+      amount: body?.amount ?? null,
+      tipAmount: body?.tipAmount ?? null,
+      actor: { id: req.staff.sub, name: req.staff.name },
+    });
+  }
+
+  /** Today's payments, newest first: table, bill, paid, full or part, still owed. */
+  @Get('payments')
+  async payments(@Req() req: { staff: StaffTokenClaims }) {
+    return this.leos.paymentFeed(req.staff.org);
+  }
+
+  /**
+   * Sold out for today (back tomorrow by itself), sold out until changed, or back on now.
+   * Any floor staff can do this — it happens mid-service.
+   */
+  @Post('items/:itemId/availability')
+  async availability(
+    @Req() req: { staff: StaffTokenClaims },
+    @Param('itemId') itemId: string,
+    @Body() body: { mode?: string },
+  ) {
+    const mode = body?.mode;
+    if (mode !== 'today' && mode !== 'until_changed' && mode !== 'back') {
+      throw new BadRequestException('Choose today, until_changed or back.');
+    }
+    return this.kitchenPace.setSoldOut(req.staff.org, itemId.trim(), mode as SoldOutMode);
+  }
+
+  /** Fire a held round: every ticket for the table goes to its station together. */
+  @Post('sessions/:sessionId/fire')
+  async fire(@Req() req: { staff: StaffTokenClaims }, @Param('sessionId') sessionId: string) {
+    return this.leos.fireRound(sessionId.trim(), req.staff.org);
+  }
+
+  /** Staff and above edit hours and pause; Analyst and above read the evening. */
+  private require(staff: StaffTokenClaims, need: string) {
+    if (!grants(staff.permissions, need)) {
+      throw new ForbiddenException('Your Studio role does not include this.');
+    }
+  }
+
+  /** My tips this shift. Each waiter sees their own. */
+  @Get('tips/mine')
+  async myTips(@Req() req: { staff: StaffTokenClaims }) {
+    const { since, waiters } = await this.tables.tipsThisShift(req.staff.org);
+    const mine = waiters.find((w) => w.waiterId === req.staff.sub);
+    return { since, tipMinor: mine?.tipMinor ?? 0, count: mine?.count ?? 0 };
+  }
+
+  /** The owner's one evening sentence. Empty until the averages are real. */
+  @Get('evening')
+  async evening(@Req() req: { staff: StaffTokenClaims }) {
+    this.require(req.staff, STUDIO_PERMISSIONS.reports);
+    return { sentence: await this.tables.eveningSentence(req.staff.org) };
+  }
+
+  /** "I've got this table." Ready alerts and help for it come to this waiter. */
+  @Post('sessions/:sessionId/take')
+  async take(
+    @Req() req: { staff: StaffTokenClaims },
+    @Param('sessionId') sessionId: string,
+  ) {
+    return this.tables.take(sessionId.trim(), req.staff);
+  }
+
+  /** A manager moves an open bill to another table. */
+  @Post('sessions/:sessionId/move')
+  async move(
+    @Req() req: { staff: StaffTokenClaims },
+    @Param('sessionId') sessionId: string,
+    @Body() body: { toCode?: string },
+  ) {
+    return this.leos.moveTable({
+      sessionId: sessionId.trim(),
+      toCode: body?.toCode ?? '',
+      organisationId: req.staff.org,
+      permissions: req.staff.permissions ?? [],
+    });
+  }
+
+  /**
+   * Key a bill line (staff_operate) so a pilot can run before Pilot POS sync exists.
+   * One question: what should we add to this table's bill?
+   */
+  @Post('sessions/:sessionId/bill-lines')
+  async addBillLine(
+    @Req() req: { staff: StaffTokenClaims },
+    @Param('sessionId') sessionId: string,
+    @Body() body: { label?: string; unitPrice?: number; quantity?: number },
+  ) {
+    const label = (body.label ?? '').trim();
+    const unitPrice = Number(body.unitPrice);
+    const quantity = body.quantity != null ? Number(body.quantity) : 1;
+    if (!label) throw new BadRequestException('label is required');
+    if (!Number.isFinite(unitPrice) || unitPrice < 0) {
+      throw new BadRequestException('unitPrice must be a non-negative number');
+    }
+    if (!Number.isFinite(quantity) || quantity < 1) {
+      throw new BadRequestException('quantity must be at least 1');
+    }
+
+    const session = await this.prisma.experienceSession.findUnique({
+      where: { id: sessionId.trim() },
+      select: { organisationId: true },
+    });
+    if (!session) throw new BadRequestException('Session not found');
+    if (session.organisationId !== req.staff.org) {
+      throw new ForbiddenException('Wrong organisation');
+    }
+
+    try {
+      return await this.leos.appendStaffOperateLine({
+        sessionId,
+        organisationId: req.staff.org,
+        label,
+        unitPrice,
+        quantity,
+      });
+    } catch (err) {
+      if (err instanceof SessionNotActiveError) {
+        throw new BadRequestException('Session is no longer active');
+      }
+      if (err instanceof Error && err.message === 'Wrong organisation') {
+        throw new ForbiddenException(err.message);
+      }
+      throw err;
+    }
   }
 }

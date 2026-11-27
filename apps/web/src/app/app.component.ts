@@ -4,6 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { WebsiteHorizonComponent } from './pages/website-horizon.component';
+import { AppUpdateComponent } from './leos/app-update.component';
 
 function horizonCanvasFor(url: string): boolean {
   const path = url.split('?')[0];
@@ -16,7 +17,7 @@ function horizonCanvasFor(url: string): boolean {
 @Component({
   selector: 'lekki-root',
   standalone: true,
-  imports: [RouterOutlet, WebsiteHorizonComponent],
+  imports: [RouterOutlet, WebsiteHorizonComponent, AppUpdateComponent],
   template: `
     @if (showCanvas()) {
       <leos-website-horizon variant="canvas" />
@@ -24,6 +25,7 @@ function horizonCanvasFor(url: string): boolean {
     <div class="lekki-root__page">
       <router-outlet />
     </div>
+    <leos-app-update />
   `,
   styles: [
     `

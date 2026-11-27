@@ -12,3 +12,6 @@ export {
   verifyPilotWebhookHmac,
   verifyPilotWebhookToken,
 } from './webhook-auth';
+
+export type { PilotTender, PilotTenderReadiness } from './tender';
+export { PilotTenderUnavailableError, pilotTenderReadiness, postPilotTender } from './tender';

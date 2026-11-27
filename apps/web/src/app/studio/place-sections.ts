@@ -193,6 +193,48 @@ export function generateNumberedPlaces(
   return out;
 }
 
+const MAX_TABLES = 60;
+
+function numberedPattern(noun: string): RegExp {
+  const safe = noun.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`^${safe} \\d+$`, 'i');
+}
+
+/** How many numbered places (Table 1, Table 2, …) the sections hold. */
+export function countNumberedPlaces(sections: PlaceSection[], noun: string): number {
+  const re = numberedPattern(noun);
+  let n = 0;
+  for (const s of sections) for (const p of s.places) if (p.enabled && re.test(p.label)) n++;
+  return n;
+}
+
+/**
+ * One number says how many numbered places there are. Named places (Bar Seat 1, Counter)
+ * stay where they are. Numbered places become 1…count in the first section that had them.
+ */
+export function applyPlaceCount(
+  sections: PlaceSection[],
+  noun: string,
+  count: number,
+): PlaceSection[] {
+  const total = Math.min(MAX_TABLES, Math.max(1, Math.floor(Number(count)) || 1));
+  const re = numberedPattern(noun);
+  const homeIndex = Math.max(
+    0,
+    sections.findIndex((s) => s.places.some((p) => re.test(p.label))),
+  );
+  const numbered = generateNumberedPlaces(noun, 1, total);
+
+  const next = sections.map((s) => ({
+    ...s,
+    places: s.places.filter((p) => !re.test(p.label)),
+  }));
+
+  if (!next.length) return [newSection(`${noun}s`, numbered)];
+  next[homeIndex] = { ...next[homeIndex], places: [...numbered, ...next[homeIndex].places] };
+  return next.filter((s) => s.places.length > 0);
+}
+
 export function newSection(name: string, places: PlaceItem[] = []): PlaceSection {
   return { id: id(), name, places };
 }

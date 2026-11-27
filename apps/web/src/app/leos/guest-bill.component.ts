@@ -3,6 +3,14 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LeosMoneyPipe } from './leos-money.pipe';
 import { hasOpenBalance, isCleared, fromMinor, toMinor } from './money';
+import { viewCustomAmount, type CustomAmountView } from './custom-amount';
+import { shareCaption } from './line-shares';
+import {
+  DEFAULT_TIP_PERCENTS,
+  equalShares,
+  tipChipLabel,
+  type EqualShares,
+} from './pay-choices';
 
 export type BillLine = {
   label: string;
@@ -17,11 +25,14 @@ export type BillDisplayLine = BillLine & {
   ownerParticipantId?: string | null;
   /** First name of whoever owns this line (for live chips). */
   ownerName?: string;
+  /** How many guests split this line. 0 when it is not shared. */
+  sharedCount?: number;
+  /** This guest's part of a shared line, in major units. */
+  myShare?: number;
 };
 
-export type BillScope = 'visit' | 'mine' | 'equal';
+export type BillScope = 'visit' | 'mine' | 'equal' | 'amount';
 
-const TIP_OPTIONS = [0, 10, 15, 18, 20];
 
 /**
  * Guest bill — ported from Restaurant App bill.page functionality.
@@ -66,21 +77,67 @@ const TIP_OPTIONS = [0, 10, 15, 18, 20];
               role="tab"
               class="gb__scope-btn"
               [class.gb__scope-btn--on]="scope === 'equal'"
-              [class.gb__scope-btn--done]="equalSharePaid"
               [attr.aria-selected]="scope === 'equal'"
-              [disabled]="equalSharePaid && visitHasOpenBalance"
               (click)="setScope('equal')"
             >
-              {{ equalSharePaid ? 'Equal · paid' : 'Equal share' }}
+              Equal shares
               <span class="gb__scope-amt">({{ equalSubtotal | leosMoney: currency }})</span>
             </button>
           }
+          @if (visitHasOpenBalance) {
+            <button
+              type="button"
+              role="tab"
+              class="gb__scope-btn"
+              [class.gb__scope-btn--on]="scope === 'amount'"
+              [attr.aria-selected]="scope === 'amount'"
+              (click)="setScope('amount')"
+            >
+              An amount
+            </button>
+          }
         </div>
+        @if (scope === 'amount') {
+          <label class="gb__amount">
+            <span class="gb__tip-label">What would you like to pay?</span>
+            <input
+              class="leos-field__input gb__amount-input"
+              type="number"
+              inputmode="decimal"
+              min="0"
+              step="0.01"
+              [ngModel]="customAmount"
+              (ngModelChange)="onCustomAmount($event)"
+              placeholder="0.00"
+              aria-describedby="gb-amount-hint"
+            />
+            <span class="gb__share-note" id="gb-amount-hint">{{ amountView.hint }}</span>
+          </label>
+        }
+        @if (scope === 'equal') {
+          <div class="gb__equal" role="group" aria-label="Equal shares">
+            <div class="gb__stepper">
+              <span class="gb__tip-label" id="gb-people">People at the table</span>
+              <button type="button" class="gb__chip" aria-label="One fewer person" (click)="stepPeople(-1)">−</button>
+              <span class="gb__step-value" aria-labelledby="gb-people" aria-live="polite">{{ equal.people }}</span>
+              <button type="button" class="gb__chip" aria-label="One more person" (click)="stepPeople(1)">+</button>
+            </div>
+            <div class="gb__stepper">
+              <span class="gb__tip-label" id="gb-shares">Shares I’m covering</span>
+              <button type="button" class="gb__chip" aria-label="One share fewer" (click)="stepShares(-1)">−</button>
+              <span class="gb__step-value" aria-labelledby="gb-shares" aria-live="polite">{{ equal.shares }}</span>
+              <button type="button" class="gb__chip" aria-label="One share more" (click)="stepShares(1)">+</button>
+            </div>
+            <span class="gb__share-note">
+              One share is {{ equal.perShare | leosMoney: currency }}.
+              @if (equal.capped) {
+                Only {{ equal.amount | leosMoney: currency }} is left, so that’s what you’ll pay.
+              }
+            </span>
+          </div>
+        }
         @if (mineSharePaid && visitHasOpenBalance && scope !== 'equal') {
           <p class="gb__share-note">Your share is paid — you can still cover the visit if you like.</p>
-        }
-        @if (equalSharePaid && visitHasOpenBalance) {
-          <p class="gb__share-note">Your equal share is paid — others can settle the rest, or you can cover the visit.</p>
         }
       }
 
@@ -94,19 +151,39 @@ const TIP_OPTIONS = [0, 10, 15, 18, 20];
             <span class="gb__line-main">
               <span>{{ line.label }} × {{ line.quantity }}</span>
               @if (scope === 'visit') {
-                @if (line.mine) {
-                  <span class="gb__yours" [class.gb__yours--flash]="isJustClaimed(line.id)">✓ Yours</span>
-                } @else if (line.ownerName) {
-                  <span class="gb__owner-chip">Claimed by {{ line.ownerName }}</span>
-                } @else if (canClaimLine(line)) {
+                @if (line.sharedCount) {
+                  <span class="gb__owner-chip">{{ shareCaptionFor(line) }}</span>
                   <button
                     type="button"
                     class="gb__claim"
                     [disabled]="busy || offline || claimingLineId === line.id"
-                    (click)="claimLine.emit(line.id)"
+                    (click)="shareLine.emit({ lineId: line.id, action: line.mine ? 'leave' : 'join' })"
                   >
-                    {{ claimingLineId === line.id ? 'Claiming…' : 'Claim' }}
+                    {{ line.mine ? 'Leave this share' : 'Join this share' }}
                   </button>
+                } @else if (line.mine) {
+                  <span class="gb__yours" [class.gb__yours--flash]="isJustClaimed(line.id)">✓ Yours</span>
+                } @else if (line.ownerName) {
+                  <span class="gb__owner-chip">Claimed by {{ line.ownerName }}</span>
+                } @else if (canClaimLine(line)) {
+                  <span class="gb__claim-row">
+                    <button
+                      type="button"
+                      class="gb__claim"
+                      [disabled]="busy || offline || claimingLineId === line.id"
+                      (click)="claimLine.emit(line.id)"
+                    >
+                      {{ claimingLineId === line.id ? 'Claiming…' : 'Claim' }}
+                    </button>
+                    <button
+                      type="button"
+                      class="gb__claim"
+                      [disabled]="busy || offline || claimingLineId === line.id"
+                      (click)="shareLine.emit({ lineId: line.id, action: 'join' })"
+                    >
+                      Share it
+                    </button>
+                  </span>
                 }
               }
             </span>
@@ -130,9 +207,10 @@ const TIP_OPTIONS = [0, 10, 15, 18, 20];
                 type="button"
                 class="gb__chip"
                 [class.gb__chip--on]="!customTip && tipPercent === pct"
+                [attr.aria-pressed]="!customTip && tipPercent === pct"
                 (click)="setTipPercent(pct)"
               >
-                {{ pct }}%
+                {{ tipLabel(pct) }}
               </button>
             }
             <button
@@ -184,11 +262,20 @@ const TIP_OPTIONS = [0, 10, 15, 18, 20];
         <p class="leos-success-banner" role="status">Securing your payment…</p>
       }
 
+      @if (billChangedNote) {
+        <div class="gb__changed" role="alert">
+          <p>{{ billChangedNote }}</p>
+          <button type="button" class="leos-btn leos-btn--secondary" (click)="billChangeSeen.emit()">
+            I’ve checked it
+          </button>
+        </div>
+      }
+
       <div class="gb__actions">
         <button
           type="button"
           class="leos-btn leos-btn--primary"
-          [disabled]="busy || offline || subtotal <= 0"
+          [disabled]="busy || offline || subtotal <= 0 || !!billChangedNote"
           (click)="pay.emit()"
         >
           {{ busy ? 'Securing…' : error ? 'Try again' : 'Pay ' + (total | leosMoney: currency) }}
@@ -259,6 +346,16 @@ const TIP_OPTIONS = [0, 10, 15, 18, 20];
       .gb__scope-btn:disabled {
         cursor: default;
       }
+      .gb__amount {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+      }
+      .gb__amount-input {
+        font-variant-numeric: tabular-nums;
+        font-size: 1.25rem;
+        min-height: 3rem;
+      }
       .gb__share-note {
         margin: 0;
         font-size: 0.8125rem;
@@ -301,6 +398,10 @@ const TIP_OPTIONS = [0, 10, 15, 18, 20];
         color: var(--leos-gold, #d7a14a);
         cursor: pointer;
         min-height: 2.75rem;
+      }
+      .gb__claim-row {
+        display: inline-flex;
+        gap: 1rem;
       }
       .gb__claim:disabled {
         opacity: 0.5;
@@ -358,6 +459,42 @@ const TIP_OPTIONS = [0, 10, 15, 18, 20];
         display: flex;
         flex-wrap: wrap;
         gap: 0.4rem;
+      }
+      .gb__changed {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        margin: 0.75rem 0;
+        padding: 0.75rem 0.9rem;
+        border-radius: 12px;
+        background: #fbf1df;
+        color: #6b4a12;
+        font-size: 0.9rem;
+        line-height: 1.4;
+      }
+      .gb__changed p {
+        margin: 0;
+      }
+      .gb__equal {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        margin: 0.75rem 0 0;
+      }
+      .gb__stepper {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .gb__stepper .gb__tip-label {
+        flex: 1;
+        margin: 0;
+      }
+      .gb__step-value {
+        min-width: 2rem;
+        text-align: center;
+        font-weight: 650;
+        font-variant-numeric: tabular-nums;
       }
       .gb__chip {
         min-height: 2.75rem;
@@ -495,23 +632,101 @@ export class GuestBillComponent {
   @Input() offline = false;
   @Input() error = '';
 
+  /** Set when the bill changed while the guest was on Pay. Pay waits until they've seen it. */
+  @Input() billChangedNote = '';
+  @Output() billChangeSeen = new EventEmitter<void>();
   @Output() pay = new EventEmitter<void>();
   @Output() serviceHelp = new EventEmitter<void>();
   @Output() managerHelp = new EventEmitter<void>();
   @Output() claimLine = new EventEmitter<string>();
+  @Output() shareLine = new EventEmitter<{ lineId: string; action: 'join' | 'leave' }>();
   @Output() openPaymentMethods = new EventEmitter<void>();
   @Output() totalChange = new EventEmitter<number>();
   @Output() tipChange = new EventEmitter<number>();
   @Output() scopeChange = new EventEmitter<BillScope>();
 
-  readonly tipOptions = TIP_OPTIONS;
+  /** The venue's tip percents; "No tip" always comes first. */
+  @Input() set tipPercents(value: readonly number[] | null | undefined) {
+    this.tipOptions = [0, ...(value?.length ? value : DEFAULT_TIP_PERCENTS)];
+  }
+  /** Guests at the table — the starting count for equal shares. */
+  @Input() set tablePeopleCount(n: number | null | undefined) {
+    const v = Math.max(1, Math.round(Number(n) || 0));
+    if (!this.peopleTouched && v > 1) this.equalPeople = v;
+  }
+  tipOptions: number[] = [0, ...DEFAULT_TIP_PERCENTS];
+  equalPeople = 2;
+  equalShareCount = 1;
+  private peopleTouched = false;
+
+  tipLabel(pct: number): string {
+    return tipChipLabel(pct, this.subtotal, this.currency);
+  }
+
+  /** Equal shares of the whole bill, never more than is left. */
+  get equal(): EqualShares {
+    return equalShares({
+      billTotal: this.sum(this.lines),
+      remaining: this.visitSubtotal,
+      people: this.equalPeople,
+      shares: this.equalShareCount,
+    });
+  }
+
+  stepPeople(delta: number) {
+    this.peopleTouched = true;
+    this.equalPeople = Math.min(50, Math.max(1, this.equalPeople + delta));
+    if (this.equalShareCount > this.equalPeople) this.equalShareCount = this.equalPeople;
+    this.emitMoney();
+  }
+
+  stepShares(delta: number) {
+    this.equalShareCount = Math.min(this.equalPeople, Math.max(1, this.equalShareCount + delta));
+    this.emitMoney();
+  }
+
+  /** What is sent to the server: equal shares go as a fixed amount toward the table. */
+  get paymentScope(): 'visit' | 'mine' | 'amount' {
+    if (this.scope === 'equal' || this.scope === 'amount') return 'amount';
+    return this.scope;
+  }
+
+  get paymentAmount(): number | undefined {
+    if (this.scope === 'equal') return this.equal.amount;
+    if (this.scope === 'amount') return this.payableAmount;
+    return undefined;
+  }
+
   scope: BillScope = 'visit';
   tipPercent = 0;
   customTip = false;
   customTipAmount = 0;
+  /** What the guest typed for scope 'amount'. */
+  customAmount: number | null = null;
+
+  get amountView(): CustomAmountView {
+    return viewCustomAmount(this.customAmount, this.visitSubtotal);
+  }
+
+  /** Major units to send with scope 'amount'. 0 until it is payable. */
+  get payableAmount(): number {
+    return this.amountView.amount;
+  }
+
+  /** After a part-payment, the field clears and the guest sees what is left on the visit. */
+  resetAmount() {
+    this.customAmount = null;
+    if (this.scope === 'amount') this.setScope('visit');
+  }
+
+  onCustomAmount(value: number | string | null) {
+    const n = typeof value === 'string' ? parseFloat(value) : value;
+    this.customAmount = n != null && Number.isFinite(n) ? n : null;
+    this.emitMoney();
+  }
 
   get showEqualShare(): boolean {
-    return this.equalRemaining != null && this.visitHasOpenBalance;
+    return this.visitHasOpenBalance;
   }
 
   get visitHasOpenBalance(): boolean {
@@ -527,8 +742,13 @@ export class GuestBillComponent {
       this.scope === 'visit' &&
       !!line.id &&
       !line.mine &&
+      !line.sharedCount &&
       !line.ownerName
     );
+  }
+
+  shareCaptionFor(line: BillDisplayLine): string {
+    return shareCaption(line.sharedCount ?? 0, line.mine);
   }
 
   isJustClaimed(lineId: string): boolean {
@@ -536,6 +756,17 @@ export class GuestBillComponent {
   }
 
   get displayLines(): BillDisplayLine[] {
+    if (this.scope === 'amount') {
+      return [
+        {
+          id: 'amount',
+          label: 'An amount toward the table',
+          quantity: 1,
+          total: this.payableAmount,
+          mine: true,
+        },
+      ];
+    }
     if (this.scope === 'equal') {
       return [
         {
@@ -549,7 +780,9 @@ export class GuestBillComponent {
     }
     if (this.detailLines?.length) {
       return this.scope === 'mine'
-        ? this.detailLines.filter((l) => l.mine)
+        ? this.detailLines
+            .filter((l) => l.mine)
+            .map((l) => (l.sharedCount ? { ...l, total: l.myShare ?? l.total } : l))
         : this.detailLines;
     }
     const base = this.scope === 'mine' && this.mineLines ? this.mineLines : this.lines;
@@ -575,8 +808,7 @@ export class GuestBillComponent {
   }
 
   get equalSubtotal(): number {
-    if (this.equalRemaining != null) return Math.max(0, this.equalRemaining);
-    return 0;
+    return this.equal.amount;
   }
 
   get mineSharePaid(): boolean {
@@ -584,12 +816,13 @@ export class GuestBillComponent {
   }
 
   get equalSharePaid(): boolean {
-    return this.showEqualShare && isCleared(this.equalSubtotal);
+    return false;
   }
 
   get subtotal(): number {
     if (this.scope === 'mine') return this.mineSubtotal;
     if (this.scope === 'equal') return this.equalSubtotal;
+    if (this.scope === 'amount') return this.payableAmount;
     return this.visitSubtotal;
   }
 
@@ -608,6 +841,7 @@ export class GuestBillComponent {
     if (scope === 'mine' && this.mineSharePaid && this.visitHasOpenBalance) return;
     if (scope === 'equal' && this.equalSharePaid && this.visitHasOpenBalance) return;
     if (scope === 'equal' && !this.showEqualShare) return;
+    if (scope === 'amount' && !this.visitHasOpenBalance) return;
     this.scope = scope;
     this.scopeChange.emit(scope);
     this.emitMoney();

@@ -15,40 +15,28 @@ import { catchError } from 'rxjs/operators';
   imports: [ExperienceScreenComponent, RouterLink],
   template: `
     <leos-experience-screen
-      purpose="Integrations"
-      lead="Connect payments and your till — guests feel it immediately."
-      [showFooter]="true"
+      purpose="Connections"
+      lead="Link your till so orders and bills stay in step. Card payments are in Payments."
     >
       <div config class="int-hub">
-        @if (showPayfast) {
-          <a
-            class="int-card"
-            [class.int-card--muted]="payfastMuted"
-            routerLink="/studio/integrations/payfast"
-          >
-            <span class="int-card__eyebrow">Payment gateway</span>
-            <span class="int-card__title">PayFast</span>
-            <span class="int-card__status" [class.int-card__status--ok]="payfastOk">{{
-              payfastLabel
-            }}</span>
-            @if (payfastMuted) {
-              <span class="int-card__note">Settlement is on the Pilot till</span>
-            }
-          </a>
-        }
-        <a class="int-card" routerLink="/studio/integrations/pilot">
-          <span class="int-card__eyebrow">Point of sale</span>
+        <a class="int-card" routerLink="/studio/connections/pilot">
+          <span class="int-card__eyebrow">Your till</span>
           <span class="int-card__title">Pilot</span>
           <span class="int-card__status" [class.int-card__status--ok]="pilotOk">{{
             pilotLabel
           }}</span>
+          @if (payfastMuted) {
+            <span class="int-card__note">Bills are settled on the Pilot till</span>
+          }
+        </a>
+        <a class="int-card int-card--muted" routerLink="/studio/payments">
+          <span class="int-card__eyebrow">Card payments</span>
+          <span class="int-card__title">Payments</span>
+          <span class="int-card__status" [class.int-card__status--ok]="payfastOk">{{
+            payfastLabel
+          }}</span>
         </a>
       </div>
-
-      <a escape class="leos-btn leos-btn--secondary" routerLink="/studio">Back to Studio</a>
-      <a primary class="leos-btn leos-btn--primary" routerLink="/studio/setup/payments"
-        >How guests pay</a
-      >
     </leos-experience-screen>
   `,
   styles: [

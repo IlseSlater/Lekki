@@ -1,5 +1,7 @@
 import { Routes } from '@angular/router';
 import { studioAuthGuard } from './guards/studio-auth.guard';
+import { studioRoleGuard } from './guards/studio-role.guard';
+import { guidedSetupOnlyBeforeLive } from './studio/guided-setup';
 
 export const routes: Routes = [
   {
@@ -58,6 +60,12 @@ export const routes: Routes = [
         path: 'guest',
         loadComponent: () => import('./pages/guest.page').then((m) => m.GuestPageComponent),
       },
+      {
+        // Studio's preview phone — the real guest app on a sample table.
+        path: 'preview',
+        loadComponent: () =>
+          import('./pages/guest-preview.page').then((m) => m.GuestPreviewPageComponent),
+      },
     ],
   },
 
@@ -93,6 +101,7 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./shells/studio-shell.component').then((m) => m.StudioShellComponent),
     canActivate: [studioAuthGuard],
+    canActivateChild: [studioRoleGuard],
     children: [
       {
         path: '',
@@ -113,6 +122,8 @@ export const routes: Routes = [
         path: 'setup',
         loadComponent: () =>
           import('./pages/setup-engine-host.page').then((m) => m.SetupEngineHostPageComponent),
+        // The guided first run. Once live, these links open the everyday pages.
+        canActivateChild: [guidedSetupOnlyBeforeLive],
         children: [
           { path: '', pathMatch: 'full', redirectTo: 'identity' },
           {
@@ -152,22 +163,61 @@ export const routes: Routes = [
         ],
       },
       {
-        path: 'integrations',
+        // Everyday pages: the page beside the real guest app. Edits save as you go —
+        // the same screens the guided first run walks, without Back / Continue.
+        path: '',
+        loadComponent: () =>
+          import('./pages/studio-page-host.page').then((m) => m.StudioPageHostComponent),
+        data: { studioPage: true },
+        children: [
+          {
+            path: 'place',
+            data: { studioPage: true },
+            loadComponent: () =>
+              import('./pages/setup-identity.page').then((m) => m.SetupIdentityPageComponent),
+          },
+          {
+            path: 'tables',
+            data: { studioPage: true },
+            loadComponent: () =>
+              import('./pages/setup-places.page').then((m) => m.SetupPlacesPageComponent),
+          },
+          {
+            path: 'at-the-table',
+            data: { studioPage: true },
+            loadComponent: () =>
+              import('./pages/studio-at-the-table.page').then(
+                (m) => m.StudioAtTheTablePageComponent,
+              ),
+          },
+          {
+            path: 'payments',
+            data: { studioPage: true },
+            loadComponent: () =>
+              import('./pages/setup-payments.page').then((m) => m.SetupPaymentsPageComponent),
+          },
+        ],
+      },
+      {
+        path: 'payments/connect',
+        loadComponent: () =>
+          import('./pages/setup-payfast.page').then((m) => m.SetupPayfastPageComponent),
+      },
+      {
+        path: 'connections',
         loadComponent: () =>
           import('./pages/setup-integrations.page').then(
             (m) => m.SetupIntegrationsPageComponent,
           ),
       },
       {
-        path: 'integrations/payfast',
-        loadComponent: () =>
-          import('./pages/setup-payfast.page').then((m) => m.SetupPayfastPageComponent),
-      },
-      {
-        path: 'integrations/pilot',
+        path: 'connections/pilot',
         loadComponent: () =>
           import('./pages/setup-pilot.page').then((m) => m.SetupPilotPageComponent),
       },
+      { path: 'integrations', redirectTo: 'connections' },
+      { path: 'integrations/pilot', redirectTo: 'connections/pilot' },
+      { path: 'integrations/payfast', redirectTo: 'payments/connect' },
       {
         path: 'menu',
         loadComponent: () =>
@@ -189,7 +239,7 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./pages/studio-grow.page').then((m) => m.StudioGrowPageComponent),
       },
-      { path: 'organisation', redirectTo: 'setup/identity' },
+      { path: 'organisation', redirectTo: 'place' },
       {
         path: 'station/:stationId',
         redirectTo: ({ params }) => `/staff/station/${params['stationId']}`,
@@ -200,15 +250,14 @@ export const routes: Routes = [
       { path: 'waiter', redirectTo: '/staff/service' },
       { path: 'counter', redirectTo: '/staff/station/counter' },
       { path: 'choose', redirectTo: 'create' },
-      { path: 'configure', redirectTo: 'setup/identity' },
-      { path: 'payments', redirectTo: 'setup/payments' },
+      { path: 'configure', redirectTo: 'place' },
       { path: 'golive', redirectTo: 'setup/golive' },
       { path: 'live', redirectTo: 'setup/golive' },
     ],
   },
 
   { path: 'setup', pathMatch: 'full', redirectTo: 'studio' },
-  { path: 'setup/organisation', redirectTo: 'studio/setup/identity' },
+  { path: 'setup/organisation', redirectTo: 'studio/place' },
   { path: 'setup/golive', redirectTo: 'studio/setup/golive' },
   { path: 'setup/operate', redirectTo: 'studio/operate' },
   { path: 'setup/payments', redirectTo: 'studio/setup/payments' },

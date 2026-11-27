@@ -49,7 +49,7 @@
           "options": {
             "host": "0.0.0.0",
             "port": 4200,
-            "allowedHosts": true
+            "allowedHosts": ["all"]
           },
           "configurations": {
             "production": { "buildTarget": "web:build:production" },

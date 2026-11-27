@@ -1,8 +1,7 @@
 import 'reflect-metadata';
-import { existsSync } from 'node:fs';
-import { mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import { networkInterfaces } from 'node:os';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { loadEnvFile } from 'node:process';
 import tls from 'node:tls';
 import { json, urlencoded, static as expressStatic, type Request, type Response, type NextFunction } from 'express';
@@ -80,7 +79,7 @@ async function bootstrap() {
     }
   }
 
-  const app = await NestFactory.create(AppModule, { cors: false, bodyParser: false });
+  const app = await NestFactory.create(AppModule, { cors: false, bodyParser: false, rawBody: true });
   const port = Number(process.env.RUNTIME_PORT ?? 3000);
 
   app.use(
@@ -89,8 +88,24 @@ async function bootstrap() {
       crossOriginResourcePolicy: { policy: 'cross-origin' },
     }),
   );
-  app.use(json({ limit: '256kb' }));
-  app.use(urlencoded({ extended: true, limit: '256kb' }));
+  // Preserve exact bytes for Pilot HMAC (and other signed webhooks).
+  app.use(
+    json({
+      limit: '256kb',
+      verify: (req, _res, buf) => {
+        (req as Request & { rawBody?: Buffer }).rawBody = buf;
+      },
+    }),
+  );
+  app.use(
+    urlencoded({
+      extended: true,
+      limit: '256kb',
+      verify: (req, _res, buf) => {
+        (req as Request & { rawBody?: Buffer }).rawBody = buf;
+      },
+    }),
+  );
   app.use((req: Request, res: Response, next: NextFunction) => {
     req.setTimeout(30_000);
     res.setTimeout(30_000);
@@ -129,6 +144,27 @@ async function bootstrap() {
     http.get('/dev/lan', (_req: unknown, res: { json: (b: unknown) => void }) => {
       res.json({ host: lanIpv4() });
     });
+  }
+
+  // Single-container deploy: static assets + SPA shell (API paths fall through to Nest).
+  const webDist = (process.env.SERVE_WEB_DIST ?? '').trim();
+  if (webDist && existsSync(join(webDist, 'index.html'))) {
+    const expressApp = app.getHttpAdapter().getInstance();
+    expressApp.use(expressStatic(webDist, { index: false, fallthrough: true, maxAge: '1h' }));
+    expressApp.use((req: Request, res: Response, next: NextFunction) => {
+      if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+      if (req.path.startsWith('/socket.io') || req.path.startsWith('/assets')) return next();
+      const apiHit =
+        /^\/(entry|sessions|payments|fulfilments|assistance|catalogue|operate|identity|integrations|setup|grow|transactions|oauth|health|dev)(\/|$)/i.test(
+          req.path,
+        );
+      if (apiHit) return next();
+      if (req.path.includes('.') && !req.path.endsWith('.html')) return next();
+      res.sendFile(join(webDist, 'index.html'), (err) => {
+        if (err) next(err);
+      });
+    });
+    console.log(`LEOS serving web from ${webDist}`);
   }
 
   await app.listen(port, '0.0.0.0');

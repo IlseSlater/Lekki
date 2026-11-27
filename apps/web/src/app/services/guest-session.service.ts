@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { GuestBillComponent, type BillDisplayLine, type BillLine } from '../leos/guest-bill.component';
 import { type GuestOrder } from '../leos/guest-orders.component';
+import { billChangeNotice } from '../leos/pay-choices';
 import { type GuestTabId } from '../leos/guest-tab-bar.component';
 import { type GuestHelpKind } from '../leos/guest-help-sheet.component';
 import {
@@ -32,7 +33,25 @@ import { resolveAllowPay } from '../studio/pay-continuity';
 import { resolveAllowHelp } from '../studio/help-continuity';
 import { resolveShowSpecials } from '../studio/specials-continuity';
 import { offlineQueue } from './offline-queue';
+import { clearCart, loadCart, newOrderKey, saveCart } from '../leos/cart-store';
+import { notesWithAllergies, rememberedDishes, type GuestMemory } from '../leos/guest-memory';
+import {
+  NO_PACE,
+  applyMenuHours,
+  canOrderNow,
+  pausedLine,
+  readGuestPace,
+  type GuestPace,
+} from '../leos/kitchen-pace-view';
 import { hasOpenBalance, isCleared, isGreaterMinor, toMinor, fromMinor } from '../leos/money';
+import { shareOfLineMinor } from '../leos/line-shares';
+import { suggestPairing } from '../leos/pairing';
+import {
+  sameAgainLines,
+  sameAgainSummary,
+  type PastTransaction,
+  type SameAgainLine,
+} from '../leos/same-again';
 import { composeStillInBanner } from '../studio/mid-visit-resume';
 import { firstValueFrom } from 'rxjs';
 import { timeout } from 'rxjs/operators';
@@ -71,6 +90,8 @@ export type FulfilmentRow = {
   id: string;
   status: string;
   stationId: string;
+  /** Minutes the kitchen pushed this order back (once, or 0). */
+  delayMinutes?: number;
   lines: Array<{ label?: string; quantity: number }>;
 };
 
@@ -144,6 +165,12 @@ export class GuestSessionService {
   catalogue: CatalogueItem[] = [];
   catalogueLoading = false;
   cart: CartLine[] = [];
+  /** One key per order. A retry of the same order sends the same key. */
+  private orderKey = '';
+  /** One key per payment attempt. */
+  private paymentKey = '';
+  private lastCartSaved = '';
+  private cartWatch?: ReturnType<typeof setInterval>;
   editingCartIndex: number | null = null;
   billLines: BillLine[] = [];
   mineBillLines: BillLine[] = [];
@@ -182,6 +209,10 @@ export class GuestSessionService {
   private pendingMineSettleCheck = false;
   /** Honest receipt — sum of completed payments only. */
   receiptPaidTotal = 0;
+  /** The bill total the guest saw when they opened Pay. */
+  payBaseline = 0;
+  /** Set when the bill changed while they were on Pay; Pay waits until they've seen it. */
+  billChangedNote = '';
   /** Restore Stay from leave confirm. */
   private phaseBeforeLeave: GuestPhase = 'browse';
   search = '';
@@ -245,6 +276,7 @@ export class GuestSessionService {
     return this.fulfilments.map((f) => ({
       id: f.id,
       status: f.status,
+      delayMinutes: f.delayMinutes ?? 0,
       lines: (f.lines ?? []).map((l) => ({
         label: l.label ?? 'Item',
         quantity: l.quantity,
@@ -431,6 +463,8 @@ export class GuestSessionService {
           this.catalogue = guestVisibleCatalogueItems(
             items.map((item) => ({
               ...item,
+              // The API has sent prices as text ("45"); a string here showed guests R0.00.
+              unitPrice: Number(item.unitPrice) || 0,
               imageUrl: safeGuestImageUrl(item.imageUrl) ?? undefined,
               choiceGroups: this.normalizeChoiceGroups(item.choiceGroups),
             })),
@@ -502,6 +536,8 @@ export class GuestSessionService {
   }
 
   tearDown() {
+    this.saveCartNow();
+    this.stopCartWatch();
     if (this.poll) clearInterval(this.poll);
     this.clearClaimUndoTimer();
     this.clearClaimFlashTimer();
@@ -530,6 +566,7 @@ export class GuestSessionService {
         const payload = action.payload as {
           sessionId: string;
           participantId?: string;
+          idempotencyKey?: string;
           lines: Array<{
             catalogueItemId: string;
             quantity: number;
@@ -542,6 +579,7 @@ export class GuestSessionService {
             sessionId: payload.sessionId,
             participantId: payload.participantId || this.state.participantId || undefined,
             participantSecret: this.state.participantSecret,
+            idempotencyKey: payload.idempotencyKey,
             lines: payload.lines,
           }),
         );
@@ -610,6 +648,7 @@ export class GuestSessionService {
       'AssistanceRequested',
       'AssistanceAcknowledged',
       'AssistanceResolved',
+      'SessionMoved',
     ]);
     if (!refreshOn.has(name)) return;
 
@@ -742,7 +781,37 @@ export class GuestSessionService {
   }
 
   /** One-tap add on Browse — or G-04 sheet when the item needs choices. */
+  /** What this phone remembers: allergies and the last visit here. */
+  get memory(): GuestMemory {
+    return this.onboarding.memory();
+  }
+
+  private visitDishes: string[] = [];
+
+  private noteDishes(labels: string[]) {
+    this.visitDishes = rememberedDishes([...this.visitDishes, ...labels].map((label) => ({ label })));
+    const venue = this.state.venueName || this.state.profileLabel || '';
+    this.onboarding.rememberOrder(venue, this.visitDishes);
+  }
+
+  rememberAllergies(raw: string) {
+    this.onboarding.rememberAllergies(raw);
+  }
+
+  /** The kitchen's pace as the guest sees it: menu hours, pause, wait. */
+  pace: GuestPace = NO_PACE;
+
+  /** The menu right now: categories outside their hours are off it. */
+  get menuNow(): CatalogueItem[] {
+    return applyMenuHours(this.catalogue, this.pace);
+  }
+
   addFromMenu(item: CatalogueItem) {
+    if (item.available === false) return;
+    if (!canOrderNow(this.pace, item.category)) {
+      this.message = pausedLine(this.pace) || `${item.category} is not being served right now.`;
+      return;
+    }
     if (this.hasChoices(item)) {
       this.editingCartIndex = null;
       this.choicesItem = item;
@@ -791,7 +860,88 @@ export class GuestSessionService {
       return;
     }
     this.cart.push(next);
+    if (result.pairedItemId) {
+      const paired = this.catalogue.find((c) => c.id === result.pairedItemId);
+      if (paired) {
+        const existing = this.cart.find(
+          (l) => l.catalogueItemId === paired.id && !l.choiceSummary,
+        );
+        if (existing) existing.quantity += 1;
+        else
+          this.cart.push({
+            catalogueItemId: paired.id,
+            label: paired.label,
+            quantity: 1,
+            unitPrice: paired.unitPrice,
+            routingTags: paired.routingTags,
+            imageUrl: paired.imageUrl,
+          });
+      }
+    }
     this.flashAdded();
+  }
+
+  /** Rounds already on this visit, kept for Same again. */
+  pastTransactions: PastTransaction[] = [];
+
+  /** The guest's last round, ready to repeat in one tap. */
+  get sameAgain(): SameAgainLine[] {
+    if (this.phase !== 'live' || this.submitting || this.cart.length) return [];
+    return sameAgainLines(
+      this.pastTransactions,
+      this.state.participantId || null,
+      this.catalogue.map((c) => ({
+        id: c.id,
+        label: c.label,
+        unitPrice: c.unitPrice,
+        available: c.available,
+        routingTags: c.routingTags,
+        imageUrl: c.imageUrl,
+        needsChoices: this.hasChoices(c),
+      })),
+      this.participantCount >= 2,
+    );
+  }
+
+  get sameAgainLabel(): string {
+    return sameAgainSummary(this.sameAgain);
+  }
+
+  /** One tap: the last round goes straight back on order. */
+  orderSameAgain() {
+    const lines = this.sameAgain;
+    if (!lines.length || this.submitting) return;
+    this.cart = lines.map((l) => ({
+      catalogueItemId: l.catalogueItemId,
+      label: l.label,
+      quantity: l.quantity,
+      unitPrice: l.unitPrice,
+      routingTags: l.routingTags,
+      imageUrl: l.imageUrl,
+    }));
+    this.submitOrder();
+  }
+
+  /** The one related add offered on the dish sheet. */
+  get choicesPairing(): { id: string; label: string; unitPrice: number } | null {
+    const item = this.choicesItem;
+    if (!item) return null;
+    const toPairable = (c: CatalogueItem) => ({
+      id: c.id,
+      label: c.label,
+      category: c.category,
+      unitPrice: c.unitPrice,
+      routingTags: c.routingTags,
+      available: c.available,
+      ageRestricted: c.ageRestricted,
+      needsChoices: this.hasChoices(c),
+    });
+    const pick = suggestPairing(
+      toPairable(item),
+      this.catalogue.map(toPairable),
+      this.cart.map((l) => l.catalogueItemId),
+    );
+    return pick ? { id: pick.id, label: pick.label, unitPrice: pick.unitPrice } : null;
   }
 
   setMenuQty(item: CatalogueItem, qty: number) {
@@ -851,14 +1001,17 @@ export class GuestSessionService {
     this.error = '';
     if (!this.cart.length || this.submitting) return;
     this.submitting = true;
+    if (!this.orderKey) this.orderKey = newOrderKey();
+    const orderKey = this.orderKey;
     if (!navigator.onLine) {
       offlineQueue.enqueue('transaction.create', {
         sessionId: this.state.sessionId,
         participantId: this.state.participantId || undefined,
+        idempotencyKey: orderKey,
         lines: this.cart.map((line) => ({
           catalogueItemId: line.catalogueItemId,
           quantity: line.quantity,
-          notes: line.specialRequest?.trim() || undefined,
+          notes: notesWithAllergies(line.specialRequest, this.memory.allergies),
           selectionsJson: line.selections ?? undefined,
         })),
       });
@@ -873,29 +1026,35 @@ export class GuestSessionService {
       this.orderRecordedFlash = true;
       setTimeout(() => (this.orderRecordedFlash = false), 5000);
       this.cart = [];
+      this.orderKey = '';
+      this.saveCartNow();
       this.phase = 'live';
       this.submitting = false;
       return;
     }
     const total = this.cartTotal;
+    const dishLabels = this.cart.map((l) => l.label);
     this.api
       .createTransaction({
         sessionId: this.state.sessionId,
         participantId: this.state.participantId || undefined,
         participantSecret: this.state.participantSecret,
+        idempotencyKey: orderKey,
         lines: this.cart.map((line) => ({
           catalogueItemId: line.catalogueItemId,
           quantity: line.quantity,
-          notes: line.specialRequest?.trim() || undefined,
+          notes: notesWithAllergies(line.specialRequest, this.memory.allergies),
           selectionsJson: line.selections ?? undefined,
         })),
       })
       .pipe(timeout(20000))
       .subscribe({
       next: () => {
+        this.noteDishes(dishLabels);
         this.message = `${this.terms.term('transaction', 'Order')} received — the team can see it`;
         this.lastOrderTotal = total;
         this.cart = [];
+        this.orderKey = '';
         this.persistGuestState();
         this.phase = 'live';
         this.submitting = false;
@@ -911,7 +1070,18 @@ export class GuestSessionService {
           this.resetStaleSession();
           return;
         }
+        // A refusal from the server ends this order key. A lost connection keeps it,
+        // so tapping again sends the same order once.
+        if (typeof err?.status === 'number' && err.status >= 400 && err.status < 500) {
+          this.orderKey = '';
+        }
         const timedOut = err?.name === 'TimeoutError' || err?.message?.includes?.('Timeout');
+        const code = err?.error?.code;
+        if (err?.status === 409 && (code === 'orders_paused' || code === 'out_of_hours')) {
+          this.error = err?.error?.message || pausedLine({ ...NO_PACE, paused: true });
+          this.refreshLive();
+          return;
+        }
         this.error = timedOut
           ? 'Taking too long — check the connection and try again'
           : 'Could not submit — try again';
@@ -932,6 +1102,8 @@ export class GuestSessionService {
         this.state.menuBrandEnabled = false;
         this.state.brandColour = session.brandColour || this.state.brandColour || '#d7a14a';
         if (session.venueName) this.state.venueName = session.venueName;
+        // A manager can move the bill to another table; the guest sees the new one.
+        if (session.placeCode) this.state.physicalContextCode = session.placeCode;
         if (typeof session.logoUrl === 'string') this.state.logoUrl = session.logoUrl;
         this.state.menuCoverUrl = '';
         if (typeof session.location === 'string') this.state.location = session.location;
@@ -944,6 +1116,7 @@ export class GuestSessionService {
           this.state.paymentsActive = session.paymentsActive;
           this.state.persist();
         }
+        this.pace = readGuestPace(session.pace);
         this.refreshAllowPay();
         this.refreshAllowTip();
         this.refreshAllowHelp();
@@ -971,6 +1144,17 @@ export class GuestSessionService {
           peopleNames.push(first);
         }
         this.tablePeople = peopleNames;
+        this.pastTransactions = (session.transactions ?? []).map((tx) => ({
+          id: tx.id,
+          createdAt: tx.createdAt ?? null,
+          lines: (tx.lines ?? []).map((l) => ({
+            catalogueItemId: l.catalogueItemId ?? null,
+            label: l.label,
+            quantity: Number(l.quantity) || 0,
+            participantId: l.participantId ?? null,
+            selectionsJson: l.selectionsJson,
+          })),
+        }));
         for (const tx of session.transactions ?? []) {
           orderTotal += Number(tx.total) || 0;
           if (tx.status === 'settled') continue;
@@ -980,33 +1164,51 @@ export class GuestSessionService {
             const key = line.label || 'Item';
             const qty = Number(line.quantity) || 0;
             const lineTotal = qty * (Number(line.unitPrice) || 0);
-            const bump = (map: Map<string, BillLine>) => {
+            const bump = (map: Map<string, BillLine>, total = lineTotal) => {
               const existing = map.get(key);
               if (existing) {
                 existing.quantity += qty;
-                existing.total += lineTotal;
+                existing.total += total;
               } else {
                 map.set(key, {
                   label: key,
                   quantity: qty,
-                  total: lineTotal,
+                  total,
                 });
               }
             };
             bump(visitAgg);
+            const sharedWith = line.sharedWith ?? [];
+            const sharedCount = sharedWith.length;
+            const inShare = !!myPart && sharedWith.includes(myPart);
+            const myShareMajor =
+              sharedCount && myPart
+                ? fromMinor(
+                    shareOfLineMinor(
+                      {
+                        participantId: line.participantId ?? null,
+                        sharedWith,
+                        totalMinor: toMinor(lineTotal),
+                      },
+                      myPart,
+                    ),
+                  )
+                : 0;
             const ownerGuest = line.participantId
               ? guests.find((g) => g.id === line.participantId)
               : undefined;
             const myGuest = myPart ? guests.find((g) => g.id === myPart) : undefined;
-            const isMine = multiGuest
-              ? !!myGuest &&
-                !!ownerGuest &&
-                guestShareKey(myGuest) === guestShareKey(ownerGuest)
-              : true;
-            if (isMine) bump(mineAgg);
+            const isMine = sharedCount
+              ? inShare
+              : multiGuest
+                ? !!myGuest &&
+                  !!ownerGuest &&
+                  guestShareKey(myGuest) === guestShareKey(ownerGuest)
+                : true;
+            if (isMine) bump(mineAgg, sharedCount ? myShareMajor : lineTotal);
             const ownerParticipantId = line.participantId ?? null;
             const ownerName =
-              !isMine && ownerParticipantId
+              !isMine && ownerParticipantId && !sharedCount
                 ? participantFirstName.get(ownerParticipantId)
                 : undefined;
             detailRows.push({
@@ -1017,6 +1219,8 @@ export class GuestSessionService {
               mine: isMine,
               ownerParticipantId,
               ownerName,
+              sharedCount,
+              myShare: sharedCount ? myShareMajor : undefined,
             });
           }
         }
@@ -1027,12 +1231,20 @@ export class GuestSessionService {
         this.mineBillLines = [...mineAgg.values()];
         const mineOrdered = this.mineBillLines.reduce((n, l) => n + l.total, 0);
         const visitOrdered = this.billLines.reduce((n, l) => n + l.total, 0);
+        // Something was added to (or taken off) the bill while this guest is on Pay.
+        if (this.phase === 'payment' && this.payBaseline > 0 && !this.paying) {
+          const note = billChangeNotice(this.payBaseline, visitOrdered, this.state.currency || 'ZAR');
+          if (note) this.billChangedNote = note;
+        } else if (this.phase === 'payment' && this.payBaseline <= 0) {
+          this.payBaseline = visitOrdered;
+        }
         if (orderTotal > 0) this.lastOrderTotal = orderTotal;
         const fulfilments = session.fulfilments ?? [];
         this.fulfilments = fulfilments.map((f) => ({
           id: f.id,
           status: f.status,
           stationId: f.stationId,
+          delayMinutes: Number((f as { delayMinutes?: number }).delayMinutes) || 0,
           lines: (f.lines ?? []).map((l) => ({
             quantity: l.quantity,
             label: lineLabels.get(l.transactionLineId ?? '') ?? l.label ?? 'Item',
@@ -1214,6 +1426,9 @@ export class GuestSessionService {
     }
     this.shareSettledMoment = false;
     this.phase = 'payment';
+    // What the guest is looking at when they open Pay — a change after this is pointed out.
+    this.payBaseline = this.billLines.reduce((n, l) => n + l.total, 0);
+    this.billChangedNote = '';
     this.refreshLive();
     this.startLivePoll();
     // See → Claim: Visit tab when others’ lines exist; else Mine when shares differ.
@@ -1292,7 +1507,35 @@ export class GuestSessionService {
         error: (err) => {
           this.claimingLineId = null;
           if (this.isStale(err)) this.resetStaleSession();
+          else if (err?.status === 409 && err?.error?.message) this.paymentError = err.error.message;
           else this.paymentError = 'Couldn’t claim that item — try again.';
+        },
+      });
+  }
+
+  /** One dish, shared: join or leave the share of a line. */
+  shareOneLine(lineId: string, action: 'join' | 'leave') {
+    if (!this.state.sessionId || !this.state.participantId || this.claimingLineId) return;
+    this.claimingLineId = lineId;
+    this.paymentError = '';
+    this.api
+      .shareLine(this.state.sessionId, {
+        lineId,
+        action,
+        participantSecret: this.state.participantSecret,
+      })
+      .subscribe({
+        next: () => {
+          this.claimingLineId = null;
+          this.flashClaimedLine(lineId);
+          this.pulseMineScope();
+          this.refreshLive();
+        },
+        error: (err) => {
+          this.claimingLineId = null;
+          if (this.isStale(err)) this.resetStaleSession();
+          else if (err?.status === 409 && err?.error?.message) this.paymentError = err.error.message;
+          else this.paymentError = 'Couldn’t update that share — try again.';
         },
       });
   }
@@ -1378,15 +1621,16 @@ export class GuestSessionService {
     }
   }
 
-  requestHelp(kind: GuestHelpKind) {
+  requestHelp(kind: GuestHelpKind, specificMessage?: string) {
     this.refreshAllowHelp();
     if (!this.allowHelp || !this.state.sessionId || this.helpBusy) return;
     this.helpBusy = true;
     this.error = '';
     const message =
-      kind === 'manager'
+      specificMessage ??
+      (kind === 'manager'
         ? 'Guest asked to speak with the manager'
-        : `Guest asked for help at the ${this.serviceAssist.staffNoun}`;
+        : `Guest asked for help at the ${this.serviceAssist.staffNoun}`);
     this.api
       .requestAssistance({
         sessionId: this.state.sessionId,
@@ -1415,19 +1659,34 @@ export class GuestSessionService {
     this.openHelpSheet();
   }
 
+  /** The guest has seen the new total; Pay works again against it. */
+  acknowledgeBillChange() {
+    this.payBaseline = this.billLines.reduce((n, l) => n + l.total, 0);
+    this.billChangedNote = '';
+  }
+
   pay() {
     this.error = '';
     this.paymentError = '';
     if (this.paying || this.offline) return;
+    // Never charge against a bill the guest hasn't seen.
+    if (this.billChangedNote) {
+      this.paymentError = 'The bill changed — check the new total first.';
+      return;
+    }
     this.paying = true;
     const tipAmount = this.bill?.tipAmount ?? 0;
     const tipPercent = this.bill?.customTip ? undefined : this.bill?.tipPercent;
-    const scope = this.bill?.scope ?? 'visit';
+    // Equal shares go to the server as a fixed amount toward the table.
+    const scope = this.bill?.paymentScope ?? 'visit';
+    if (!this.paymentKey) this.paymentKey = newOrderKey();
     this.api
       .requestPayment(this.state.sessionId, {
+        idempotencyKey: this.paymentKey,
         tipAmount: this.bill?.customTip ? tipAmount : undefined,
         tipPercent,
         scope,
+        amount: scope === 'amount' ? this.bill?.paymentAmount : undefined,
         participantId: this.state.participantId || undefined,
         participantSecret: this.state.participantSecret,
       })
@@ -1446,6 +1705,10 @@ export class GuestSessionService {
       error: (err) => {
         this.paying = false;
         this.pendingMineSettleCheck = false;
+        // A refusal ends this attempt. A lost connection keeps the key, so a retry never pays twice.
+        if (typeof err?.status === 'number' && err.status >= 400 && err.status < 500) {
+          this.paymentKey = '';
+        }
         if (this.isStale(err)) this.resetStaleSession();
         else this.paymentError = 'Couldn’t start payment — try again when you’re ready.';
       },
@@ -1454,7 +1717,7 @@ export class GuestSessionService {
 
   private pollPaymentUntilSettled(
     paymentId: string,
-    scope: 'visit' | 'mine' | 'equal',
+    scope: 'visit' | 'mine' | 'equal' | 'amount',
     attempt = 0,
   ) {
     if (!this.state.sessionId) {
@@ -1465,6 +1728,9 @@ export class GuestSessionService {
       next: (session) => {
         const payment = session.payments?.find((p) => p.id === paymentId);
         const status = payment?.status ?? '';
+        if (status === 'completed' || status === 'settled' || status === 'failed') {
+          this.paymentKey = '';
+        }
         if (status === 'completed' || status === 'settled') {
           this.paying = false;
           this.awaitingPaymentConfirm = false;
@@ -1478,6 +1744,7 @@ export class GuestSessionService {
             return;
           }
           this.pendingMineSettleCheck = true;
+          if (scope === 'amount') this.bill?.resetAmount();
           this.refreshLive();
           return;
         }
@@ -1563,29 +1830,84 @@ export class GuestSessionService {
 
   private persistGuestState() {
     if (!this.state.sessionId || typeof sessionStorage === 'undefined') return;
-    sessionStorage.setItem(
-      this.guestPersistKey(),
-      JSON.stringify({ cart: this.cart, phase: this.phase }),
-    );
+    sessionStorage.setItem(this.guestPersistKey(), JSON.stringify({ phase: this.phase }));
+    this.saveCartNow();
   }
 
   private restoreGuestPersist() {
-    if (typeof sessionStorage === 'undefined') return;
-    try {
-      const raw = sessionStorage.getItem(this.guestPersistKey());
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as { cart?: CartLine[]; phase?: GuestPhase };
-      if (Array.isArray(parsed.cart)) this.cart = parsed.cart;
-      if (parsed.phase && parsed.phase !== 'leave' && parsed.phase !== 'receipt') {
-        this.phase = parsed.phase;
+    if (typeof sessionStorage !== 'undefined') {
+      try {
+        const raw = sessionStorage.getItem(this.guestPersistKey());
+        if (raw) {
+          const parsed = JSON.parse(raw) as { phase?: GuestPhase };
+          if (parsed.phase && parsed.phase !== 'leave' && parsed.phase !== 'receipt') {
+            this.phase = parsed.phase;
+          }
+        }
+      } catch {
+        /* ignore */
       }
-    } catch {
-      /* ignore */
     }
+    // The cart lives on the phone: same lines and the same order key after a reload.
+    if (typeof localStorage !== 'undefined' && !this.cart.length) {
+      const stored = loadCart(localStorage, this.state.sessionId);
+      if (stored) {
+        this.cart = stored.lines as CartLine[];
+        this.orderKey = stored.orderKey;
+      }
+    }
+    this.startCartWatch();
+  }
+
+  /** Saves the cart whenever it changes, and when the page goes to the background. */
+  private startCartWatch() {
+    if (this.cartWatch || typeof window === 'undefined') return;
+    this.cartWatch = setInterval(() => this.saveCartNow(), 1000);
+    window.addEventListener('pagehide', this.flushCart);
+    document.addEventListener('visibilitychange', this.flushCart);
+  }
+
+  private stopCartWatch() {
+    if (this.cartWatch) clearInterval(this.cartWatch);
+    this.cartWatch = undefined;
+    if (typeof window === 'undefined') return;
+    window.removeEventListener('pagehide', this.flushCart);
+    document.removeEventListener('visibilitychange', this.flushCart);
+  }
+
+  private readonly flushCart = () => {
+    this.saveCartNow();
+    // Safari has no Background Sync, so a queued order retries when the guest comes back.
+    if (
+      typeof document !== 'undefined' &&
+      document.visibilityState === 'visible' &&
+      typeof navigator !== 'undefined' &&
+      navigator.onLine &&
+      offlineQueue.hasPending()
+    ) {
+      void this.flushOfflineQueue();
+    }
+  };
+
+  private saveCartNow() {
+    if (typeof localStorage === 'undefined' || !this.state.sessionId) return;
+    if (!this.cart.length) {
+      if (this.lastCartSaved) clearCart(localStorage, this.state.sessionId);
+      this.lastCartSaved = '';
+      return;
+    }
+    if (!this.orderKey) this.orderKey = newOrderKey();
+    const text = JSON.stringify([this.cart, this.orderKey]);
+    if (text === this.lastCartSaved) return;
+    saveCart(localStorage, this.state.sessionId, this.cart, this.orderKey);
+    this.lastCartSaved = text;
   }
 
   private clearGuestPersist() {
-    if (typeof sessionStorage === 'undefined' || !this.state.sessionId) return;
+    if (!this.state.sessionId) return;
+    if (typeof localStorage !== 'undefined') clearCart(localStorage, this.state.sessionId);
+    this.lastCartSaved = '';
+    if (typeof sessionStorage === 'undefined') return;
     sessionStorage.removeItem(this.guestPersistKey());
   }
 

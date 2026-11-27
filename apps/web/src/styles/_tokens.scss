@@ -132,6 +132,16 @@
 
   /* Peak gold — Open for guests only. Never a standard Studio fill. */
   --leos-action-peak: var(--leos-gold);
+  /* Table layers — dark ground, light sheet, one glass card. Used by the bill and pay screens. */
+  --leos-table-ground: var(--leos-obsidian-ground);
+  --leos-table-sheet: linear-gradient(180deg, #e6e6e7 0%, #ffffff 42%);
+  --leos-table-glass: linear-gradient(90deg, rgba(255, 255, 255, 0.12), rgba(18, 18, 18, 0.82));
+  --leos-table-glass-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+  --leos-table-ready: #4f8a6b;
+  --leos-table-waiting: #d9a441;
+  --leos-table-problem: var(--leos-danger);
+  --leos-table-glass-ink: #ffffff;
+  --leos-table-glass-ink-muted: rgba(255, 255, 255, 0.62);
   --leos-on-peak: #1b2230;
 
 

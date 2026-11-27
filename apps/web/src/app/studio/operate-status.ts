@@ -160,6 +160,7 @@ export function guestStatusLabel(status: string, profileIdOrType?: string): stri
   const airport = id.includes('airport');
   const cafe = id.includes('cafe') || id.includes('café');
   const s = normStatus(status);
+  if (s === 'held') return 'Held — sent together';
   if (s === 'pending' || s === 'created') {
     if (hotel || healthcare) return 'Requested';
     if (festival) return 'Order in';

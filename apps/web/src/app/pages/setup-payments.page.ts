@@ -38,9 +38,17 @@ type PayOption = { key: GuestDesignKey | 'card' | 'applePay' | 'googlePay'; labe
             {{ payfastStatusLabel }}
           </p>
           @if (payfastStatus === 'active') {
-            <a class="pay-section__link" routerLink="/studio/setup/payments/connect"
+            <a class="pay-section__link" routerLink="connect"
               >Manage PayFast</a
             >
+          }
+          @if (needsPayFast) {
+            <p class="pay-section__later">
+              Not ready? Guests can still see their bill and staff can key a total.
+              <button type="button" class="pay-section__link pay-section__link--button" (click)="later()">
+                Add PayFast later
+              </button>
+            </p>
           }
         </section>
 
@@ -119,6 +127,20 @@ type PayOption = { key: GuestDesignKey | 'card' | 'applePay' | 'googlePay'; labe
       .pay-section__link:hover {
         text-decoration: underline;
       }
+      .pay-section__later {
+        margin: 0.5rem 0 0;
+        font-size: 0.875rem;
+        color: var(--studio-ink-secondary, var(--leos-ink-secondary));
+      }
+      .pay-section__link--button {
+        border: none;
+        background: transparent;
+        padding: 0;
+        min-height: 2.75rem;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
       .pay-list {
         list-style: none;
         margin: 0;
@@ -172,8 +194,7 @@ export class SetupPaymentsPageComponent implements OnInit, OnDestroy {
     { key: 'card', label: 'Card' },
     { key: 'applePay', label: 'Apple Pay' },
     { key: 'googlePay', label: 'Google Pay' },
-    { key: 'tipStaff', label: 'Tips' },
-    { key: 'splitBill', label: 'Split bill' },
+    // Tips live in At the table. Guests can always split, so there is no switch for it.
   ];
 
   get payfastStatusLabel() {
@@ -265,6 +286,13 @@ export class SetupPaymentsPageComponent implements OnInit, OnDestroy {
       void this.router.navigate(['/studio/setup/payments/connect']);
       return;
     }
+    void this.router.navigate(['/studio/setup/golive']);
+  }
+
+  /** PayFast is offered, never required. Guests still see the bill; staff can key a total. */
+  later() {
+    this.persistPayMethods(false);
+    this.ctx.markStep('payments');
     void this.router.navigate(['/studio/setup/golive']);
   }
 

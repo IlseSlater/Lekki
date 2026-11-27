@@ -5,6 +5,7 @@ import { ConfidenceIndicatorComponent } from '../leos/confidence-indicator.compo
 import { ExperienceScreenComponent } from '../leos/experience-screen.component';
 import { safeBrandImageUrl } from '../leos/catalogue-parity';
 import { SETUP_STEPS, experienceLabel, getExperience } from '../studio/experience-registry';
+import { isPlaceholderName, prefillPlace } from '../studio/place-prefill';
 import { StudioContextService } from '../services/studio-context.service';
 import { LeosApiService } from '../services/leos-api.service';
 
@@ -288,11 +289,26 @@ export class SetupIdentityPageComponent implements OnInit, OnDestroy {
     const def = getExperience(active.typeId);
     this.nameLabel = def ? `${def.label} name` : 'Name';
     this.typeLabel = experienceLabel(active.typeId);
-    this.venueName = active.venueName || def?.defaults.venueName || '';
     this.logoUrl = active.logoUrl || '';
-    this.brandColour = active.brandColour || '#d7a14a';
-    this.location = active.location || '';
+    this.applyPrefill();
     this.ensureVenueAndHydrate();
+  }
+
+  /** Show what we already know. A true value is never replaced. */
+  private applyPrefill() {
+    const active = this.ctx.activeExperience();
+    if (!active) return;
+    const next = prefillPlace({
+      activeName: active.venueName,
+      activeLocation: active.location,
+      activeColour: active.brandColour,
+    });
+    if (!this.venueName.trim() || isPlaceholderName(this.venueName)) this.venueName = next.venueName;
+    if (!this.location.trim()) this.location = next.location;
+    this.brandColour = /^#[0-9A-Fa-f]{6}$/.test(this.brandColour) && this.brandColour !== '#d7a14a'
+      ? this.brandColour
+      : next.brandColour;
+    if (next.filled.includes('location') || next.filled.includes('brandColour')) this.scheduleSave();
   }
 
   ngOnDestroy() {
@@ -356,6 +372,7 @@ export class SetupIdentityPageComponent implements OnInit, OnDestroy {
           this.brandColour = hydrated.brandColour || this.brandColour;
           this.location = hydrated.location || this.location;
           if (hydrated.venueName) this.venueName = hydrated.venueName;
+          this.applyPrefill();
         }
         then?.(ctx.venueId);
       },
@@ -397,6 +414,7 @@ export class SetupIdentityPageComponent implements OnInit, OnDestroy {
       menuBrandEnabled: false,
       menuCoverUrl: '',
       location: this.location.trim(),
+      // The Google review link lives in At the table → After paying.
     });
     if (markDone) this.ctx.markStep('identity');
     this.flashSaved();

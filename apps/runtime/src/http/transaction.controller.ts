@@ -12,6 +12,7 @@ export class TransactionController {
       sessionId: body.sessionId,
       participantId: body.participantId,
       participantSecret: body.participantSecret,
+      idempotencyKey: body.idempotencyKey,
       lines: body.lines.map((line) => ({
         catalogueItemId: line.catalogueItemId,
         quantity: line.quantity,

@@ -1,7 +1,8 @@
 import { createHmac, timingSafeEqual } from 'crypto';
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { hasPermission, type StaffPrincipal } from '@lekki/contracts';
 import { PrismaService } from '../prisma/prisma.service';
+import { grants } from '../leos/studio-roles';
 import { newId } from '@lekki/shared';
 import { requireStaffTokenSecret } from '../leos/runtime-secrets';
 import { restaurantStationAccess } from '@lekki/pack-restaurant';
@@ -155,8 +156,10 @@ export class StaffTokenService {
   }
 
   requirePermission(claims: StaffTokenClaims, permission: string) {
-    if (!hasPermission(claims.permissions, permission)) {
-      throw new UnauthorizedException(`Missing permission: ${permission}`);
+    // Admin (organisation.manage) also holds every Studio role's permission.
+    if (!hasPermission(claims.permissions, permission) && !grants(claims.permissions, permission)) {
+      // 403, not 401: they are signed in, just not allowed. Floor pages sign people out on 401.
+      throw new ForbiddenException(`Missing permission: ${permission}`);
     }
   }
 

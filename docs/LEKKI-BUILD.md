@@ -14,11 +14,11 @@ Read first every session.
 | **Mission** | Give people **confidence** throughout an experience. |
 | **Sacred** | Reduce **uncertainty**. |
 | **Phase** | **Hospitality Phase** |
-| **Current Proof** | **Continuity polish if named** |
-| **Current Human Moment** | Name one continuity moment — then craft it |
-| **Next Proof** | Hold until a moment is named |
-| **Platform Confidence** | High |
-| **Bottleneck** | Named Continuity craft — not new products |
+| **Current Proof** | **Storefront onboarding** — owner edits what the guest sees |
+| **Current Human Moment** | Does this look like our place, without a quiz? |
+| **Next Proof** | Three moments: place · menu · open doors, fields prefilled |
+| **Platform Confidence** | Core sound · onboarding still the old quiz in the app |
+| **Bottleneck** | Docs no longer freeze the quiz — app flow still does |
 | **Goal** | Confidence · Calm · Hospitality · Continuity |
 
 **Every commit:** Did this moment increase at least one pillar?
@@ -26,7 +26,7 @@ Read first every session.
 **Instruct:** `Continue building Lekki`
 
 **Look:** [LVES](ux/lves.md) · **Studio Design Constitution:** [LEOS-Studio-Design-Blueprint.md](ux/LEOS-Studio-Design-Blueprint.md) (v1.2 · [§3A Studio→Live→Guest](ux/LEOS-Studio-Design-Blueprint.md#section-3a--studio--live-experience--guest-interaction-contract)) · **Studio Design System v1 (Frozen):** [studio-design-system.md](ux/studio-design-system.md) · **Motion (Frozen):** [leos-motion-system.md](ux/leos-motion-system.md)  
-**Setup v1:** **COMPLETE — do not redesign** · [operate-craft](ux/operate-craft.md) · [grow-craft](ux/grow-craft.md)  
+**Owner onboarding:** [storefront](ux/studio-storefront-onboarding.md) — place, menu, open doors. Setup v1 quiz is not binding. · [operate-craft](ux/operate-craft.md) · [grow-craft](ux/grow-craft.md)  
 **Live Experience (frozen):** [live-experience.md](ux/live-experience.md)  
 **Phase freeze:** [Hospitality Phase](ux/hospitality-phase.md) — Moments → Feel → Trust  
 **Current state (authoritative):** [SECTION 3 — Current Product State](ux/current-product-state.md) — HCI lock · Continuity · Frozen · Never  
@@ -45,7 +45,7 @@ LEOS
 ├── Experience (Guest) ── “I’m in the right place.”
 ├── Staff Experience ── “I know my next job.”
 └── Studio (Owner)
-      ├── Setup   ★ FROZEN v1 — Who → What → Where → How pay → Go Live
+      ├── Storefront  place · menu guests order · open the doors
       ├── Home    Ready to welcome guests
       ├── Operate Operations Overview (mission control)
       ├── Grow    Trusted manager · almost invisible
@@ -84,7 +84,7 @@ One question: **Am I confident?**
 |--------|---------------------|--------|
 | Welcome / Create | Can I start without fear? | ✓ Setup v1 |
 | Choose Experience | Do I know what I’m creating? | ✓ Setup v1 |
-| Identity → Go Live | Ready to welcome guests? | ✓ Setup v1 **FROZEN** |
+| Identity → Go Live | Does this look like the guest page? | Reopened — storefront |
 | Home | Am I ready? | ✓ Readiness door · **calm floor live counts** |
 | Operate | Is everything under control? | ✓ Overview · next action · Needs you/Ready/Preparing · Staff handoff |
 | Grow | Do I hear calm truth (not BI)? | ✓ One breath · one suggestion · pack nouns |
@@ -113,7 +113,7 @@ Restaurant ✓ · Café ✓ · Hotel · Festival · Airport · Healthcare path-p
 |------|--------|
 | Marketplace | Capability Marketplace |
 | Neo | Ambient — not a chatbot |
-| Setup polish | **No** — Setup v1 frozen |
+| Setup v1 quiz | Retired as a sequence — storefront onboarding |
 | Claim/split · loyalty · wallets | Experience Continuity — not Studio Admin |
 | Fleet sysadmin · inventory CRUD | After Return HCI · pack tools |
 | Admin BI · dark glass | Never — Grow breath · Operate pulse instead |
@@ -124,7 +124,7 @@ Restaurant ✓ · Café ✓ · Hotel · Festival · Airport · Healthcare path-p
 
 **Hospitality Phase.** Shell ✓ · Live ✓ · Setup ✓ · Owner→QR ✓ · Home ✓ · Operate ✓ · Welcome Back ✓ · Grow ✓ · Alignment ✓ · **Claim-from-table** ✓ · **PaymentCapability vault** ✓ · **Board calm** ✓ · **G-04 browse confidence** ✓ · **Equal share people** ✓ · **Studio→Live→Guest parity** ✓ · **Team confidence** ✓ · **Operate craft glance** ✓ · **Grow one-breath** ✓ · **Tip Continuity** ✓ · **Ready → Pay** ✓ · **Leave while open** ✓ · **Mid-visit resume** ✓ · **Help ack** ✓ · **Entry wait still-in** ✓.
 
-**Next:** Continuity polish if named. Resist Marketplace · Neo · Setup redesign · Admin BI · allocation wizard.
+**Next:** Rebuild owner onboarding as a storefront — [studio-storefront-onboarding](ux/studio-storefront-onboarding.md). The five-step quiz is not binding. Keep one gold action, the real guest phone, and prefilled fields. Launch and Pilot work stay in the repo; they are not the design block.
 
 **Roadmap (fidelity, not redesign):** Shell ✓ · Live ✓ · Setup ✓ · Evidence ✓ · Home ✓ · Operate ✓ · Remember ✓ · Grow ✓ · Align ✓ · Claim ✓ · Vault ✓ · Board calm ✓ · G-04 ✓ · Equal people ✓ · §3A Live parity ✓ · Team confidence ✓ · Operate craft ✓ · Grow one-breath ✓ · Tip Continuity ✓ · Ready → Pay ✓ · Leave while open ✓ · Mid-visit resume ✓ · Help ack ✓ · Entry wait ✓.
 

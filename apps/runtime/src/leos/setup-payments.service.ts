@@ -436,6 +436,19 @@ export class SetupPaymentsService {
     if (!row.connectorId) throw new BadRequestException('Connector not selected');
     if (!row.venueId) throw new BadRequestException('Venue is required before activation');
 
+    const connectorKey = row.connectorId.trim().toLowerCase();
+    if (
+      process.env.NODE_ENV === 'production' &&
+      (connectorKey === 'manual' ||
+        connectorKey === 'connector-manual-payment' ||
+        connectorKey === 'fake' ||
+        connectorKey === 'connector-fake-payment')
+    ) {
+      throw new BadRequestException(
+        'Manual and fake payment connectors cannot be activated in production',
+      );
+    }
+
     let definition: PaymentConnectorDefinition;
     try {
       definition = assertInstallablePaymentConnector(row.connectorId);

@@ -12,6 +12,8 @@ export type GuestOrder = {
   id: string;
   status: string;
   createdAt?: string | Date;
+  /** Minutes the kitchen pushed this order back (once, or 0). */
+  delayMinutes?: number;
   lines: GuestOrderLine[];
 };
 
@@ -89,6 +91,10 @@ const TERMINAL = new Set(['served', 'delivered', 'completed', 'cancelled']);
             <div class="go__ready" role="status">
               {{ readyHint || 'Your order is ready for you.' }}
             </div>
+          } @else if ((order.delayMinutes ?? 0) > 0 && !isDone(order.status)) {
+            <p class="go__delay" role="status">
+              The kitchen needs about {{ order.delayMinutes }} more minutes for this one.
+            </p>
           }
 
           <ul class="go__items">
@@ -247,6 +253,12 @@ const TERMINAL = new Set(['served', 'delivered', 'completed', 'cancelled']);
         background: var(--leos-danger-bg, rgba(198, 91, 82, 0.12));
         color: var(--leos-danger, #c65b52);
       }
+      .go__delay {
+        margin: 0.5rem 0 0;
+        font-size: 0.875rem;
+        line-height: 1.4;
+        color: var(--leos-ink-secondary, #475569);
+      }
       .go__ready {
         display: flex;
         align-items: center;
@@ -388,6 +400,10 @@ export class GuestOrdersComponent {
       return list.filter((o) => !TERMINAL.has(this.norm(o.status)));
     }
     return list.filter((o) => TERMINAL.has(this.norm(o.status)));
+  }
+
+  isDone(status: string): boolean {
+    return TERMINAL.has(this.norm(status));
   }
 
   norm(status: string): string {

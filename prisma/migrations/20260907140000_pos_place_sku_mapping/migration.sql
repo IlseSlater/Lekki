@@ -19,10 +19,17 @@ CREATE UNIQUE INDEX IF NOT EXISTS "PosPlaceMapping_venueId_externalPlaceId_key"
 CREATE INDEX IF NOT EXISTS "PosPlaceMapping_venueId_idx"
   ON "PosPlaceMapping" ("venueId");
 
-ALTER TABLE "PosPlaceMapping"
-  ADD CONSTRAINT "PosPlaceMapping_physicalContextId_fkey"
-  FOREIGN KEY ("physicalContextId") REFERENCES "PhysicalContext"("id")
-  ON DELETE RESTRICT ON UPDATE CASCADE;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'PosPlaceMapping_physicalContextId_fkey'
+  ) THEN
+    ALTER TABLE "PosPlaceMapping"
+      ADD CONSTRAINT "PosPlaceMapping_physicalContextId_fkey"
+      FOREIGN KEY ("physicalContextId") REFERENCES "PhysicalContext"("id")
+      ON DELETE RESTRICT ON UPDATE CASCADE;
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS "PosSkuMapping" (
   "id" TEXT NOT NULL,

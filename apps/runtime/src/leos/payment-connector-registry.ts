@@ -9,9 +9,11 @@ import {
   fakeConnectorDefinition,
   manualConnectorDefinition,
 } from './payment-connectors/manual.definition';
+import { yocoConnectorDefinition } from './payment-connectors/yoco.definition';
 
 const DEFINITIONS: PaymentConnectorDefinition[] = [
   payFastConnectorDefinition,
+  yocoConnectorDefinition,
   manualConnectorDefinition,
   fakeConnectorDefinition,
 ];

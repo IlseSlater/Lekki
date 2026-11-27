@@ -21,8 +21,10 @@ export const staffAuthInterceptor: HttpInterceptorFn = (req, next) => {
     url.includes('/operate/') ||
     (req.method === 'GET' && /\/sessions\/[^/]+$/.test(url)) ||
     url.includes('/fulfilments/') ||
-    (url.includes('/assistance/') &&
-      (url.includes('/acknowledge') || url.includes('/resolve'))) ||
+    (url.includes('/assistance') &&
+      (req.method !== 'POST' ||
+        url.includes('/acknowledge') ||
+        url.includes('/resolve'))) ||
     (url.includes('/sessions/') && url.includes('/close')) ||
     url.includes('/payments/') && url.includes('/complete');
   if (!needsStaff) return next(req);

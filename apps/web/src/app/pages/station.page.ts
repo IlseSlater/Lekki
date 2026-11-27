@@ -22,6 +22,14 @@ import {
 } from '../studio/operate-pressure';
 import type { ExperienceTypeId } from '../studio/experience-registry';
 import { staffPlaceLabel } from '../studio/place-continuity';
+import { FormsModule } from '@angular/forms';
+import {
+  CANCEL_REASONS,
+  DELAY_CHOICES,
+  cancelReady,
+  soldOutLabel,
+  type CancelReason,
+} from '../studio/order-actions';
 
 type StationItem = {
   id: string;
@@ -42,7 +50,7 @@ type StationItem = {
 @Component({
   standalone: true,
   selector: 'leos-station-board',
-  imports: [RouterLink],
+  imports: [RouterLink, FormsModule],
   host: {
     class: 'leos-layout-operator leos-layout-station-board',
     '[class.leos-station-board--embed]': 'embedMonitor',
@@ -101,6 +109,16 @@ type StationItem = {
                   <span class="studio-operate__hint">{{ actionHint(item.status) }}</span>
                 }
               </button>
+              @if (!monitorMode || canManageOrders) {
+                <button
+                  type="button"
+                  class="station-more"
+                  [attr.aria-label]="'More for ' + placeForPublic(item)"
+                  (click)="openTicket(item)"
+                >
+                  More
+                </button>
+              }
             } @empty {
               <p class="studio-operate__col-empty">Quiet</p>
             }
@@ -130,6 +148,16 @@ type StationItem = {
                   <span class="studio-operate__hint">{{ actionHint(item.status) }}</span>
                 }
               </button>
+              @if (!monitorMode || canManageOrders) {
+                <button
+                  type="button"
+                  class="station-more"
+                  [attr.aria-label]="'More for ' + placeForPublic(item)"
+                  (click)="openTicket(item)"
+                >
+                  More
+                </button>
+              }
             } @empty {
               <p class="studio-operate__col-empty">Quiet</p>
             }
@@ -159,6 +187,16 @@ type StationItem = {
                   <span class="studio-operate__hint">{{ actionHint(item.status) }}</span>
                 }
               </button>
+              @if (!monitorMode || canManageOrders) {
+                <button
+                  type="button"
+                  class="station-more"
+                  [attr.aria-label]="'More for ' + placeForPublic(item)"
+                  (click)="openTicket(item)"
+                >
+                  More
+                </button>
+              }
             } @empty {
               <p class="studio-operate__col-empty">Quiet</p>
             }
@@ -197,6 +235,76 @@ type StationItem = {
         <p class="studio-operate__calm">Monitoring — actions happen in Staff Experience.</p>
       }
 
+      @if (ticket) {
+        <div class="station-86" role="dialog" aria-modal="true" aria-labelledby="ticket-title">
+          <div class="station-86__card">
+            <h2 id="ticket-title" class="station-86__title">{{ placeForPublic(ticket) }}</h2>
+            <p class="station-86__lead">{{ linesLabel(ticket) }}</p>
+
+            <h3 class="station-sheet__h">Need more time?</h3>
+            @if (ticketDelayed) {
+              <p class="station-86__lead">Already pushed back once. Talk to the table if it needs longer.</p>
+            } @else {
+              <div class="station-sheet__chips">
+                @for (m of delayChoices; track m) {
+                  <button type="button" class="station-86__btn" [disabled]="ticketBusy" (click)="delayTicket(m)">
+                    +{{ m }} min
+                  </button>
+                }
+              </div>
+            }
+
+            <h3 class="station-sheet__h">Cancel this order</h3>
+            <div class="station-sheet__chips" role="radiogroup" aria-label="Why cancel">
+              @for (r of cancelReasons; track r) {
+                <button
+                  type="button"
+                  role="radio"
+                  class="station-86__btn"
+                  [class.station-86__btn--on]="cancelReason === r"
+                  [attr.aria-checked]="cancelReason === r"
+                  (click)="cancelReason = r"
+                >
+                  {{ r }}
+                </button>
+              }
+            </div>
+            @if (cancelReason) {
+              <label class="station-sheet__note">
+                <span>{{ cancelReason === 'Other' ? 'What happened? (needed)' : 'Anything to add? (optional)' }}</span>
+                <input class="leos-field__input" [(ngModel)]="cancelNote" maxlength="140" />
+              </label>
+              <button
+                type="button"
+                class="leos-btn leos-btn--secondary station-sheet__cancel"
+                [disabled]="ticketBusy || !canCancel"
+                (click)="cancelTicket()"
+              >
+                Cancel the order
+              </button>
+            }
+
+            <h3 class="station-sheet__h">What happened so far</h3>
+            @if (timeline.length) {
+              <ol class="station-sheet__timeline">
+                @for (s of timeline; track s.at + s.step) {
+                  <li>
+                    <span class="station-sheet__time">{{ clock(s.at) }}</span>
+                    <span>{{ s.step }}@if (s.by) { · {{ s.by }} }@if (s.detail) { · {{ s.detail }} }</span>
+                  </li>
+                }
+              </ol>
+            } @else {
+              <p class="station-86__lead">{{ ticketBusy ? 'Loading…' : 'Nothing logged yet.' }}</p>
+            }
+            @if (ticketError) {
+              <p class="studio-operate__calm" role="alert">{{ ticketError }}</p>
+            }
+            <button type="button" class="leos-btn leos-btn--secondary" (click)="closeTicket()">Done</button>
+          </div>
+        </div>
+      }
+
       @if (eightySixOpen) {
         <div class="station-86" role="dialog" aria-modal="true" aria-labelledby="station-86-title">
           <div class="station-86__card">
@@ -209,17 +317,27 @@ type StationItem = {
             } @else {
               <ul class="station-86__list">
                 @for (item of boardItems; track item.id) {
-                  <li>
-                    <button
-                      type="button"
-                      class="station-86__row"
-                      [class.station-86__row--off]="!item.available"
-                      [disabled]="boardBusy"
-                      (click)="toggleEightySix(item)"
-                    >
-                      <span>{{ item.label }}</span>
-                      <span>{{ item.available ? '86' : 'Back on' }}</span>
-                    </button>
+                  <li class="station-86__item" [class.station-86__row--off]="!item.available">
+                    <span class="station-86__name">
+                      {{ item.label }}
+                      @if (!item.available) {
+                        <span class="station-86__when">{{ soldOutLabel(item) }}</span>
+                      }
+                    </span>
+                    <span class="station-86__acts">
+                      @if (item.available) {
+                        <button type="button" class="station-86__btn" [disabled]="boardBusy" (click)="setSoldOut(item, 'today')">
+                          Off today
+                        </button>
+                        <button type="button" class="station-86__btn" [disabled]="boardBusy" (click)="setSoldOut(item, 'until_changed')">
+                          Until I change it
+                        </button>
+                      } @else {
+                        <button type="button" class="station-86__btn" [disabled]="boardBusy" (click)="setSoldOut(item, 'back')">
+                          Back on
+                        </button>
+                      }
+                    </span>
                   </li>
                 }
               </ul>
@@ -542,8 +660,108 @@ type StationItem = {
         cursor: pointer;
         text-align: left;
       }
-      .station-86__row--off {
-        opacity: 0.55;
+      .station-86__row--off .station-86__name {
+        color: #64748b;
+      }
+      .station-86__item {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.5rem 1rem;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #eae6e1;
+      }
+      .station-86__name {
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+        font-weight: 600;
+        color: #1b2230;
+      }
+      .station-86__when {
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: #475569;
+      }
+      .station-86__acts,
+      .station-sheet__chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+      }
+      .station-86__btn {
+        min-height: 2.75rem;
+        padding: 0 0.85rem;
+        border: 1px solid #d8d2c9;
+        border-radius: 999px;
+        background: #ffffff;
+        color: #1b2230;
+        font: inherit;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .station-86__btn--on {
+        background: #1b2230;
+        border-color: #1b2230;
+        color: #ffffff;
+      }
+      .station-86__btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .station-more {
+        align-self: flex-end;
+        min-height: 2.75rem;
+        margin: -0.25rem 0 0.5rem;
+        padding: 0 0.85rem;
+        border: 0;
+        background: none;
+        color: #475569;
+        font: inherit;
+        font-size: 0.82rem;
+        font-weight: 600;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+        cursor: pointer;
+      }
+      .station-sheet__h {
+        margin: 1.1rem 0 0.5rem;
+        font-size: 0.9rem;
+        font-weight: 650;
+        color: #1b2230;
+      }
+      .station-sheet__note {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+        margin-top: 0.6rem;
+        font-size: 0.85rem;
+        color: #475569;
+      }
+      .station-sheet__cancel {
+        margin-top: 0.6rem;
+      }
+      .station-sheet__timeline {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        font-size: 0.85rem;
+        color: #1b2230;
+      }
+      .station-sheet__timeline li {
+        display: flex;
+        gap: 0.6rem;
+      }
+      .station-sheet__time {
+        flex-shrink: 0;
+        width: 3rem;
+        color: #475569;
+        font-variant-numeric: tabular-nums;
       }
     `,
   ],
@@ -584,7 +802,7 @@ export class StationPageComponent implements OnInit, OnChanges, OnDestroy {
   nowMs = Date.now();
   eightySixOpen = false;
   boardBusy = false;
-  boardItems: Array<{ id: string; label: string; available: boolean }> = [];
+  boardItems: Array<{ id: string; label: string; available: boolean; soldOutUntil?: string | null }> = [];
   private venueId = '';
 
   private readonly stationAliases: Record<
@@ -810,12 +1028,113 @@ export class StationPageComponent implements OnInit, OnChanges, OnDestroy {
     this.eightySixOpen = false;
   }
 
-  toggleEightySix(item: { id: string; available: boolean }) {
+  readonly soldOutLabel = soldOutLabel;
+
+  /** Off for today (back tomorrow by itself), until changed, or back on now. */
+  setSoldOut(item: { id: string }, mode: 'today' | 'until_changed' | 'back') {
     this.boardBusy = true;
-    this.api.updateCatalogueItem(item.id, { available: !item.available }).subscribe({
+    this.api.setItemAvailability(item.id, mode).subscribe({
       next: () => this.loadBoard(),
       error: () => {
         this.boardBusy = false;
+      },
+    });
+  }
+
+  // --- One order: delay once, cancel with a reason, see its steps ---
+  readonly delayChoices = DELAY_CHOICES;
+  readonly cancelReasons = CANCEL_REASONS;
+  ticket: StationItem | null = null;
+  ticketBusy = false;
+  ticketError = '';
+  ticketDelayed = false;
+  cancelReason: CancelReason | '' = '';
+  cancelNote = '';
+  timeline: Array<{ at: string; step: string; by: string | null; detail: string | null }> = [];
+
+  /**
+   * Managers open any order — even on Studio's read-only board — to see its steps,
+   * push it back or cancel it. Moving it along stays with the station.
+   */
+  get canManageOrders(): boolean {
+    return !!this.staffSession.read()?.permissions?.includes('organisation.manage');
+  }
+
+  get canCancel(): boolean {
+    return cancelReady(this.cancelReason, this.cancelNote);
+  }
+
+  openTicket(item: StationItem) {
+    this.ticket = item;
+    this.cancelReason = '';
+    this.cancelNote = '';
+    this.ticketError = '';
+    this.timeline = [];
+    this.loadTimeline();
+  }
+
+  closeTicket() {
+    this.ticket = null;
+  }
+
+  clock(iso: string): string {
+    const t = Date.parse(iso);
+    return Number.isFinite(t)
+      ? new Date(t).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+      : '';
+  }
+
+  delayTicket(minutes: number) {
+    if (!this.ticket) return;
+    this.ticketBusy = true;
+    this.ticketError = '';
+    this.api.delayFulfilment(this.ticket.id, minutes).subscribe({
+      next: () => {
+        this.ticketBusy = false;
+        this.message = `Pushed back ${minutes} min — the table can see it.`;
+        setTimeout(() => (this.message = ''), 2200);
+        this.loadTimeline();
+      },
+      error: (err: { error?: { message?: string } }) => {
+        this.ticketBusy = false;
+        this.ticketError = err?.error?.message || 'Could not delay this order.';
+        this.loadTimeline();
+      },
+    });
+  }
+
+  cancelTicket() {
+    if (!this.ticket || !this.canCancel || !this.cancelReason) return;
+    this.ticketBusy = true;
+    this.ticketError = '';
+    this.api.cancelFulfilment(this.ticket.id, this.cancelReason, this.cancelNote).subscribe({
+      next: () => {
+        this.ticketBusy = false;
+        this.ticket = null;
+        this.message = 'Order cancelled. Managers have been told why.';
+        setTimeout(() => (this.message = ''), 2400);
+        this.refresh();
+      },
+      error: (err: { error?: { message?: string } }) => {
+        this.ticketBusy = false;
+        this.ticketError = err?.error?.message || 'Could not cancel this order.';
+      },
+    });
+  }
+
+  private loadTimeline() {
+    if (!this.ticket) return;
+    this.ticketBusy = true;
+    const id = this.ticket.id;
+    this.api.fulfilmentTimeline(id).subscribe({
+      next: (steps) => {
+        if (this.ticket?.id !== id) return;
+        this.timeline = steps;
+        this.ticketDelayed = steps.some((s) => s.step.startsWith('Delayed'));
+        this.ticketBusy = false;
+      },
+      error: () => {
+        this.ticketBusy = false;
       },
     });
   }
@@ -829,6 +1148,7 @@ export class StationPageComponent implements OnInit, OnChanges, OnDestroy {
           id: i.id,
           label: i.label,
           available: i.available !== false,
+          soldOutUntil: i.soldOutUntil ?? null,
         }));
         this.boardBusy = false;
       },

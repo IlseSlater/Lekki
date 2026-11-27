@@ -99,6 +99,11 @@ import { StudioContextService } from '../services/studio-context.service';
           We verify your Merchant ID and passphrase with PayFast. Your merchant key is stored
           securely for checkout.
         </p>
+        <p class="pf__hint">
+          Guests see every way you turn on inside PayFast. In your PayFast dashboard, switch on
+          Capitec Pay, SnapScan, Zapper, Apple Pay and Google Pay, then open a test payment to
+          see them on the PayFast page.
+        </p>
       </div>
 
       <leos-confidence-indicator
@@ -211,7 +216,7 @@ export class SetupPayfastPageComponent implements OnInit {
   }
 
   get backLink() {
-    return this.inSetupFlow ? '/studio/setup/payments' : '/studio/integrations';
+    return this.inSetupFlow ? '/studio/setup/payments' : '/studio/payments';
   }
 
   get canSubmit() {
@@ -278,7 +283,7 @@ export class SetupPayfastPageComponent implements OnInit {
               void this.router.navigate(['/studio/setup/payments']);
               return;
             }
-            void this.router.navigate(['/studio/integrations'], {
+            void this.router.navigate(['/studio/payments'], {
               queryParams: { payfast: 'verified' },
             });
           },

@@ -4,7 +4,10 @@ import {
   PaymentConflictError,
   SessionNotActiveError,
 } from './domain-errors';
-import { NothingLeftToPayError } from './payment-invariants';
+import { ClaimLockedError, ShareNotAllowedError } from './line-shares';
+import { TableMoveRefusedError, moveRefusalStatus } from './table-move';
+import { OrderRefusedError } from './kitchen-pace';
+import { CustomAmountError, NothingLeftToPayError } from './payment-invariants';
 
 export interface MappedError {
   status: number;
@@ -50,6 +53,35 @@ export function mapDomainError(err: unknown): MappedError {
       code: 'nothing_left_to_pay',
       message: 'Nothing left to pay.',
     };
+  }
+
+  if (err instanceof ClaimLockedError) {
+    return {
+      status: 409,
+      code: 'line_locked',
+      message: 'Someone is paying for this item right now. Try again in a moment.',
+    };
+  }
+
+  if (err instanceof ShareNotAllowedError) {
+    return { status: 409, code: 'share_not_allowed', message: err.message };
+  }
+
+  if (err instanceof OrderRefusedError) {
+    return {
+      status: 409,
+      code: err.refusal.reason === 'paused' ? 'orders_paused' : 'out_of_hours',
+      message: err.message,
+    };
+  }
+
+  if (err instanceof TableMoveRefusedError) {
+    return { status: moveRefusalStatus(err.reason), code: 'table_move_refused', message: err.message };
+  }
+
+  if (err instanceof CustomAmountError) {
+    // Message is authored in customAmountBaseMinor and safe to show a guest.
+    return { status: 400, code: 'invalid_amount', message: err.message };
   }
 
   if (err instanceof PaymentConflictError) {

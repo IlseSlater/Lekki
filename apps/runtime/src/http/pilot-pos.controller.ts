@@ -47,12 +47,14 @@ export class PilotPosController {
   ) {
     try {
       const secret = await this.resolveWebhookSecret(venueId);
+      const raw = (req as Request & { rawBody?: Buffer | string }).rawBody;
       const rawBody =
-        typeof (req as Request & { rawBody?: Buffer | string }).rawBody === 'string'
-          ? (req as Request & { rawBody?: string }).rawBody
-          : Buffer.isBuffer((req as Request & { rawBody?: Buffer }).rawBody)
-            ? (req as Request & { rawBody?: Buffer }).rawBody!.toString('utf8')
-            : JSON.stringify(body ?? {});
+        typeof raw === 'string'
+          ? raw
+          : Buffer.isBuffer(raw)
+            ? raw.toString('utf8')
+            : undefined;
+      // Never re-encode JSON for HMAC — signature is over the exact request bytes.
       assertPilotWebhookAuthorized({
         secret,
         bearerOrTokenHeader: authorization || webhookToken,
@@ -94,6 +96,7 @@ export class PilotPosController {
         status: true,
       },
     });
+    // Active install with its own secret — fail closed; never fall back to shared env.
     if (install?.webhookSecretRef && install.status === 'active') {
       try {
         return await this.vault.resolveSecret({
@@ -103,9 +106,10 @@ export class PilotPosController {
           secretRef: install.webhookSecretRef,
         });
       } catch {
-        // Fall through to env — fail closed via requirePilotPosWebhookSecret.
+        throw new UnauthorizedException('Pilot webhook secret unavailable for venue');
       }
     }
+    // No per-venue secret yet (dev / pre-activate) — shared env only.
     return requirePilotPosWebhookSecret();
   }
 }

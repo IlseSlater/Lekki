@@ -1,6 +1,21 @@
-import { Body, Controller, ForbiddenException, Get, Param, Patch, Req, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  ForbiddenException,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import { CANCEL_REASONS, cancelAlert, cleanCancelReason } from '../leos/order-log';
+import { canManage } from '../leos/staff-admin';
+import { PushService } from '../push/push.service';
 import { LeosService } from '../leos/leos.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { WaiterTablesService } from '../leos/waiter-tables.service';
 import { StaffAuthGuard, RequireStaffPermission } from '../staff-auth/staff-auth.guard';
 import { StaffTokenService, type StaffTokenClaims } from '../staff-auth/staff-token.service';
 import { restaurantStationAccess } from '@lekki/pack-restaurant';
@@ -12,6 +27,8 @@ export class FulfilmentController {
     private readonly leos: LeosService,
     private readonly prisma: PrismaService,
     private readonly tokens: StaffTokenService,
+    private readonly tables: WaiterTablesService,
+    private readonly push: PushService,
   ) {}
 
   @Patch(':id/status')
@@ -19,32 +36,107 @@ export class FulfilmentController {
   @RequireStaffPermission('fulfilment.update')
   async updateStatus(
     @Param('id') id: string,
-    @Body() body: { status: string },
+    @Body() body: { status: string; reason?: string; note?: string },
     @Req() req: { staff?: StaffTokenClaims },
   ) {
     const staff = req.staff!;
-    const existing = await this.prisma.fulfilment.findUnique({ where: { id } });
+    // A cancel always says why; managers hear about it.
+    const reason =
+      body?.status === 'cancelled' ? cleanCancelReason(body.reason, body.note) : null;
+    if (body?.status === 'cancelled' && !reason) {
+      throw new BadRequestException(
+        `Say why the order is cancelled: ${CANCEL_REASONS.join(', ')}. "Other" needs a few words.`,
+      );
+    }
+    const existing = await this.prisma.fulfilment.findUnique({
+      where: { id },
+      include: { session: { include: { physicalContext: true } } },
+    });
     if (!existing) throw new ForbiddenException('Fulfilment not found');
     if (existing.organisationId !== staff.org) {
       throw new ForbiddenException('Wrong organisation');
     }
-    if (!this.tokens.canAccessStation(staff.role, existing.stationId)) {
+    // A manager may cancel any order in their place; moving an order on stays with its station.
+    const managerCancel = body.status === 'cancelled' && canManage(staff.permissions);
+    if (!managerCancel && !this.tokens.canAccessStation(staff.role, existing.stationId)) {
       throw new ForbiddenException('Experience cannot update this station');
     }
     // Serve / handoff roles may only mark ready → delivered
     if (
+      !managerCancel &&
       isDeliverOnlyRole(staff.role, restaurantStationAccess) &&
       body.status !== 'delivered'
     ) {
       throw new ForbiddenException('Serve role can only mark served');
     }
-    return this.leos.updateFulfilmentStatus(id, body.status);
+    const actor = { id: staff.sub, name: staff.name };
+    const updated = await this.leos.updateFulfilmentStatus(id, body.status, { actor, reason });
+    if (body.status === 'delivered' && /waiter|staff/i.test(staff.role)) {
+      await this.tables.takeIfFree(existing.sessionId, staff).catch(() => null);
+    }
+    if (reason) {
+      void this.push.notifyManagers(
+        staff.org,
+        cancelAlert({ by: staff.name, placeCode: existing.session.physicalContext?.code, reason }),
+      );
+    }
+    return updated;
+  }
+
+  /** Push one order back by 5, 10, 20 or 30 minutes — once per order. */
+  @Post(':id/delay')
+  @UseGuards(StaffAuthGuard)
+  @RequireStaffPermission('fulfilment.update')
+  async delay(
+    @Param('id') id: string,
+    @Body() body: { minutes?: number },
+    @Req() req: { staff?: StaffTokenClaims },
+  ) {
+    const staff = req.staff!;
+    // The station that makes it can push it back, and so can a manager.
+    const existing = await this.prisma.fulfilment.findUnique({ where: { id } });
+    if (!existing || existing.organisationId !== staff.org) {
+      throw new ForbiddenException('Fulfilment not found');
+    }
+    if (
+      !canManage(staff.permissions) &&
+      (!this.tokens.canAccessStation(staff.role, existing.stationId) ||
+        isDeliverOnlyRole(staff.role, restaurantStationAccess))
+    ) {
+      throw new ForbiddenException('Only the station making this order can delay it');
+    }
+    return this.leos.delayFulfilment(id, body?.minutes, staff.org, {
+      id: staff.sub,
+      name: staff.name,
+    });
+  }
+
+  /** Every step of one order, with the time and who did it. */
+  @Get(':id/timeline')
+  @UseGuards(StaffAuthGuard)
+  @RequireStaffPermission('fulfilment.read')
+  timeline(@Param('id') id: string, @Req() req: { staff?: StaffTokenClaims }) {
+    return this.leos.fulfilmentTimeline(id, req.staff!.org);
   }
 
   @Get('station/:stationId')
-  async listByStation(@Param('stationId') stationId: string) {
+  @UseGuards(StaffAuthGuard)
+  @RequireStaffPermission('fulfilment.read')
+  async listByStation(
+    @Param('stationId') stationId: string,
+    @Req() req: { staff?: StaffTokenClaims },
+  ) {
+    const staff = req.staff!;
+    // Managers watch every station; everyone else reads their own.
+    if (!canManage(staff.permissions) && !this.tokens.canAccessStation(staff.role, stationId)) {
+      throw new ForbiddenException('Experience cannot read this station');
+    }
     const rows = await this.prisma.fulfilment.findMany({
-      where: { stationId, status: { not: 'delivered' } },
+      where: {
+        stationId,
+        organisationId: staff.org,
+        status: { notIn: ['delivered', 'held'] },
+      },
       include: {
         lines: true,
         transaction: { include: { lines: true } },
