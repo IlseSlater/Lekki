@@ -1,4 +1,21 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  DELAY_CHOICES,
+  alreadyDelayed,
+  cleanDelay,
+  timelineFromEvents,
+  type LogActor,
+  type LoggedEnvelope,
+  type TimelineStep,
+} from './order-log';
+import { needsTillClose, tillTaskMessage } from './till-task';
+import { paymentFeedRows, type PaymentFeedRow } from './payment-feed';
 import type { Prisma } from '@prisma/client';
 import type { EventEnvelope, ResolvedContext } from '@lekki/contracts';
 import { id } from '@lekki/contracts';
@@ -380,13 +397,16 @@ export class LeosService {
     }
 
     const catalogueIds = [...new Set(input.lines.map((l) => l.catalogueItemId))];
-    const catalogue = await this.prisma.restaurantCatalogItem.findMany({
-      where: { venueId: session.venueId, id: { in: catalogueIds }, available: true },
-    });
+    // Paused kitchens, closed days and categories outside their hours refuse new orders.
+    const { pace, timezone } = await this.kitchenPace.forVenue(session.venueId);
+    // Sold out "for today" counts as unavailable until the venue's next day.
+    const catalogue = (
+      await this.prisma.restaurantCatalogItem.findMany({
+        where: { venueId: session.venueId, id: { in: catalogueIds }, available: true },
+      })
+    ).filter((c) => !(c.id in pace.soldOutToday));
     const byId = new Map(catalogue.map((c) => [c.id, c]));
 
-    // Paused kitchens and categories outside their hours refuse new orders.
-    const { pace, timezone } = await this.kitchenPace.forVenue(session.venueId);
     const refusal = orderRefusal(
       pace,
       catalogue.map((c) => c.category),
@@ -1135,7 +1155,15 @@ export class LeosService {
     return { sessionId: session.id, placeCode: target!.code, fromCode };
   }
 
-  async updateFulfilmentStatus(fulfilmentId: string, status: string) {
+  /**
+   * Move an order to a new status. The step is logged with who did it; a cancel carries
+   * its reason (the controller insists on one).
+   */
+  async updateFulfilmentStatus(
+    fulfilmentId: string,
+    status: string,
+    opts?: { actor?: LogActor; reason?: string | null },
+  ) {
     const existing = await this.prisma.fulfilment.findUnique({
       where: { id: fulfilmentId },
       include: { session: true },
@@ -1169,11 +1197,166 @@ export class LeosService {
           status,
           sessionId: fulfilment.sessionId,
           stationId: fulfilment.stationId,
+          ...(opts?.actor ? { actor: opts.actor } : {}),
+          ...(opts?.reason ? { reason: opts.reason } : {}),
         },
       ),
     );
 
     return fulfilment;
+  }
+
+  /** The last 24 hours of payments for the floor, newest first. */
+  async paymentFeed(organisationId: string, now = new Date()): Promise<PaymentFeedRow[]> {
+    const since = new Date(now.getTime() - 24 * 60 * 60_000);
+    const payments = await this.prisma.payment.findMany({
+      where: { organisationId, status: { in: ['completed', 'settled'] }, createdAt: { gte: since } },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+      select: { id: true, createdAt: true, amount: true, tipAmount: true, sessionId: true },
+    });
+    const sessionIds = [...new Set(payments.map((p) => p.sessionId))];
+    const sessions = await this.prisma.experienceSession.findMany({
+      where: { id: { in: sessionIds }, organisationId },
+      select: { id: true, billMinor: true, paidMinor: true, physicalContext: { select: { code: true } } },
+    });
+    return paymentFeedRows(
+      payments.map((p) => ({
+        id: p.id,
+        createdAt: p.createdAt,
+        amountMinor: toMinor(Number(p.amount)),
+        tipMinor: toMinor(Number(p.tipAmount ?? 0)),
+        sessionId: p.sessionId,
+      })),
+      sessions.map((s) => ({
+        id: s.id,
+        placeCode: s.physicalContext?.code ?? null,
+        billMinor: s.billMinor,
+        paidMinor: s.paidMinor,
+      })),
+    );
+  }
+
+  /** Everything logged for one order, oldest first. */
+  private async orderEvents(fulfilmentId: string): Promise<LoggedEnvelope[]> {
+    const rows = await this.prisma.outboxMessage.findMany({
+      where: {
+        eventName: { in: ['FulfilmentCreated', 'FulfilmentStatusChanged', 'FulfilmentDelayed'] },
+        envelope: { path: ['payload', 'fulfilmentId'], equals: fulfilmentId },
+      },
+      orderBy: { createdAt: 'asc' },
+      select: { eventName: true, envelope: true },
+    });
+    return rows.map((r) => {
+      const env = (r.envelope ?? {}) as { occurredAt?: string; payload?: Record<string, unknown> };
+      return { eventName: r.eventName, occurredAt: env.occurredAt, payload: env.payload };
+    });
+  }
+
+  private async fulfilmentInOrg(fulfilmentId: string, organisationId: string) {
+    const f = await this.prisma.fulfilment.findUnique({
+      where: { id: fulfilmentId },
+      include: { session: true },
+    });
+    if (!f || f.organisationId !== organisationId) throw new NotFoundException('Order not found');
+    return f;
+  }
+
+  /** An order's steps with times and who did each. */
+  async fulfilmentTimeline(fulfilmentId: string, organisationId: string): Promise<TimelineStep[]> {
+    await this.fulfilmentInOrg(fulfilmentId, organisationId);
+    return timelineFromEvents(await this.orderEvents(fulfilmentId));
+  }
+
+  /** Push one order back by 5, 10, 20 or 30 minutes — once. The guest's phone shows it. */
+  async delayFulfilment(
+    fulfilmentId: string,
+    minutes: unknown,
+    organisationId: string,
+    actor: LogActor,
+  ) {
+    const clean = cleanDelay(minutes);
+    if (!clean) throw new BadRequestException(`Delay by ${DELAY_CHOICES.join(', ')} minutes.`);
+    const f = await this.fulfilmentInOrg(fulfilmentId, organisationId);
+    if (['delivered', 'cancelled'].includes(f.status)) {
+      throw new ConflictException('This order is finished.');
+    }
+    if (alreadyDelayed(await this.orderEvents(fulfilmentId))) {
+      throw new ConflictException('This order has already been delayed once.');
+    }
+    await this.outbox.append(
+      this.envelope('FulfilmentDelayed', f.organisationId, f.session.venueId, f.session.correlationId, {
+        fulfilmentId,
+        sessionId: f.sessionId,
+        stationId: f.stationId,
+        minutes: clean,
+        ...(actor ? { actor } : {}),
+      }),
+    );
+    return { fulfilmentId, delayedMinutes: clean };
+  }
+
+  /** Minutes each of a table's orders was pushed back, for the guest's phone. */
+  async delaysForSession(sessionId: string): Promise<Record<string, number>> {
+    const rows = await this.prisma.outboxMessage.findMany({
+      where: {
+        eventName: 'FulfilmentDelayed',
+        envelope: { path: ['payload', 'sessionId'], equals: sessionId },
+      },
+      select: { envelope: true },
+    });
+    const out: Record<string, number> = {};
+    for (const r of rows) {
+      const p = ((r.envelope ?? {}) as { payload?: Record<string, unknown> }).payload ?? {};
+      const id = String(p['fulfilmentId'] ?? '');
+      if (id) out[id] = Number(p['minutes']) || 0;
+    }
+    return out;
+  }
+
+  /**
+   * A bill that came from the till is settled in Lekki: staff close it on the till by hand.
+   * The task stays open until someone resolves it. Never blocks the payment.
+   */
+  private async openTillTaskIfNeeded(sessionId: string) {
+    const session = await this.prisma.experienceSession.findUnique({
+      where: { id: sessionId },
+      include: { physicalContext: true, transactions: { include: { lines: true } } },
+    });
+    if (!session) return;
+    const lines = session.transactions.flatMap((t) => t.lines);
+    if (!needsTillClose(lines)) return;
+    const message = cleanAssistanceMessage(
+      tillTaskMessage({
+        placeCode: session.physicalContext?.code,
+        paidMinor: session.paidMinor,
+        currency: session.transactions[0]?.currency,
+        checkIds: lines.map((l) => l.externalCheckId ?? ''),
+      }),
+    );
+    const open = await this.prisma.assistanceRequest.findFirst({
+      where: { sessionId, kind: 'service', status: { in: ['open', 'acknowledged'] }, message },
+    });
+    if (open) return;
+    const request = await this.prisma.assistanceRequest.create({
+      data: {
+        id: newId('asst'),
+        sessionId,
+        organisationId: session.organisationId,
+        venueId: session.venueId,
+        kind: 'service',
+        message,
+        status: 'open',
+      },
+    });
+    await this.outbox.append(
+      this.envelope('AssistanceRequested', session.organisationId, session.venueId, session.correlationId, {
+        assistanceId: request.id,
+        sessionId,
+        kind: 'service',
+        status: 'open',
+      }),
+    );
   }
 
   async requestPayment(
@@ -1739,6 +1922,7 @@ export class LeosService {
       toMinor(Number(payment.tipAmount ?? 0)),
     );
     let status: 'completed' | 'needs_refund' = 'completed';
+    let settledWhole = false;
 
     await this.prisma.$transaction(async (tx) => {
       // Serialize concurrent late ITNs against the same payment.
@@ -1828,6 +2012,7 @@ export class LeosService {
         pendingLeft === 0;
 
       if (fullyCovered) {
+        settledWhole = true;
         await tx.transaction.updateMany({
           where: { sessionId: payment.sessionId, status: 'committed' },
           data: { status: 'settled' },
@@ -1851,6 +2036,12 @@ export class LeosService {
         tx,
       );
     });
+
+    if (settledWhole && status === 'completed') {
+      await this.openTillTaskIfNeeded(payment.sessionId).catch((err) =>
+        this.logger.warn(`Till task not opened: ${(err as Error).message}`),
+      );
+    }
 
     return { paymentId, status };
   }

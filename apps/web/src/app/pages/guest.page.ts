@@ -39,6 +39,7 @@ import {
 import { LeosMoneyPipe } from '../leos/leos-money.pipe';
 import { GuestAfterPayComponent } from '../leos/guest-after-pay.component';
 import { googleReviewUrlFrom } from '../leos/review-links';
+import { tipPercentsFrom } from '../leos/pay-choices';
 import { pausedLine, waitLine } from '../leos/kitchen-pace-view';
 import { lastTimeLine } from '../leos/guest-memory';
 import { receiptText, whatsappReceiptUrl } from '../leos/receipt-text';
@@ -355,6 +356,8 @@ import { receiptText, whatsappReceiptUrl } from '../leos/receipt-text';
             [visitRemaining]="visitRemaining"
             [mineRemaining]="mineRemaining"
             [equalRemaining]="equalRemaining"
+            [tipPercents]="tipPercents"
+            [tablePeopleCount]="tablePeople.length"
             [visitLabel]="billVisitLabel"
             [allowTip]="allowTip"
             [allowHelp]="allowHelp"
@@ -653,6 +656,10 @@ export class GuestPageComponent implements OnInit, OnDestroy {
   get sameAgainLines() { return this.session.sameAgain; }
   get sameAgainLabel() { return this.session.sameAgainLabel; }
   orderSameAgain() { this.session.orderSameAgain(); }
+  /** The venue's tip percents, from the guest design the guest already receives. */
+  get tipPercents(): number[] {
+    return tipPercentsFrom(this.state.guestDesign as Record<string, unknown> | null);
+  }
   get googleReviewUrl(): string {
     return googleReviewUrlFrom(this.state.guestDesign as Record<string, unknown> | null);
   }

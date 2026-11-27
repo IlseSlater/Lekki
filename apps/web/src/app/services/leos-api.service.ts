@@ -4,13 +4,25 @@ import { io, Socket } from 'socket.io-client';
 import { resolveApiBaseUrl } from './public-origin';
 import { OperateStaffSessionService } from './operate-staff-session.service';
 import type { GuestExperienceDesign } from '../studio/guest-experience-design';
+import { guestPreviewActive } from '../preview/preview-storage';
 
 /** Kitchen pace as a manager sets it (menu hours, pause, busy minutes, hold-and-fire). */
 export interface KitchenPaceSettings {
   paused: boolean;
+  /** When a pause ends by itself (ISO). Null = until reopened. */
+  pausedUntil?: string | null;
+  pauseReason?: string;
   holdRounds: boolean;
   categoryHours: Record<string, { from: string; to: string }>;
   busyMinutes: Record<string, number>;
+  /** When busy minutes stop applying (ISO). */
+  busyUntil?: string | null;
+  /** Days the venue is closed ("YYYY-MM-DD"). */
+  closedDates?: Array<{ date: string; note: string }>;
+  /** Item id → the day it is sold out for. */
+  soldOutToday?: Record<string, string>;
+  /** Read-only: today is a closed day. */
+  closedToday?: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -206,6 +218,8 @@ export class LeosApiService {
         routingTags: string[];
         category: string;
         available?: boolean;
+        /** When sold out: back 'tomorrow' by itself, or only when 'changed'. */
+        soldOutUntil?: 'tomorrow' | 'changed' | null;
         allergens?: string[];
         dietaryTags?: string[];
         ageRestricted?: boolean;
@@ -681,11 +695,66 @@ export class LeosApiService {
     });
   }
 
-  /** Pause or resume new orders. Seated guests can still see and pay. */
-  pauseOrders(paused: boolean) {
+  /**
+   * Pause or resume new orders — for a set number of minutes (or until reopened) with a reason.
+   * Seated guests can still see and pay. Managers are told.
+   */
+  pauseOrders(paused: boolean, opts?: { minutes?: number | null; reason?: string }) {
     return this.http.post<KitchenPaceSettings>(
       `${this.api}/operate/pace/pause`,
-      { paused },
+      { paused, minutes: opts?.minutes ?? null, reason: opts?.reason ?? '' },
+      { headers: this.staffAuthHeaders() },
+    );
+  }
+
+  /** Sold out for today (back tomorrow by itself), until changed, or back on now. */
+  setItemAvailability(itemId: string, mode: 'today' | 'until_changed' | 'back') {
+    return this.http.post<{ venueId: string; available: boolean }>(
+      `${this.api}/operate/items/${encodeURIComponent(itemId)}/availability`,
+      { mode },
+      { headers: this.staffAuthHeaders() },
+    );
+  }
+
+  /** Today's payments: table, bill, paid, full or part, still owed. */
+  paymentFeed() {
+    return this.http.get<
+      Array<{
+        paymentId: string;
+        at: string;
+        placeCode: string | null;
+        billMinor: number;
+        paidMinor: number;
+        tipMinor: number;
+        kind: 'full' | 'part';
+        leftMinor: number;
+        settled: boolean;
+      }>
+    >(`${this.api}/operate/payments`, { headers: this.staffAuthHeaders() });
+  }
+
+  /** Push one order back by 5, 10, 20 or 30 minutes — once. */
+  delayFulfilment(id: string, minutes: number) {
+    return this.http.post<{ fulfilmentId: string; delayedMinutes: number }>(
+      `${this.api}/fulfilments/${id}/delay`,
+      { minutes },
+      { headers: this.staffAuthHeaders() },
+    );
+  }
+
+  /** Cancel an order. A reason is required; "Other" needs a note. */
+  cancelFulfilment(id: string, reason: string, note?: string) {
+    return this.http.patch(
+      `${this.api}/fulfilments/${id}/status`,
+      { status: 'cancelled', reason, note: note ?? '' },
+      { headers: this.staffAuthHeaders() },
+    );
+  }
+
+  /** Every step of one order with its time and who did it. */
+  fulfilmentTimeline(id: string) {
+    return this.http.get<Array<{ at: string; step: string; by: string | null; detail: string | null }>>(
+      `${this.api}/fulfilments/${id}/timeline`,
       { headers: this.staffAuthHeaders() },
     );
   }
@@ -1006,6 +1075,8 @@ export class LeosApiService {
 
   private ensureIoConnected() {
     if (this.socket) return;
+    // Studio's preview phone talks to a sample table — never a live room.
+    if (guestPreviewActive()) return;
     const staffToken = this.staffTokenForOperate();
     this.socket = io(this.api, {
       query: {

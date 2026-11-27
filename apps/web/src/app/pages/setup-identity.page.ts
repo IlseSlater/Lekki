@@ -6,7 +6,6 @@ import { ExperienceScreenComponent } from '../leos/experience-screen.component';
 import { safeBrandImageUrl } from '../leos/catalogue-parity';
 import { SETUP_STEPS, experienceLabel, getExperience } from '../studio/experience-registry';
 import { isPlaceholderName, prefillPlace } from '../studio/place-prefill';
-import { googleReviewUrlFrom, safeReviewUrl } from '../leos/review-links';
 import { StudioContextService } from '../services/studio-context.service';
 import { LeosApiService } from '../services/leos-api.service';
 
@@ -38,20 +37,6 @@ import { LeosApiService } from '../services/leos-api.service';
             autocomplete="address-level2"
             placeholder="City or suburb guests recognise"
           />
-        </div>
-
-        <div class="leos-field">
-          <span class="leos-field__label">Google review link <em class="leos-field__need">optional</em></span>
-          <input
-            class="leos-field__input"
-            name="googleReviewUrl"
-            type="url"
-            inputmode="url"
-            [(ngModel)]="googleReviewUrl"
-            (ngModelChange)="scheduleSave()"
-            placeholder="https://g.page/r/…"
-          />
-          <p class="id-hint">Guests see it after they pay. Leave it empty and they still can tell you privately.</p>
         </div>
 
         <div class="id-marks">
@@ -274,7 +259,6 @@ export class SetupIdentityPageComponent implements OnInit, OnDestroy {
   venueName = '';
   logoUrl = '';
   brandColour = '#d7a14a';
-  googleReviewUrl = '';
   location = '';
   typeLabel = 'Restaurant';
   savedFlash = false;
@@ -306,7 +290,6 @@ export class SetupIdentityPageComponent implements OnInit, OnDestroy {
     this.nameLabel = def ? `${def.label} name` : 'Name';
     this.typeLabel = experienceLabel(active.typeId);
     this.logoUrl = active.logoUrl || '';
-    this.googleReviewUrl = googleReviewUrlFrom(active.guestDesign as unknown as Record<string, unknown>);
     this.applyPrefill();
     this.ensureVenueAndHydrate();
   }
@@ -388,9 +371,6 @@ export class SetupIdentityPageComponent implements OnInit, OnDestroy {
           this.logoUrl = hydrated.logoUrl || this.logoUrl;
           this.brandColour = hydrated.brandColour || this.brandColour;
           this.location = hydrated.location || this.location;
-          this.googleReviewUrl =
-            googleReviewUrlFrom(hydrated.guestDesign as unknown as Record<string, unknown>) ||
-            this.googleReviewUrl;
           if (hydrated.venueName) this.venueName = hydrated.venueName;
           this.applyPrefill();
         }
@@ -427,7 +407,6 @@ export class SetupIdentityPageComponent implements OnInit, OnDestroy {
     const name =
       this.venueName.trim() || this.ctx.activeExperience()?.venueName?.trim() || '';
     if (!name && !markDone) return;
-    const current = this.ctx.activeExperience();
     this.ctx.upsertActive({
       venueName: name || this.venueName,
       logoUrl: this.logoUrl,
@@ -435,14 +414,7 @@ export class SetupIdentityPageComponent implements OnInit, OnDestroy {
       menuBrandEnabled: false,
       menuCoverUrl: '',
       location: this.location.trim(),
-      ...(current
-        ? {
-            guestDesign: {
-              ...current.guestDesign,
-              googleReviewUrl: safeReviewUrl(this.googleReviewUrl),
-            } as unknown as typeof current.guestDesign,
-          }
-        : {}),
+      // The Google review link lives in At the table → After paying.
     });
     if (markDone) this.ctx.markStep('identity');
     this.flashSaved();

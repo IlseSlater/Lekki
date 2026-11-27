@@ -77,15 +77,15 @@ type TodayRow = { label: string; value: string; ok?: boolean };
           @if (live) {
             <a class="leos-btn leos-btn--primary" routerLink="/studio/operate">Open Operate</a>
             <div class="studio-home__actions" aria-label="When you have a minute">
-              <a class="leos-btn leos-btn--secondary" routerLink="/studio/setup/payments">Payments</a>
+              <a class="leos-btn leos-btn--secondary" routerLink="/studio/payments">Payments</a>
               <a class="leos-btn leos-btn--secondary" routerLink="/studio/menu">Menu</a>
-              <a class="leos-btn leos-btn--secondary" routerLink="/studio/setup/golive">Guest QR</a>
+              <a class="leos-btn leos-btn--secondary" routerLink="/studio/tables">Tables &amp; QR</a>
             </div>
           } @else {
             <a class="leos-btn leos-btn--primary" [routerLink]="resumeLink">{{ primaryCta }}</a>
             <div class="studio-home__actions" aria-label="Optional">
               <a class="leos-btn leos-btn--secondary" routerLink="/studio/menu">Menu</a>
-              <a class="leos-btn leos-btn--secondary" routerLink="/studio/integrations">Integrations</a>
+              <a class="leos-btn leos-btn--secondary" routerLink="/studio/connections">Connections</a>
             </div>
           }
         </div>
@@ -222,7 +222,7 @@ export class StudioHomePageComponent implements OnInit {
 
     const progress = this.ctx.setupProgress();
     const next = progress.current === 'done' ? 'golive' : progress.current;
-    const nextTitle = SETUP_STEPS.find((s) => s.slug === next)?.title ?? 'Open the doors';
+    const nextTitle = SETUP_STEPS.find((s) => s.slug === next)?.title ?? 'Go live';
     this.resumeLink = this.ctx.pathForStep(next);
     this.primaryCta = next === 'golive' ? 'Go live' : 'Continue setup';
 
@@ -235,12 +235,12 @@ export class StudioHomePageComponent implements OnInit {
     this.todayRows = [
       { label: 'Next', value: nextTitle, ok: false },
       {
-        label: 'Your tables',
+        label: 'Tables & QR',
         value: placesSet ? 'Set' : 'Still to finish',
         ok: placesSet,
       },
       {
-        label: 'Taking payment',
+        label: 'Payments',
         value: c.paymentsDone ? 'Healthy' : 'Still to finish',
         ok: c.paymentsDone,
       },

@@ -121,6 +121,12 @@ import { StudioContextService } from '../services/studio-context.service';
         <button type="button" class="pl-quiet pl-quiet--block" (click)="addSection()">
           Add section
         </button>
+
+        @if (live) {
+          <a class="leos-btn leos-btn--secondary pl-qr" routerLink="/studio/setup/golive">
+            Print or download your QR codes
+          </a>
+        }
       </div>
 
       <leos-confidence-indicator
@@ -275,6 +281,10 @@ import { StudioContextService } from '../services/studio-context.service';
       .pl-quiet--block {
         align-self: flex-start;
       }
+      .pl-qr {
+        align-self: flex-start;
+        margin-top: 0.5rem;
+      }
       .pl-room__add {
         display: flex;
         flex-wrap: wrap;
@@ -315,6 +325,10 @@ export class SetupPlacesPageComponent implements OnInit, OnDestroy {
 
   purpose = SETUP_STEPS[2].title;
   lead = SETUP_STEPS[2].why;
+  /** After go-live the QR codes are a link away; during setup they come at the end. */
+  get live(): boolean {
+    return !!this.ctx.readConfig().live;
+  }
   singularNoun = 'Table';
   placeNounPlural = 'Tables';
   sections: PlaceSection[] = [];

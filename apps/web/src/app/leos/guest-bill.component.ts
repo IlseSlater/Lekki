@@ -5,6 +5,12 @@ import { LeosMoneyPipe } from './leos-money.pipe';
 import { hasOpenBalance, isCleared, fromMinor, toMinor } from './money';
 import { viewCustomAmount, type CustomAmountView } from './custom-amount';
 import { shareCaption } from './line-shares';
+import {
+  DEFAULT_TIP_PERCENTS,
+  equalShares,
+  tipChipLabel,
+  type EqualShares,
+} from './pay-choices';
 
 export type BillLine = {
   label: string;
@@ -27,7 +33,6 @@ export type BillDisplayLine = BillLine & {
 
 export type BillScope = 'visit' | 'mine' | 'equal' | 'amount';
 
-const TIP_OPTIONS = [0, 10, 15, 18, 20];
 
 /**
  * Guest bill — ported from Restaurant App bill.page functionality.
@@ -72,12 +77,10 @@ const TIP_OPTIONS = [0, 10, 15, 18, 20];
               role="tab"
               class="gb__scope-btn"
               [class.gb__scope-btn--on]="scope === 'equal'"
-              [class.gb__scope-btn--done]="equalSharePaid"
               [attr.aria-selected]="scope === 'equal'"
-              [disabled]="equalSharePaid && visitHasOpenBalance"
               (click)="setScope('equal')"
             >
-              {{ equalSharePaid ? 'Equal · paid' : 'Equal share' }}
+              Equal shares
               <span class="gb__scope-amt">({{ equalSubtotal | leosMoney: currency }})</span>
             </button>
           }
@@ -111,11 +114,30 @@ const TIP_OPTIONS = [0, 10, 15, 18, 20];
             <span class="gb__share-note" id="gb-amount-hint">{{ amountView.hint }}</span>
           </label>
         }
+        @if (scope === 'equal') {
+          <div class="gb__equal" role="group" aria-label="Equal shares">
+            <div class="gb__stepper">
+              <span class="gb__tip-label" id="gb-people">People at the table</span>
+              <button type="button" class="gb__chip" aria-label="One fewer person" (click)="stepPeople(-1)">−</button>
+              <span class="gb__step-value" aria-labelledby="gb-people" aria-live="polite">{{ equal.people }}</span>
+              <button type="button" class="gb__chip" aria-label="One more person" (click)="stepPeople(1)">+</button>
+            </div>
+            <div class="gb__stepper">
+              <span class="gb__tip-label" id="gb-shares">Shares I’m covering</span>
+              <button type="button" class="gb__chip" aria-label="One share fewer" (click)="stepShares(-1)">−</button>
+              <span class="gb__step-value" aria-labelledby="gb-shares" aria-live="polite">{{ equal.shares }}</span>
+              <button type="button" class="gb__chip" aria-label="One share more" (click)="stepShares(1)">+</button>
+            </div>
+            <span class="gb__share-note">
+              One share is {{ equal.perShare | leosMoney: currency }}.
+              @if (equal.capped) {
+                Only {{ equal.amount | leosMoney: currency }} is left, so that’s what you’ll pay.
+              }
+            </span>
+          </div>
+        }
         @if (mineSharePaid && visitHasOpenBalance && scope !== 'equal') {
           <p class="gb__share-note">Your share is paid — you can still cover the visit if you like.</p>
-        }
-        @if (equalSharePaid && visitHasOpenBalance) {
-          <p class="gb__share-note">Your equal share is paid — others can settle the rest, or you can cover the visit.</p>
         }
       }
 
@@ -185,9 +207,10 @@ const TIP_OPTIONS = [0, 10, 15, 18, 20];
                 type="button"
                 class="gb__chip"
                 [class.gb__chip--on]="!customTip && tipPercent === pct"
+                [attr.aria-pressed]="!customTip && tipPercent === pct"
                 (click)="setTipPercent(pct)"
               >
-                {{ pct }}%
+                {{ tipLabel(pct) }}
               </button>
             }
             <button
@@ -428,6 +451,27 @@ const TIP_OPTIONS = [0, 10, 15, 18, 20];
         flex-wrap: wrap;
         gap: 0.4rem;
       }
+      .gb__equal {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        margin: 0.75rem 0 0;
+      }
+      .gb__stepper {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .gb__stepper .gb__tip-label {
+        flex: 1;
+        margin: 0;
+      }
+      .gb__step-value {
+        min-width: 2rem;
+        text-align: center;
+        font-weight: 650;
+        font-variant-numeric: tabular-nums;
+      }
       .gb__chip {
         min-height: 2.75rem;
         min-width: 2.75rem;
@@ -574,7 +618,58 @@ export class GuestBillComponent {
   @Output() tipChange = new EventEmitter<number>();
   @Output() scopeChange = new EventEmitter<BillScope>();
 
-  readonly tipOptions = TIP_OPTIONS;
+  /** The venue's tip percents; "No tip" always comes first. */
+  @Input() set tipPercents(value: readonly number[] | null | undefined) {
+    this.tipOptions = [0, ...(value?.length ? value : DEFAULT_TIP_PERCENTS)];
+  }
+  /** Guests at the table — the starting count for equal shares. */
+  @Input() set tablePeopleCount(n: number | null | undefined) {
+    const v = Math.max(1, Math.round(Number(n) || 0));
+    if (!this.peopleTouched && v > 1) this.equalPeople = v;
+  }
+  tipOptions: number[] = [0, ...DEFAULT_TIP_PERCENTS];
+  equalPeople = 2;
+  equalShareCount = 1;
+  private peopleTouched = false;
+
+  tipLabel(pct: number): string {
+    return tipChipLabel(pct, this.subtotal, this.currency);
+  }
+
+  /** Equal shares of the whole bill, never more than is left. */
+  get equal(): EqualShares {
+    return equalShares({
+      billTotal: this.sum(this.lines),
+      remaining: this.visitSubtotal,
+      people: this.equalPeople,
+      shares: this.equalShareCount,
+    });
+  }
+
+  stepPeople(delta: number) {
+    this.peopleTouched = true;
+    this.equalPeople = Math.min(50, Math.max(1, this.equalPeople + delta));
+    if (this.equalShareCount > this.equalPeople) this.equalShareCount = this.equalPeople;
+    this.emitMoney();
+  }
+
+  stepShares(delta: number) {
+    this.equalShareCount = Math.min(this.equalPeople, Math.max(1, this.equalShareCount + delta));
+    this.emitMoney();
+  }
+
+  /** What is sent to the server: equal shares go as a fixed amount toward the table. */
+  get paymentScope(): 'visit' | 'mine' | 'amount' {
+    if (this.scope === 'equal' || this.scope === 'amount') return 'amount';
+    return this.scope;
+  }
+
+  get paymentAmount(): number | undefined {
+    if (this.scope === 'equal') return this.equal.amount;
+    if (this.scope === 'amount') return this.payableAmount;
+    return undefined;
+  }
+
   scope: BillScope = 'visit';
   tipPercent = 0;
   customTip = false;
@@ -604,7 +699,7 @@ export class GuestBillComponent {
   }
 
   get showEqualShare(): boolean {
-    return this.equalRemaining != null && this.visitHasOpenBalance;
+    return this.visitHasOpenBalance;
   }
 
   get visitHasOpenBalance(): boolean {
@@ -686,8 +781,7 @@ export class GuestBillComponent {
   }
 
   get equalSubtotal(): number {
-    if (this.equalRemaining != null) return Math.max(0, this.equalRemaining);
-    return 0;
+    return this.equal.amount;
   }
 
   get mineSharePaid(): boolean {
@@ -695,7 +789,7 @@ export class GuestBillComponent {
   }
 
   get equalSharePaid(): boolean {
-    return this.showEqualShare && isCleared(this.equalSubtotal);
+    return false;
   }
 
   get subtotal(): number {

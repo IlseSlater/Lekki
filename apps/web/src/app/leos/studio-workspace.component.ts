@@ -1,5 +1,5 @@
 import { Component, Input } from '@angular/core';
-import { LiveExperiencePanelComponent } from './live-experience-panel.component';
+import { LivePreviewComponent } from './live-preview.component';
 
 /**
  * Studio workspace — one paper (story + craft) · Live phone on the ground.
@@ -7,7 +7,7 @@ import { LiveExperiencePanelComponent } from './live-experience-panel.component'
 @Component({
   selector: 'leos-studio-workspace',
   standalone: true,
-  imports: [LiveExperiencePanelComponent],
+  imports: [LivePreviewComponent],
   template: `
     <div class="studio-ws" [class.studio-ws--with-story]="withStory">
       <div class="studio-ws__body">
@@ -22,7 +22,7 @@ import { LiveExperiencePanelComponent } from './live-experience-panel.component'
           </div>
         </div>
         <div class="studio-ws__live studio-motion-appear-delay">
-          <leos-live-experience-panel />
+          <leos-live-preview />
         </div>
       </div>
     </div>

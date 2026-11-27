@@ -89,6 +89,50 @@ export class PushService implements OnModuleInit {
     }
   }
 
+  /**
+   * Tell the people who manage this place: orders paused, an order cancelled.
+   * Never throws — an alert that cannot be sent must not block the floor.
+   */
+  async notifyManagers(organisationId: string, alert: { title: string; body: string; tag: string }) {
+    if (!this.enabled) return 0;
+    try {
+      const managers = await this.prisma.staffMember.findMany({
+        where: { organisationId, active: true, permissions: { has: 'organisation.manage' } },
+        select: { id: true },
+      });
+      if (!managers.length) return 0;
+      const devices = await this.prisma.pushSubscription.findMany({
+        where: { organisationId, staffMemberId: { in: managers.map((m) => m.id) } },
+      });
+      const payload = JSON.stringify({
+        notification: { title: alert.title, body: alert.body, tag: alert.tag, renotify: true },
+      });
+      let sent = 0;
+      await Promise.all(
+        devices.map(async (device) => {
+          try {
+            await webpush.sendNotification(
+              { endpoint: device.endpoint, keys: { p256dh: device.p256dh, auth: device.auth } },
+              payload,
+              { TTL: 600, urgency: 'normal' },
+            );
+            sent += 1;
+          } catch (err) {
+            if (isGoneStatus((err as { statusCode?: number }).statusCode)) {
+              await this.prisma.pushSubscription
+                .deleteMany({ where: { endpoint: device.endpoint } })
+                .catch(() => null);
+            }
+          }
+        }),
+      );
+      return sent;
+    } catch (err) {
+      this.log.warn(`Manager alert failed: ${(err as Error).message}`);
+      return 0;
+    }
+  }
+
   async notifyReady(fulfilmentId: string) {
     const fulfilment = await this.prisma.fulfilment.findUnique({
       where: { id: fulfilmentId },

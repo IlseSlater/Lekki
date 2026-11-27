@@ -101,6 +101,8 @@ export type GuestCartClaimUndo = {
           [visitLabel]="visitLabel"
           [showScope]="true"
           [allowTip]="allowTip"
+          [tipPercents]="tipPercents"
+          [tablePeopleCount]="tablePeopleCount"
           [allowHelp]="allowHelp"
           [trustLine]="trustLine"
           [savedPaymentMethodStatus]="savedPaymentMethodStatus"
@@ -148,6 +150,10 @@ export class GuestCartDrawerComponent {
   @Input() visitRemaining: number | null = null;
   @Input() mineRemaining: number | null = null;
   @Input() equalRemaining: number | null = null;
+  /** The venue's tip percents (from its guest design). */
+  @Input() tipPercents: number[] = [];
+  /** Guests at the table — where equal shares start counting. */
+  @Input() tablePeopleCount = 0;
   @Input() visitLabel = 'This visit';
   @Input() allowTip = true;
   @Input() allowHelp = true;

@@ -98,6 +98,9 @@ export class SessionController {
       minutes: minutesOnVenueClock(new Date(), timezone),
     });
 
+    // An order pushed back once shows the guest by how much.
+    const delays = await this.leos.delaysForSession(session.id);
+
     const labelByTxLine = new Map(
       session.transactions.flatMap((t) =>
         (t.lines ?? []).map((l) => [l.id, l.label] as const),
@@ -127,6 +130,7 @@ export class SessionController {
         stationId: f.stationId,
         sessionId: f.sessionId,
         createdAt: f.createdAt,
+        delayMinutes: delays[f.id] ?? 0,
         lines: f.lines.map((line) => ({
           quantity: line.quantity,
           label: labelByTxLine.get(line.transactionLineId) ?? 'Item',

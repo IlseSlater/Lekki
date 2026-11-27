@@ -64,6 +64,8 @@ export interface PaceSettings {
   holdRounds: boolean;
   categoryHours: Record<string, { from: string; to: string }>;
   busyMinutes: Record<string, number>;
+  /** Days the venue is closed ("YYYY-MM-DD"). */
+  closedDates?: Array<{ date: string; note: string }>;
 }
 
 const CLOCK = /^([01]\d|2[0-3]):[0-5]\d$/;

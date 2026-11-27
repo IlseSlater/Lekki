@@ -25,6 +25,7 @@ import { isSpecificAsk } from '../leos/help-presets';
 import { StaffAlertsService } from '../services/staff-alerts.service';
 import { helpVisibleTo } from '../leos/staff-alerts';
 import { myTipsLine } from '../leos/tips-today';
+import { PAUSE_CHOICES, pausedLine } from '../studio/order-actions';
 
 type FloorTab = 'tables' | 'ready' | 'help' | 'history';
 type DetailItemsTab = 'active' | 'history';
@@ -136,11 +137,66 @@ type HelpReq = {
         <p class="waiter__calm">{{ calmLine }}</p>
         @if (isManager && !monitorMode) {
           <p class="waiter__alerts">
-            {{ ordersPaused ? 'New orders are paused. Guests can still pay.' : 'Taking orders.' }}
-            <button type="button" class="waiter__alerts-btn" [disabled]="busy" (click)="togglePause()">
-              {{ ordersPaused ? 'Resume orders' : 'Pause new orders' }}
-            </button>
+            {{ ordersPaused ? pauseStatus + '. Guests can still pay.' : 'Taking orders.' }}
+            @if (ordersPaused) {
+              <button type="button" class="waiter__alerts-btn" [disabled]="busy" (click)="resumeOrders()">
+                Resume orders
+              </button>
+            } @else {
+              <button
+                type="button"
+                class="waiter__alerts-btn"
+                [disabled]="busy"
+                [attr.aria-expanded]="pauseChooserOpen"
+                (click)="pauseChooserOpen = !pauseChooserOpen"
+              >
+                Pause new orders
+              </button>
+            }
           </p>
+          @if (pauseChooserOpen && !ordersPaused) {
+            <div class="waiter__pause" role="group" aria-label="Pause new orders">
+              <div class="waiter__pause-chips">
+                @for (c of pauseChoices; track c.label) {
+                  <button
+                    type="button"
+                    class="waiter__alerts-btn"
+                    [class.waiter__pause-on]="pauseMinutes === c.minutes"
+                    [attr.aria-pressed]="pauseMinutes === c.minutes"
+                    (click)="pauseMinutes = c.minutes"
+                  >
+                    {{ c.label }}
+                  </button>
+                }
+              </div>
+              <label class="waiter__pause-why">
+                <span>Why? Managers see this, guests don’t.</span>
+                <input class="leos-field__input" [(ngModel)]="pauseReason" maxlength="120" placeholder="Kitchen is behind" />
+              </label>
+              <button type="button" class="leos-btn leos-btn--secondary" [disabled]="busy" (click)="pauseOrders()">
+                Pause new orders
+              </button>
+            </div>
+          }
+        }
+        @if (!monitorMode && paymentRows.length) {
+          <details class="waiter__payments">
+            <summary>Payments today · {{ paymentRows.length }}</summary>
+            <ul class="waiter__payment-list">
+              @for (p of paymentRows; track p.paymentId) {
+                <li class="waiter__payment" [class.waiter__payment--owed]="!p.settled">
+                  <span class="waiter__payment-place">Table {{ p.placeCode || '—' }}</span>
+                  <span>
+                    {{ p.kind === 'full' ? 'Paid in full' : 'Part payment' }} ·
+                    {{ money(p.paidMinor) }} of {{ money(p.billMinor) }}
+                  </span>
+                  <span class="waiter__payment-left">
+                    {{ p.settled ? 'Settled' : money(p.leftMinor) + ' still owed' }}
+                  </span>
+                </li>
+              }
+            </ul>
+          </details>
         }
         @if (!monitorMode && tipsLine) {
           <p class="waiter__alerts">{{ tipsLine }}</p>
@@ -818,6 +874,65 @@ type HelpReq = {
         font-size: 0.85rem;
         color: var(--leos-muted, #6b5c4d);
       }
+      .waiter__pause {
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+        margin: 0.5rem 0 0;
+        padding: 0.75rem;
+        border: 1px solid #eae6e1;
+        border-radius: 0.75rem;
+      }
+      .waiter__pause-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+      }
+      .waiter__pause-on {
+        color: #1b2230;
+        text-decoration-thickness: 2px;
+      }
+      .waiter__pause-why {
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+        font-size: 0.82rem;
+        color: #475569;
+      }
+      .waiter__payments {
+        margin: 0.5rem 0 0;
+        font-size: 0.85rem;
+      }
+      .waiter__payments summary {
+        min-height: 2.75rem;
+        display: flex;
+        align-items: center;
+        font-weight: 650;
+        cursor: pointer;
+      }
+      .waiter__payment-list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      .waiter__payment {
+        display: grid;
+        grid-template-columns: 5rem 1fr;
+        gap: 0.1rem 0.75rem;
+        padding: 0.5rem 0;
+        border-top: 1px solid #eae6e1;
+      }
+      .waiter__payment-place {
+        grid-row: span 2;
+        font-weight: 650;
+      }
+      .waiter__payment-left {
+        color: #2f7a4f;
+        font-weight: 600;
+      }
+      .waiter__payment--owed .waiter__payment-left {
+        color: #9a5b10;
+      }
       .waiter__alerts-btn,
       .waiter-card__owner-btn {
         border: 0;
@@ -1297,14 +1412,56 @@ export class ServicePageComponent implements OnInit, OnDestroy {
 
   tipsLine = '';
   ordersPaused = false;
+  pausedUntil: string | null = null;
+  pauseChooserOpen = false;
+  readonly pauseChoices = PAUSE_CHOICES;
+  pauseMinutes: number | null = 30;
+  pauseReason = '';
+  paymentRows: Array<{
+    paymentId: string;
+    placeCode: string | null;
+    billMinor: number;
+    paidMinor: number;
+    kind: 'full' | 'part';
+    leftMinor: number;
+    settled: boolean;
+  }> = [];
 
-  togglePause() {
+  get pauseStatus(): string {
+    return pausedLine({ paused: this.ordersPaused, pausedUntil: this.pausedUntil });
+  }
+
+  money(minor: number): string {
+    return `R ${(Math.max(0, minor) / 100).toFixed(2)}`;
+  }
+
+  /** A pause runs for a chosen time (or until reopened) and says why. Managers are told. */
+  pauseOrders() {
     if (this.busy) return;
     this.busy = true;
-    this.api.pauseOrders(!this.ordersPaused).subscribe({
+    this.api.pauseOrders(true, { minutes: this.pauseMinutes, reason: this.pauseReason }).subscribe({
       next: (p) => {
         this.busy = false;
         this.ordersPaused = p.paused;
+        this.pausedUntil = p.pausedUntil ?? null;
+        this.pauseChooserOpen = false;
+        this.pauseReason = '';
+      },
+      error: (err) => {
+        this.busy = false;
+        this.error = err?.error?.message || 'Couldn’t change this — try again.';
+      },
+    });
+  }
+
+  resumeOrders() {
+    if (this.busy) return;
+    this.busy = true;
+    this.api.pauseOrders(false).subscribe({
+      next: (p) => {
+        this.busy = false;
+        this.ordersPaused = p.paused;
+        this.pausedUntil = null;
       },
       error: (err) => {
         this.busy = false;
@@ -1494,12 +1651,17 @@ export class ServicePageComponent implements OnInit, OnDestroy {
       floor: this.api.listFloorTables().pipe(catchError(() => of({ tables: [] }))),
       tips: this.api.myTips().pipe(catchError(() => of(null))),
       pace: this.isManager ? this.api.getPace().pipe(catchError(() => of(null))) : of(null),
+      payments: this.api.paymentFeed().pipe(catchError(() => of([]))),
     }).subscribe({
       next: (bundle) => {
         if (!silent) this.error = '';
         const tips = (bundle as { tips: { tipMinor: number; count: number } | null }).tips;
-        const pace = (bundle as { pace: { paused: boolean } | null }).pace;
-        if (pace) this.ordersPaused = pace.paused;
+        const pace = (bundle as { pace: { paused: boolean; pausedUntil?: string | null } | null }).pace;
+        if (pace) {
+          this.ordersPaused = pace.paused;
+          this.pausedUntil = pace.pausedUntil ?? null;
+        }
+        this.paymentRows = (bundle as { payments: ServicePageComponent['paymentRows'] }).payments ?? [];
         this.tipsLine = tips ? myTipsLine(tips.tipMinor, tips.count) : '';
         const assistance = (
           bundle as { assistance: HelpReq[] }

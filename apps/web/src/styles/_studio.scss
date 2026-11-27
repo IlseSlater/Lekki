@@ -189,6 +189,26 @@
   background: rgba(255, 255, 255, 0.1);
 }
 
+/* Group names on the rail: What guests see · Run the floor · The business */
+.leos-studio-shell__group {
+  margin: 0.15rem 0.85rem 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.leos-studio-shell[data-nav-collapsed='true'] .leos-studio-shell__group {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  .leos-studio-shell__group {
+    display: none;
+  }
+}
+
 .leos-studio-shell[data-setup-engine='true'] .leos-studio-shell__main,
 .leos-studio-shell[data-pre-engine='true'] .leos-studio-shell__main {
   max-width: none;

@@ -135,6 +135,31 @@ type EditorMode = 'list' | 'edit';
                   />
                   <span>Send each round to the kitchen together</span>
                 </label>
+                <div class="menu-editor__closed">
+                  <strong>Closed days</strong>
+                  <p class="menu-editor__closed-note">
+                    On these days guests can still see and pay a bill, but can’t order.
+                  </p>
+                  @for (d of pace.closedDates ?? []; track d.date) {
+                    <div class="menu-editor__closed-row">
+                      <span>{{ d.date }}@if (d.note) { · {{ d.note }} }</span>
+                      <button type="button" class="menu-editor__pill" (click)="removeClosedDay(d.date)">Remove</button>
+                    </div>
+                  }
+                  <div class="menu-editor__pace-row">
+                    <label>
+                      <span>Date</span>
+                      <input type="date" class="leos-field__input" [(ngModel)]="newClosedDate" />
+                    </label>
+                    <label>
+                      <span>Note (optional)</span>
+                      <input class="leos-field__input" maxlength="80" [(ngModel)]="newClosedNote" placeholder="Public holiday" />
+                    </label>
+                    <button type="button" class="menu-editor__pill" [disabled]="!newClosedDate" (click)="addClosedDay()">
+                      Add closed day
+                    </button>
+                  </div>
+                </div>
                 <p class="menu-editor__status" aria-live="polite">{{ paceStatus }}</p>
               </details>
             }
@@ -404,6 +429,24 @@ type EditorMode = 'list' | 'edit';
         cursor: pointer;
         font-weight: 600;
       }
+      .menu-editor__closed {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        margin-top: 1rem;
+      }
+      .menu-editor__closed-note {
+        margin: 0;
+        font-size: 0.85rem;
+        color: #475569;
+      }
+      .menu-editor__closed-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 0.9rem;
+      }
       .menu-editor__pace-row {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
@@ -494,6 +537,29 @@ export class StudioMenuPageComponent implements OnInit, OnDestroy {
   paceHold(on: boolean) {
     if (!this.pace) return;
     this.pace = { ...this.pace, holdRounds: !!on };
+    this.savePaceSoon();
+  }
+
+  newClosedDate = '';
+  newClosedNote = '';
+
+  addClosedDay() {
+    if (!this.pace || !/^\d{4}-\d{2}-\d{2}$/.test(this.newClosedDate)) return;
+    const rest = (this.pace.closedDates ?? []).filter((d) => d.date !== this.newClosedDate);
+    this.pace = {
+      ...this.pace,
+      closedDates: [...rest, { date: this.newClosedDate, note: this.newClosedNote.trim() }].sort((a, b) =>
+        a.date.localeCompare(b.date),
+      ),
+    };
+    this.newClosedDate = '';
+    this.newClosedNote = '';
+    this.savePaceSoon();
+  }
+
+  removeClosedDay(date: string) {
+    if (!this.pace) return;
+    this.pace = { ...this.pace, closedDates: (this.pace.closedDates ?? []).filter((d) => d.date !== date) };
     this.savePaceSoon();
   }
 

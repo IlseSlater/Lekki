@@ -89,6 +89,8 @@ export type FulfilmentRow = {
   id: string;
   status: string;
   stationId: string;
+  /** Minutes the kitchen pushed this order back (once, or 0). */
+  delayMinutes?: number;
   lines: Array<{ label?: string; quantity: number }>;
 };
 
@@ -269,6 +271,7 @@ export class GuestSessionService {
     return this.fulfilments.map((f) => ({
       id: f.id,
       status: f.status,
+      delayMinutes: f.delayMinutes ?? 0,
       lines: (f.lines ?? []).map((l) => ({
         label: l.label ?? 'Item',
         quantity: l.quantity,
@@ -455,6 +458,8 @@ export class GuestSessionService {
           this.catalogue = guestVisibleCatalogueItems(
             items.map((item) => ({
               ...item,
+              // The API has sent prices as text ("45"); a string here showed guests R0.00.
+              unitPrice: Number(item.unitPrice) || 0,
               imageUrl: safeGuestImageUrl(item.imageUrl) ?? undefined,
               choiceGroups: this.normalizeChoiceGroups(item.choiceGroups),
             })),
@@ -1227,6 +1232,7 @@ export class GuestSessionService {
           id: f.id,
           status: f.status,
           stationId: f.stationId,
+          delayMinutes: Number((f as { delayMinutes?: number }).delayMinutes) || 0,
           lines: (f.lines ?? []).map((l) => ({
             quantity: l.quantity,
             label: lineLabels.get(l.transactionLineId ?? '') ?? l.label ?? 'Item',
@@ -1645,7 +1651,8 @@ export class GuestSessionService {
     this.paying = true;
     const tipAmount = this.bill?.tipAmount ?? 0;
     const tipPercent = this.bill?.customTip ? undefined : this.bill?.tipPercent;
-    const scope = this.bill?.scope ?? 'visit';
+    // Equal shares go to the server as a fixed amount toward the table.
+    const scope = this.bill?.paymentScope ?? 'visit';
     if (!this.paymentKey) this.paymentKey = newOrderKey();
     this.api
       .requestPayment(this.state.sessionId, {
@@ -1653,7 +1660,7 @@ export class GuestSessionService {
         tipAmount: this.bill?.customTip ? tipAmount : undefined,
         tipPercent,
         scope,
-        amount: scope === 'amount' ? this.bill?.payableAmount : undefined,
+        amount: scope === 'amount' ? this.bill?.paymentAmount : undefined,
         participantId: this.state.participantId || undefined,
         participantSecret: this.state.participantSecret,
       })

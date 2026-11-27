@@ -6,6 +6,7 @@ import { provideRouter, withPreloading } from '@angular/router';
 import { routes } from './app.routes';
 import { SigninPreloadStrategy } from './signin-preload.strategy';
 import { staffAuthInterceptor } from './services/staff-auth.interceptor';
+import { guestPreviewInterceptor } from './preview/guest-preview.interceptor';
 
 /**
  * Browser application config.
@@ -15,7 +16,7 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes, withPreloading(SigninPreloadStrategy)),
-    provideHttpClient(withFetch(), withInterceptors([staffAuthInterceptor])),
+    provideHttpClient(withFetch(), withInterceptors([guestPreviewInterceptor, staffAuthInterceptor])),
     provideClientHydration(withEventReplay()),
     // Waiters who add the site to the Home Screen hear when food is ready (Web Push).
     provideServiceWorker('ngsw-worker.js', {

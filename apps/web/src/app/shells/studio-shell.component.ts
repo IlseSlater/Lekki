@@ -4,93 +4,14 @@ import { filter } from 'rxjs/operators';
 import { OperateStaffSessionService } from '../services/operate-staff-session.service';
 import { StudioAuthService } from '../services/studio-auth.service';
 import { StudioContextService, type StudioMode } from '../services/studio-context.service';
+import {
+  STUDIO_NAV_GROUPS,
+  activeNavItem,
+  type StudioNavItem,
+} from '../studio/studio-nav';
 
 const NAV_COLLAPSED_KEY = 'leos-studio-nav-collapsed';
 
-type NavItem = {
-  label: string;
-  path: string;
-  /** Paths that light this item. Exact for Home; otherwise the path and anything under it. */
-  matches: string[];
-  exact?: boolean;
-  mode: StudioMode;
-  /** One SVG path string (stroke icon, 24 grid). */
-  icon: string;
-};
-
-/**
- * The Studio nav — modelled on the Uber Eats Manager rail: one flat list, two groups.
- * Every item points at a page that already exists.
- */
-export const STUDIO_NAV_MAIN: NavItem[] = [
-  {
-    label: 'Home',
-    path: '/studio',
-    matches: ['/studio'],
-    exact: true,
-    mode: 'setup',
-    icon: 'M3 10.5L12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
-  },
-  {
-    label: 'Your place',
-    path: '/studio/setup/identity',
-    matches: ['/studio/setup/identity', '/studio/setup/experience', '/studio/setup/places'],
-    mode: 'setup',
-    icon: 'M3 9l2-5h14l2 5M3 9h18M3 9v11h18V9M9 20v-6h6v6',
-  },
-  {
-    label: 'Menu',
-    path: '/studio/menu',
-    matches: ['/studio/menu'],
-    mode: 'setup',
-    icon: 'M5 6h14M5 12h14M5 18h9',
-  },
-  {
-    label: 'Operate',
-    path: '/studio/operate',
-    matches: ['/studio/operate'],
-    mode: 'operate',
-    icon: 'M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11',
-  },
-  {
-    label: 'Grow',
-    path: '/studio/grow',
-    matches: ['/studio/grow'],
-    mode: 'grow',
-    icon: 'M3 17l6-6 4 4 7-7M14 8h6v6',
-  },
-];
-
-export const STUDIO_NAV_TOOLS: NavItem[] = [
-  {
-    label: 'Payments',
-    path: '/studio/setup/payments',
-    matches: ['/studio/setup/payments', '/studio/setup/payments/connect'],
-    mode: 'setup',
-    icon: 'M2 7a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2zM2 10h20',
-  },
-  {
-    label: 'Guest QR',
-    path: '/studio/setup/golive',
-    matches: ['/studio/setup/golive'],
-    mode: 'setup',
-    icon: 'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z',
-  },
-  {
-    label: 'Integrations',
-    path: '/studio/integrations',
-    matches: ['/studio/integrations'],
-    mode: 'setup',
-    icon: 'M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71',
-  },
-  {
-    label: 'Team',
-    path: '/studio/team',
-    matches: ['/studio/team'],
-    mode: 'team',
-    icon: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
-  },
-];
 
 /**
  * LEOS Studio Shell — permanent frame.
@@ -134,34 +55,25 @@ export const STUDIO_NAV_TOOLS: NavItem[] = [
         </div>
 
         <nav class="leos-studio-shell__modes" aria-label="Studio sections">
-          @for (item of mainNav; track item.path) {
-            <a
-              [routerLink]="item.path"
-              [class.active]="isActive(item)"
-              [attr.aria-current]="isActive(item) ? 'page' : null"
-              (click)="setMode(item.mode)"
-              [attr.title]="item.label"
-            >
-              <svg class="leos-studio-shell__mode-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                <path [attr.d]="item.icon" />
-              </svg>
-              <span class="leos-studio-shell__mode-label">{{ item.label }}</span>
-            </a>
-          }
-          <span class="leos-studio-shell__divider" aria-hidden="true"></span>
-          @for (item of toolsNav; track item.path) {
-            <a
-              [routerLink]="item.path"
-              [class.active]="isActive(item)"
-              [attr.aria-current]="isActive(item) ? 'page' : null"
-              (click)="setMode(item.mode)"
-              [attr.title]="item.label"
-            >
-              <svg class="leos-studio-shell__mode-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                <path [attr.d]="item.icon" />
-              </svg>
-              <span class="leos-studio-shell__mode-label">{{ item.label }}</span>
-            </a>
+          @for (group of navGroups; track group.label) {
+            @if (group.label) {
+              <span class="leos-studio-shell__divider" aria-hidden="true"></span>
+              <p class="leos-studio-shell__group">{{ group.label }}</p>
+            }
+            @for (item of group.items; track item.path) {
+              <a
+                [routerLink]="item.path"
+                [class.active]="item === activeItem"
+                [attr.aria-current]="item === activeItem ? 'page' : null"
+                (click)="setMode(item.mode)"
+                [attr.title]="item.label"
+              >
+                <svg class="leos-studio-shell__mode-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                  <path [attr.d]="item.icon" />
+                </svg>
+                <span class="leos-studio-shell__mode-label">{{ item.label }}</span>
+              </a>
+            }
           }
         </nav>
 
@@ -213,8 +125,8 @@ export class StudioShellComponent implements OnInit {
   private readonly auth = inject(StudioAuthService);
   private readonly staffSession = inject(OperateStaffSessionService);
 
-  readonly mainNav = STUDIO_NAV_MAIN;
-  readonly toolsNav = STUDIO_NAV_TOOLS;
+  readonly navGroups = STUDIO_NAV_GROUPS;
+  activeItem: StudioNavItem | undefined;
 
   mode: StudioMode = 'setup';
   setupEngine = false;
@@ -245,11 +157,6 @@ export class StudioShellComponent implements OnInit {
     }
   }
 
-  isActive(item: NavItem): boolean {
-    const p = this.currentPath;
-    return item.matches.some((m) => (item.exact ? p === m : p === m || p.startsWith(m + '/')));
-  }
-
   setMode(m: StudioMode) {
     this.mode = m;
     this.ctx.mode.set(m);
@@ -265,8 +172,8 @@ export class StudioShellComponent implements OnInit {
     const url = this.router.url;
     this.currentPath = url.split(/[?#]/)[0];
     this.mode = this.ctx.modeFromUrl(url);
-    const active = [...STUDIO_NAV_MAIN, ...STUDIO_NAV_TOOLS].find((i) => this.isActive(i));
-    this.title = active?.label ?? 'Studio';
+    this.activeItem = activeNavItem(this.currentPath);
+    this.title = this.activeItem?.label ?? 'Studio';
     this.ctx.mode.set(this.mode);
     this.setupEngine = url.includes('/studio/setup/') || url.includes('/studio/create');
     this.preEngine = url.includes('/studio/welcome');

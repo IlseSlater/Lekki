@@ -17,6 +17,8 @@ import { id } from '@lekki/contracts';
 import type { EventEnvelope } from '@lekki/contracts';
 import { MissingFieldError } from '../leos/domain-errors';
 import { planStarterMenu } from '../leos/starter-menu';
+import { KitchenPaceService } from '../leos/kitchen-pace.service';
+import { itemSoldOut } from '../leos/kitchen-pace';
 import type { Prisma } from '@prisma/client';
 import { RequireStaffPermission, StaffAuthGuard } from '../staff-auth/staff-auth.guard';
 import type { StaffTokenClaims } from '../staff-auth/staff-token.service';
@@ -41,14 +43,26 @@ export class CatalogueController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly outbox: OutboxService,
+    private readonly kitchenPace: KitchenPaceService,
   ) {}
 
   @Get('venue/:venueId')
-  list(@Param('venueId') venueId: string) {
-    return this.prisma.restaurantCatalogItem.findMany({
-      where: { venueId },
-      orderBy: [{ category: 'asc' }, { label: 'asc' }],
-    });
+  async list(@Param('venueId') venueId: string) {
+    const [items, { pace }] = await Promise.all([
+      this.prisma.restaurantCatalogItem.findMany({
+        where: { venueId },
+        orderBy: [{ category: 'asc' }, { label: 'asc' }],
+      }),
+      this.kitchenPace.forVenue(venueId),
+    ]);
+    return items.map((item) => ({
+      ...item,
+      // Decimal serialises as text ("45"); guests' menus need a number or they show R0.00.
+      unitPrice: Number(item.unitPrice),
+      // Sold out for today reads as sold out until the venue's next day.
+      available: !itemSoldOut(pace, item),
+      soldOutUntil: item.id in pace.soldOutToday ? 'tomorrow' : item.available ? null : 'changed',
+    }));
   }
 
   @Post('venue/:venueId')

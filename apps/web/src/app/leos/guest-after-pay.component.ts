@@ -2,6 +2,7 @@ import { Component, Input, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LeosApiService } from '../services/leos-api.service';
 import { friendShareText, safeReviewUrl, whatsappShareUrl } from './review-links';
+import { noteWithStars } from './pay-choices';
 
 /**
  * After the meal. Every guest sees the same three choices at equal weight:
@@ -32,6 +33,24 @@ import { friendShareText, safeReviewUrl, whatsappShareUrl } from './review-links
       </div>
 
       @if (noteOpen && !sent) {
+        @for (row of starRows; track row.key) {
+          <div class="ap__stars" role="radiogroup" [attr.aria-label]="row.label + ' rating'">
+            <span class="ap__stars-label">{{ row.label }}</span>
+            @for (n of [1, 2, 3, 4, 5]; track n) {
+              <button
+                type="button"
+                role="radio"
+                class="ap__star"
+                [class.ap__star--on]="stars[row.key] >= n"
+                [attr.aria-checked]="stars[row.key] === n"
+                [attr.aria-label]="n + (n === 1 ? ' star' : ' stars')"
+                (click)="stars[row.key] = n"
+              >
+                ★
+              </button>
+            }
+          </div>
+        }
         <label class="ap__note">
           <span class="visually-hidden">Your note to the manager</span>
           <textarea
@@ -45,7 +64,7 @@ import { friendShareText, safeReviewUrl, whatsappShareUrl } from './review-links
         @if (error) {
           <p class="ap__error" role="alert">{{ error }}</p>
         }
-        <button type="button" class="ap__choice ap__send" [disabled]="busy || !note.trim()" (click)="send()">
+        <button type="button" class="ap__choice ap__send" [disabled]="busy || !message" (click)="send()">
           {{ busy ? 'Sending…' : 'Send to the manager' }}
         </button>
       }
@@ -95,6 +114,30 @@ import { friendShareText, safeReviewUrl, whatsappShareUrl } from './review-links
         display: block;
         margin-top: 0.75rem;
       }
+      .ap__stars {
+        display: flex;
+        align-items: center;
+        gap: 0.15rem;
+        margin-top: 0.6rem;
+      }
+      .ap__stars-label {
+        width: 4.5rem;
+        font-weight: 600;
+        color: var(--leos-table-glass-ink);
+      }
+      .ap__star {
+        width: 2.75rem;
+        height: 2.75rem;
+        border: 0;
+        background: none;
+        font-size: 1.5rem;
+        line-height: 1;
+        color: var(--leos-table-glass-ink-muted);
+        cursor: pointer;
+      }
+      .ap__star--on {
+        color: var(--leos-gold, #d7a14a);
+      }
       .ap__textarea {
         width: 100%;
         box-sizing: border-box;
@@ -143,6 +186,17 @@ export class GuestAfterPayComponent {
   busy = false;
   sent = false;
   error = '';
+  /** Food and service stars go with the private note — only the manager sees them. */
+  readonly starRows = [
+    { key: 'food' as const, label: 'Food' },
+    { key: 'service' as const, label: 'Service' },
+  ];
+  stars: Record<'food' | 'service', number> = { food: 0, service: 0 };
+
+  /** What the manager will read: the stars given, then the words. */
+  get message(): string {
+    return noteWithStars(this.stars.food, this.stars.service, this.note);
+  }
 
   get friendHref(): string {
     const origin = typeof window === 'undefined' ? '' : window.location.origin;
@@ -150,14 +204,15 @@ export class GuestAfterPayComponent {
   }
 
   send() {
-    if (this.busy || !this.note.trim() || !this.sessionId || !this.participantId) return;
+    const message = this.message;
+    if (this.busy || !message || !this.sessionId || !this.participantId) return;
     this.busy = true;
     this.error = '';
     this.api
       .leaveGuestNote(this.sessionId, {
         participantId: this.participantId,
         participantSecret: this.participantSecret,
-        note: this.note,
+        note: message,
       })
       .subscribe({
         next: () => {

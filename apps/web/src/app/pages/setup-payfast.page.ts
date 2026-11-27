@@ -216,7 +216,7 @@ export class SetupPayfastPageComponent implements OnInit {
   }
 
   get backLink() {
-    return this.inSetupFlow ? '/studio/setup/payments' : '/studio/integrations';
+    return this.inSetupFlow ? '/studio/setup/payments' : '/studio/payments';
   }
 
   get canSubmit() {
@@ -283,7 +283,7 @@ export class SetupPayfastPageComponent implements OnInit {
               void this.router.navigate(['/studio/setup/payments']);
               return;
             }
-            void this.router.navigate(['/studio/integrations'], {
+            void this.router.navigate(['/studio/payments'], {
               queryParams: { payfast: 'verified' },
             });
           },

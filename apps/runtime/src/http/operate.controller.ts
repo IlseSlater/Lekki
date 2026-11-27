@@ -14,7 +14,9 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { LeosService } from '../leos/leos.service';
 import { WaiterTablesService } from '../leos/waiter-tables.service';
-import { KitchenPaceService } from '../leos/kitchen-pace.service';
+import { KitchenPaceService, type SoldOutMode } from '../leos/kitchen-pace.service';
+import { pauseAlert } from '../leos/order-log';
+import { PushService } from '../push/push.service';
 import { canManage } from '../leos/staff-admin';
 import { RequireStaffPermission, StaffAuthGuard } from '../staff-auth/staff-auth.guard';
 import type { StaffTokenClaims } from '../staff-auth/staff-token.service';
@@ -33,6 +35,7 @@ export class OperateController {
     private readonly leos: LeosService,
     private readonly tables: WaiterTablesService,
     private readonly kitchenPace: KitchenPaceService,
+    private readonly push: PushService,
   ) {}
 
   @Get('floor')
@@ -135,11 +138,52 @@ export class OperateController {
     return this.kitchenPace.save(req.staff.org, body);
   }
 
-  /** A manager pauses or resumes new orders. Seated guests can still see and pay. */
+  /**
+   * A manager pauses or resumes new orders, for a set time or until reopened, with a reason.
+   * Seated guests can still see and pay. Managers are told who paused and why.
+   */
   @Post('pace/pause')
-  async pause(@Req() req: { staff: StaffTokenClaims }, @Body() body: { paused?: boolean }) {
+  async pause(
+    @Req() req: { staff: StaffTokenClaims },
+    @Body() body: { paused?: boolean; minutes?: number; reason?: string },
+  ) {
     this.requireManager(req.staff);
-    return this.kitchenPace.setPaused(req.staff.org, body?.paused === true);
+    const paused = body?.paused === true;
+    const pace = await this.kitchenPace.setPaused(req.staff.org, {
+      paused,
+      minutes: body?.minutes ?? null,
+      reason: body?.reason ?? null,
+    });
+    if (paused) {
+      void this.push.notifyManagers(
+        req.staff.org,
+        pauseAlert({ by: req.staff.name, minutes: body?.minutes, reason: pace.pauseReason }),
+      );
+    }
+    return pace;
+  }
+
+  /** Today's payments, newest first: table, bill, paid, full or part, still owed. */
+  @Get('payments')
+  async payments(@Req() req: { staff: StaffTokenClaims }) {
+    return this.leos.paymentFeed(req.staff.org);
+  }
+
+  /**
+   * Sold out for today (back tomorrow by itself), sold out until changed, or back on now.
+   * Any floor staff can do this — it happens mid-service.
+   */
+  @Post('items/:itemId/availability')
+  async availability(
+    @Req() req: { staff: StaffTokenClaims },
+    @Param('itemId') itemId: string,
+    @Body() body: { mode?: string },
+  ) {
+    const mode = body?.mode;
+    if (mode !== 'today' && mode !== 'until_changed' && mode !== 'back') {
+      throw new BadRequestException('Choose today, until_changed or back.');
+    }
+    return this.kitchenPace.setSoldOut(req.staff.org, itemId.trim(), mode as SoldOutMode);
   }
 
   /** Fire a held round: every ticket for the table goes to its station together. */

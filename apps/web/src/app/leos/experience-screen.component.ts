@@ -1,4 +1,5 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, inject } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 
 /**
  * Studio page anatomy — Design System v1.
@@ -40,7 +41,7 @@ import { Component, Input } from '@angular/core';
         <ng-content select="[confidence]" />
       </div>
 
-      @if (showFooter) {
+      @if (showFooter && !studioPage) {
         <footer class="leos-screen__footer">
           <ng-content select="[escape]" />
           <ng-content select="[primary]" />
@@ -61,4 +62,10 @@ export class ExperienceScreenComponent {
   @Input() showFooter = false;
   /** When true, screen content pads for the fixed guest tab dock. */
   @Input() docked = false;
+
+  /**
+   * A normal Studio page (route data `studioPage`), not the guided first run:
+   * edits save as you go, so there is no Back / Continue.
+   */
+  readonly studioPage = !!inject(ActivatedRoute, { optional: true })?.snapshot.data?.['studioPage'];
 }

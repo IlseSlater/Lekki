@@ -38,7 +38,7 @@ type PayOption = { key: GuestDesignKey | 'card' | 'applePay' | 'googlePay'; labe
             {{ payfastStatusLabel }}
           </p>
           @if (payfastStatus === 'active') {
-            <a class="pay-section__link" routerLink="/studio/setup/payments/connect"
+            <a class="pay-section__link" routerLink="connect"
               >Manage PayFast</a
             >
           }
@@ -194,8 +194,7 @@ export class SetupPaymentsPageComponent implements OnInit, OnDestroy {
     { key: 'card', label: 'Card' },
     { key: 'applePay', label: 'Apple Pay' },
     { key: 'googlePay', label: 'Google Pay' },
-    { key: 'tipStaff', label: 'Tips' },
-    { key: 'splitBill', label: 'Split bill' },
+    // Tips live in At the table. Guests can always split, so there is no switch for it.
   ];
 
   get payfastStatusLabel() {

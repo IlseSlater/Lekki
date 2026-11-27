@@ -1,4 +1,5 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { GUEST_STATE_CHANGED } from '../preview/preview-protocol';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { SessionStateService } from '../services/leos-api.service';
@@ -80,7 +81,7 @@ import { StudioContextService } from '../services/studio-context.service';
     `,
   ],
 })
-export class ExperienceShellComponent implements OnInit {
+export class ExperienceShellComponent implements OnInit, OnDestroy {
   private readonly state = inject(SessionStateService);
   private readonly ctx = inject(StudioContextService);
   private readonly router = inject(Router);
@@ -92,7 +93,15 @@ export class ExperienceShellComponent implements OnInit {
     this.state.restore();
     this.refresh();
     this.router.events.pipe(filter((e) => e instanceof NavigationEnd)).subscribe(() => this.refresh());
+    // Studio's preview fills in the venue after the page has opened.
+    window.addEventListener(GUEST_STATE_CHANGED, this.onStateChanged);
   }
+
+  ngOnDestroy() {
+    window.removeEventListener(GUEST_STATE_CHANGED, this.onStateChanged);
+  }
+
+  private readonly onStateChanged = () => this.refresh();
 
   private refresh() {
     this.state.restore();
