@@ -63,7 +63,9 @@ test('a Manager cannot edit an Admin even without changing permissions (no PIN t
 });
 
 test('the web app shows the same four roles the server enforces', async () => {
-  const web = await import('../../../web/src/app/studio/studio-roles');
+  // A path in a variable keeps the web file out of the runtime's own build; tsx still loads it.
+  const webPath = '../../../web/src/app/studio/studio-roles';
+  const web = (await import(webPath)) as typeof import('./studio-roles');
   assert.deepEqual(web.ROLE_PERMISSIONS, ROLE_PERMISSIONS);
   for (const perms of [[], ['organisation.manage'], [...ROLE_PERMISSIONS.manager], ['staff.service']]) {
     assert.equal(web.studioRoleOf(perms), studioRoleOf(perms));
