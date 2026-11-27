@@ -358,6 +358,8 @@ import { receiptText, whatsappReceiptUrl } from '../leos/receipt-text';
             [equalRemaining]="equalRemaining"
             [tipPercents]="tipPercents"
             [tablePeopleCount]="tablePeople.length"
+            [billChangedNote]="session.billChangedNote"
+            (billChangeSeen)="session.acknowledgeBillChange()"
             [visitLabel]="billVisitLabel"
             [allowTip]="allowTip"
             [allowHelp]="allowHelp"

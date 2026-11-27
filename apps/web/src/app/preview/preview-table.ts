@@ -9,6 +9,8 @@
 export const PREVIEW_SESSION_ID = 'preview';
 export const PREVIEW_ME = 'preview-you';
 export const PREVIEW_SECRET = 'preview';
+/** Lekki gold — the brand colour a venue starts with. */
+export const DEFAULT_BRAND_COLOUR = '#d7a14a';
 
 export type PreviewMenuItem = {
   id: string;

@@ -168,6 +168,29 @@ export class OperateController {
     return pace;
   }
 
+  /**
+   * "Paid on the card machine": the waiter records what the venue's own machine took —
+   * all that is left by default, or an amount — and the bill updates for everyone.
+   */
+  @Post('sessions/:sessionId/card-machine')
+  async cardMachine(
+    @Req() req: { staff: StaffTokenClaims },
+    @Param('sessionId') sessionId: string,
+    @Body() body: { amount?: number | null; tipAmount?: number | null },
+  ) {
+    const perms = req.staff.permissions ?? [];
+    if (!perms.includes('staff.service') && !perms.includes('payment.complete')) {
+      throw new ForbiddenException('Only floor staff can record a card-machine payment.');
+    }
+    return this.leos.recordCardMachinePayment({
+      sessionId: sessionId.trim(),
+      organisationId: req.staff.org,
+      amount: body?.amount ?? null,
+      tipAmount: body?.tipAmount ?? null,
+      actor: { id: req.staff.sub, name: req.staff.name },
+    });
+  }
+
   /** Today's payments, newest first: table, bill, paid, full or part, still owed. */
   @Get('payments')
   async payments(@Req() req: { staff: StaffTokenClaims }) {

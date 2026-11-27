@@ -316,6 +316,51 @@ type HelpReq = {
                   Send the round to the kitchen
                 </button>
               }
+              @if (!monitorMode && t.orderCount > 0) {
+                @if (cardSessionId === t.sessionId) {
+                  <div class="waiter-move" role="group" aria-label="Paid on the card machine">
+                    <label class="waiter-bill__field">
+                      <span>Amount taken (leave empty for everything left)</span>
+                      <input
+                        class="waiter-bill__input"
+                        type="number"
+                        inputmode="decimal"
+                        min="0"
+                        step="0.01"
+                        [(ngModel)]="cardAmount"
+                        [disabled]="busy"
+                      />
+                    </label>
+                    <label class="waiter-bill__field">
+                      <span>Tip on the machine (optional)</span>
+                      <input
+                        class="waiter-bill__input"
+                        type="number"
+                        inputmode="decimal"
+                        min="0"
+                        step="0.01"
+                        [(ngModel)]="cardTip"
+                        [disabled]="busy"
+                      />
+                    </label>
+                    <button type="button" class="waiter-btn waiter-btn--ghost" [disabled]="busy" (click)="recordCardPayment(t)">
+                      Record payment
+                    </button>
+                    <button type="button" class="waiter-card__owner-btn" [disabled]="busy" (click)="cardSessionId = ''">
+                      Cancel
+                    </button>
+                  </div>
+                } @else {
+                  <button
+                    type="button"
+                    class="waiter-card__owner-btn"
+                    [disabled]="busy"
+                    (click)="startCardPayment(t)"
+                  >
+                    Paid on the card machine
+                  </button>
+                }
+              }
               @if (t.waiterId) {
                 <p class="waiter-card__owner">
                   {{ isMine(t) ? 'Yours' : t.waiterName || 'Another waiter' }}
@@ -1426,6 +1471,38 @@ export class ServicePageComponent implements OnInit, OnDestroy {
     leftMinor: number;
     settled: boolean;
   }> = [];
+
+  // --- Paid on the venue's own card machine ---
+  cardSessionId = '';
+  cardAmount: number | null = null;
+  cardTip: number | null = null;
+
+  startCardPayment(t: TableRow) {
+    this.cardSessionId = t.sessionId;
+    this.cardAmount = null;
+    this.cardTip = null;
+  }
+
+  recordCardPayment(t: TableRow) {
+    if (this.busy) return;
+    this.busy = true;
+    this.error = '';
+    this.api
+      .recordCardMachinePayment(t.sessionId, { amount: this.cardAmount, tipAmount: this.cardTip })
+      .subscribe({
+        next: (r) => {
+          this.busy = false;
+          this.cardSessionId = '';
+          this.message = `Recorded ${this.money(r.paidMinor)} for ${this.placeNoun} ${t.placeCode}.`;
+          setTimeout(() => (this.message = ''), 2600);
+          this.refresh(true);
+        },
+        error: (err) => {
+          this.busy = false;
+          this.error = err?.error?.message || 'Couldn’t record that payment — try again.';
+        },
+      });
+  }
 
   /** The venue this device works for (Studio's active place); the API falls back to the first. */
   get paceVenueId(): string | null {

@@ -79,6 +79,23 @@ export function tipChipLabel(percent: number, base: number, currency = 'ZAR'): s
   return `${percent}% · ${money}`;
 }
 
+// --- The bill changed while the guest was paying ---
+
+/**
+ * Someone added to (or took off) the table's bill after this guest opened Pay.
+ * Returns what to tell them, or '' when nothing changed.
+ */
+export function billChangeNotice(before: number, after: number, currency = 'ZAR'): string {
+  const b = toMinor(Math.max(0, before));
+  const a = toMinor(Math.max(0, after));
+  if (b <= 0 || a === b) return '';
+  const fmt = (minor: number) =>
+    currency === 'ZAR' ? `R ${(minor / 100).toFixed(2)}` : `${currency} ${(minor / 100).toFixed(2)}`;
+  return a > b
+    ? `The bill went up from ${fmt(b)} to ${fmt(a)} — something was added. Check it before you pay.`
+    : `The bill went down from ${fmt(b)} to ${fmt(a)}. Check it before you pay.`;
+}
+
 // --- Stars on a private note ---
 
 export function cleanStars(n: unknown): number {

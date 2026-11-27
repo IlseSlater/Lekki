@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { equalShares, noteWithStars, tipChipLabel, tipPercentsFrom } from './pay-choices';
+import { billChangeNotice, equalShares, noteWithStars, tipChipLabel, tipPercentsFrom } from './pay-choices';
 import { CANCEL_REASONS, DELAY_CHOICES, cancelReady, pausedLine, soldOutLabel } from '../studio/order-actions';
 import {
   CANCEL_REASONS as SERVER_CANCEL_REASONS,
@@ -38,6 +38,16 @@ test('A4: the venue picks the tip percents; each chip shows its value', () => {
   assert.equal(tipChipLabel(10, 328), '10% · R 32.80');
   assert.equal(tipChipLabel(12.5, 300), '12.5% · R 37.50');
   assert.equal(tipChipLabel(0, 300), 'No tip');
+});
+
+test('Part B: the guest is told when the bill changes while they pay', () => {
+  assert.equal(billChangeNotice(936, 936), '');
+  assert.equal(billChangeNotice(0, 120), '');
+  assert.equal(
+    billChangeNotice(936, 1056),
+    'The bill went up from R 936.00 to R 1056.00 — something was added. Check it before you pay.',
+  );
+  assert.match(billChangeNotice(936, 851), /went down from R 936\.00 to R 851\.00/);
 });
 
 test('A6: stars ride with the private note', () => {

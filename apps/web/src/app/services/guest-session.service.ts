@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { GuestBillComponent, type BillDisplayLine, type BillLine } from '../leos/guest-bill.component';
 import { type GuestOrder } from '../leos/guest-orders.component';
+import { billChangeNotice } from '../leos/pay-choices';
 import { type GuestTabId } from '../leos/guest-tab-bar.component';
 import { type GuestHelpKind } from '../leos/guest-help-sheet.component';
 import {
@@ -208,6 +209,10 @@ export class GuestSessionService {
   private pendingMineSettleCheck = false;
   /** Honest receipt — sum of completed payments only. */
   receiptPaidTotal = 0;
+  /** The bill total the guest saw when they opened Pay. */
+  payBaseline = 0;
+  /** Set when the bill changed while they were on Pay; Pay waits until they've seen it. */
+  billChangedNote = '';
   /** Restore Stay from leave confirm. */
   private phaseBeforeLeave: GuestPhase = 'browse';
   search = '';
@@ -1226,6 +1231,13 @@ export class GuestSessionService {
         this.mineBillLines = [...mineAgg.values()];
         const mineOrdered = this.mineBillLines.reduce((n, l) => n + l.total, 0);
         const visitOrdered = this.billLines.reduce((n, l) => n + l.total, 0);
+        // Something was added to (or taken off) the bill while this guest is on Pay.
+        if (this.phase === 'payment' && this.payBaseline > 0 && !this.paying) {
+          const note = billChangeNotice(this.payBaseline, visitOrdered, this.state.currency || 'ZAR');
+          if (note) this.billChangedNote = note;
+        } else if (this.phase === 'payment' && this.payBaseline <= 0) {
+          this.payBaseline = visitOrdered;
+        }
         if (orderTotal > 0) this.lastOrderTotal = orderTotal;
         const fulfilments = session.fulfilments ?? [];
         this.fulfilments = fulfilments.map((f) => ({
@@ -1414,6 +1426,9 @@ export class GuestSessionService {
     }
     this.shareSettledMoment = false;
     this.phase = 'payment';
+    // What the guest is looking at when they open Pay — a change after this is pointed out.
+    this.payBaseline = this.billLines.reduce((n, l) => n + l.total, 0);
+    this.billChangedNote = '';
     this.refreshLive();
     this.startLivePoll();
     // See → Claim: Visit tab when others’ lines exist; else Mine when shares differ.
@@ -1644,10 +1659,21 @@ export class GuestSessionService {
     this.openHelpSheet();
   }
 
+  /** The guest has seen the new total; Pay works again against it. */
+  acknowledgeBillChange() {
+    this.payBaseline = this.billLines.reduce((n, l) => n + l.total, 0);
+    this.billChangedNote = '';
+  }
+
   pay() {
     this.error = '';
     this.paymentError = '';
     if (this.paying || this.offline) return;
+    // Never charge against a bill the guest hasn't seen.
+    if (this.billChangedNote) {
+      this.paymentError = 'The bill changed — check the new total first.';
+      return;
+    }
     this.paying = true;
     const tipAmount = this.bill?.tipAmount ?? 0;
     const tipPercent = this.bill?.customTip ? undefined : this.bill?.tipPercent;

@@ -16,6 +16,7 @@ import {
 } from './order-log';
 import { needsTillClose, tillTaskMessage } from './till-task';
 import { paymentFeedRows, type PaymentFeedRow } from './payment-feed';
+import { CARD_MACHINE_CONNECTOR, cardMachinePlan } from './card-machine';
 import type { Prisma } from '@prisma/client';
 import type { EventEnvelope, ResolvedContext } from '@lekki/contracts';
 import { id } from '@lekki/contracts';
@@ -1204,6 +1205,92 @@ export class LeosService {
     );
 
     return fulfilment;
+  }
+
+  /**
+   * A waiter took payment on the venue's own card machine. Records it against the table's bill
+   * (the whole of what is left, or an amount), settled at once — the same capacity rule as a
+   * guest payment, so a table can never be paid twice. Tips taken on the machine are recorded too.
+   */
+  async recordCardMachinePayment(input: {
+    sessionId: string;
+    organisationId: string;
+    amount?: number | null;
+    tipAmount?: number | null;
+    actor: LogActor;
+  }) {
+    const session = await this.prisma.experienceSession.findUnique({
+      where: { id: input.sessionId },
+      include: { transactions: { orderBy: { createdAt: 'asc' } } },
+    });
+    if (!session || session.organisationId !== input.organisationId) {
+      throw new NotFoundException('Table not found');
+    }
+    if (!session.transactions.length) throw new BadRequestException('Nothing on this bill yet.');
+    const transaction = session.transactions.filter((t) => t.status === 'committed').at(-1);
+    if (!transaction) throw new BadRequestException('This table has nothing left to pay.');
+    const plan = cardMachinePlan({
+      billMinor: session.billMinor,
+      paidMinor: session.paidMinor,
+      amount: input.amount,
+      tipAmount: input.tipAmount,
+    });
+    if ('refusal' in plan) throw new BadRequestException(plan.refusal);
+
+    const paymentId = newId('pay');
+    await this.prisma.$transaction(async (tx) => {
+      const reserved = await tx.$executeRaw`
+        UPDATE "ExperienceSession"
+        SET "paidMinor" = "paidMinor" + ${plan.baseMinor},
+            version = version + 1
+        WHERE id = ${session.id}
+          AND version = ${session.version}
+          AND "paidMinor" + ${plan.baseMinor} <= "billMinor"
+      `;
+      if (Number(reserved) === 0) throw new PaymentConflictError();
+      await tx.payment.create({
+        data: {
+          id: paymentId,
+          transactionId: transaction.id,
+          sessionId: session.id,
+          organisationId: session.organisationId,
+          amount: fromMinor(plan.baseMinor + plan.tipMinor),
+          tipAmount: fromMinor(plan.tipMinor),
+          tipWaiterId: session.waiterId ?? null,
+          tipWaiterName: session.waiterName ?? null,
+          scope: 'amount',
+          participantId: null,
+          currency: transaction.currency,
+          status: 'pending',
+          reference: `card-machine:${input.actor?.name ?? 'staff'}`.slice(0, 120),
+          connectorId: CARD_MACHINE_CONNECTOR,
+          expiresAt: null,
+        },
+      });
+      await this.outbox.append(
+        this.envelope('PaymentRequested', session.organisationId, session.venueId, session.correlationId, {
+          paymentId,
+          transactionId: transaction.id,
+          tipAmount: fromMinor(plan.tipMinor),
+          scope: 'amount',
+          baseAmount: fromMinor(plan.baseMinor),
+          participantId: null,
+          via: CARD_MACHINE_CONNECTOR,
+          ...(input.actor ? { actor: input.actor } : {}),
+        }),
+        tx,
+      );
+    });
+
+    const settled = await this.markPaymentSettled(paymentId, {
+      organisationId: session.organisationId,
+      transactionId: transaction.id,
+      sessionId: session.id,
+      amount: fromMinor(plan.baseMinor + plan.tipMinor),
+      tipAmount: fromMinor(plan.tipMinor),
+      session: { venueId: session.venueId, correlationId: session.correlationId },
+    });
+    return { ...settled, paidMinor: plan.baseMinor, tipMinor: plan.tipMinor };
   }
 
   /** The last 24 hours of payments for the floor, newest first. */

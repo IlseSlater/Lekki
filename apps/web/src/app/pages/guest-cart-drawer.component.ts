@@ -103,6 +103,8 @@ export type GuestCartClaimUndo = {
           [allowTip]="allowTip"
           [tipPercents]="tipPercents"
           [tablePeopleCount]="tablePeopleCount"
+          [billChangedNote]="billChangedNote"
+          (billChangeSeen)="billChangeSeen.emit()"
           [allowHelp]="allowHelp"
           [trustLine]="trustLine"
           [savedPaymentMethodStatus]="savedPaymentMethodStatus"
@@ -154,6 +156,9 @@ export class GuestCartDrawerComponent {
   @Input() tipPercents: number[] = [];
   /** Guests at the table — where equal shares start counting. */
   @Input() tablePeopleCount = 0;
+  /** The bill changed while the guest was on Pay. */
+  @Input() billChangedNote = '';
+  @Output() billChangeSeen = new EventEmitter<void>();
   @Input() visitLabel = 'This visit';
   @Input() allowTip = true;
   @Input() allowHelp = true;

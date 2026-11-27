@@ -727,6 +727,21 @@ export class LeosApiService {
     );
   }
 
+  /** A waiter records what the venue's own card machine took (empty amount = everything left). */
+  recordCardMachinePayment(
+    sessionId: string,
+    body: { amount?: number | null; tipAmount?: number | null },
+  ) {
+    return this.http.post<{ paymentId: string; status: string; paidMinor: number; tipMinor: number }>(
+      `${this.api}/operate/sessions/${sessionId}/card-machine`,
+      {
+        amount: body.amount === null || body.amount === undefined || (body.amount as unknown) === '' ? null : Number(body.amount),
+        tipAmount: body.tipAmount === null || body.tipAmount === undefined || (body.tipAmount as unknown) === '' ? null : Number(body.tipAmount),
+      },
+      { headers: this.staffAuthHeaders() },
+    );
+  }
+
   /** Today's payments: table, bill, paid, full or part, still owed. */
   paymentFeed() {
     return this.http.get<

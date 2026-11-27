@@ -262,11 +262,20 @@ export type BillScope = 'visit' | 'mine' | 'equal' | 'amount';
         <p class="leos-success-banner" role="status">Securing your payment…</p>
       }
 
+      @if (billChangedNote) {
+        <div class="gb__changed" role="alert">
+          <p>{{ billChangedNote }}</p>
+          <button type="button" class="leos-btn leos-btn--secondary" (click)="billChangeSeen.emit()">
+            I’ve checked it
+          </button>
+        </div>
+      }
+
       <div class="gb__actions">
         <button
           type="button"
           class="leos-btn leos-btn--primary"
-          [disabled]="busy || offline || subtotal <= 0"
+          [disabled]="busy || offline || subtotal <= 0 || !!billChangedNote"
           (click)="pay.emit()"
         >
           {{ busy ? 'Securing…' : error ? 'Try again' : 'Pay ' + (total | leosMoney: currency) }}
@@ -451,6 +460,21 @@ export type BillScope = 'visit' | 'mine' | 'equal' | 'amount';
         flex-wrap: wrap;
         gap: 0.4rem;
       }
+      .gb__changed {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        margin: 0.75rem 0;
+        padding: 0.75rem 0.9rem;
+        border-radius: 12px;
+        background: #fbf1df;
+        color: #6b4a12;
+        font-size: 0.9rem;
+        line-height: 1.4;
+      }
+      .gb__changed p {
+        margin: 0;
+      }
       .gb__equal {
         display: flex;
         flex-direction: column;
@@ -608,6 +632,9 @@ export class GuestBillComponent {
   @Input() offline = false;
   @Input() error = '';
 
+  /** Set when the bill changed while the guest was on Pay. Pay waits until they've seen it. */
+  @Input() billChangedNote = '';
+  @Output() billChangeSeen = new EventEmitter<void>();
   @Output() pay = new EventEmitter<void>();
   @Output() serviceHelp = new EventEmitter<void>();
   @Output() managerHelp = new EventEmitter<void>();

@@ -171,7 +171,7 @@ export const AT_THE_TABLE_SECTIONS: TableSection[] = [
         margin: 0;
         font-size: 1rem;
         font-weight: 650;
-        color: var(--studio-ink, #0f172a);
+        color: var(--studio-ink);
       }
       .att__row {
         display: flex;
@@ -179,7 +179,7 @@ export const AT_THE_TABLE_SECTIONS: TableSection[] = [
         gap: 1rem;
         min-height: 3.5rem;
         padding: 0.75rem 1rem;
-        border: 1px solid var(--studio-line, #eae6e1);
+        border: 1px solid var(--studio-line);
         border-radius: 1rem;
         cursor: pointer;
       }
@@ -193,19 +193,19 @@ export const AT_THE_TABLE_SECTIONS: TableSection[] = [
       .att__label {
         font-size: 0.95rem;
         font-weight: 600;
-        color: var(--studio-ink, #0f172a);
+        color: var(--studio-ink);
       }
       .att__detail,
       .att__note {
         font-size: 0.85rem;
         line-height: 1.45;
-        color: #475569;
+        color: var(--leos-ink-body);
       }
       .att__note {
         margin: 0;
       }
       .att__note a {
-        color: var(--studio-ink, #0f172a);
+        color: var(--studio-ink);
         font-weight: 600;
       }
       .att__switch {
@@ -216,7 +216,7 @@ export const AT_THE_TABLE_SECTIONS: TableSection[] = [
         height: 1.625rem;
         margin: 0;
         border-radius: 999px;
-        background: #cfc7bb;
+        background: var(--leos-icon-disabled);
         cursor: pointer;
         transition: background var(--studio-duration-fast, 160ms) var(--studio-ease, ease-out);
       }
@@ -228,23 +228,24 @@ export const AT_THE_TABLE_SECTIONS: TableSection[] = [
         width: 1.25rem;
         height: 1.25rem;
         border-radius: 999px;
-        background: #ffffff;
+        background: var(--leos-surface);
         transition: transform var(--studio-duration-fast, 160ms) var(--studio-ease, ease-out);
       }
       .att__switch:checked {
-        background: #2f7a4f;
+        background: var(--leos-success);
       }
       .att__switch:checked::after {
         transform: translateX(1.125rem);
       }
       .att__switch:focus-visible {
-        outline: 2px solid var(--studio-accent, #d7a14a);
+        outline: 2px solid var(--studio-accent);
         outline-offset: 2px;
       }
       .att__warn {
         margin: 0.35rem 0 0;
         font-size: 0.85rem;
-        color: #9a3412;
+        color: var(--leos-ink-body);
+        font-weight: 600;
       }
     `,
   ],

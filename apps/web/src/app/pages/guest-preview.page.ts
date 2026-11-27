@@ -16,6 +16,7 @@ import {
   PREVIEW_ME,
   PREVIEW_SECRET,
   PREVIEW_SESSION_ID,
+  DEFAULT_BRAND_COLOUR,
   buildPreviewTable,
   pay,
   type PreviewMenuItem,
@@ -61,14 +62,14 @@ import {
         font-weight: 600;
         letter-spacing: 0.01em;
         text-align: center;
-        color: #334155;
-        background: #f3f1ed;
+        color: var(--leos-ink-body);
+        background: var(--leos-surface-secondary);
       }
       .guest-preview__missing {
         margin: 2rem 1.25rem;
         font-size: 0.95rem;
         line-height: 1.45;
-        color: #475569;
+        color: var(--leos-ink-body);
         text-align: center;
       }
     `,
@@ -144,7 +145,7 @@ export class GuestPreviewPageComponent implements OnInit, OnDestroy {
         venueId: this.venueId,
         organisationId: workspace?.organisationId ?? this.venue?.organisationId ?? '',
         venueName: workspace?.venueName ?? this.venue?.venueName ?? '',
-        brandColour: workspace?.brandColour || this.venue?.brandColour || '#d7a14a',
+          brandColour: workspace?.brandColour || this.venue?.brandColour || DEFAULT_BRAND_COLOUR,
         logoUrl: workspace?.logoUrl ?? this.venue?.logoUrl ?? '',
         location: workspace?.location ?? this.venue?.location ?? '',
         guestDesign: workspace?.guestDesign ?? this.venue?.guestDesign ?? null,
