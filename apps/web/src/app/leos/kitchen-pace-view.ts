@@ -66,6 +66,8 @@ export interface PaceSettings {
   busyMinutes: Record<string, number>;
   /** Days the venue is closed ("YYYY-MM-DD"). */
   closedDates?: Array<{ date: string; note: string }>;
+  /** When busy minutes stop applying (ISO). Null = until cleared. */
+  busyUntil?: string | null;
 }
 
 const CLOCK = /^([01]\d|2[0-3]):[0-5]\d$/;

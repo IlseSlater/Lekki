@@ -683,15 +683,18 @@ export class LeosApiService {
     );
   }
 
-  getPace() {
+  /** One venue's kitchen pace. Without a venue, the organisation's first venue. */
+  getPace(venueId?: string | null) {
     return this.http.get<KitchenPaceSettings>(`${this.api}/operate/pace`, {
       headers: this.staffAuthHeaders(),
+      params: venueId ? { venueId } : {},
     });
   }
 
-  savePace(pace: KitchenPaceSettings) {
+  savePace(pace: KitchenPaceSettings, venueId?: string | null) {
     return this.http.put<KitchenPaceSettings>(`${this.api}/operate/pace`, pace, {
       headers: this.staffAuthHeaders(),
+      params: venueId ? { venueId } : {},
     });
   }
 
@@ -699,10 +702,18 @@ export class LeosApiService {
    * Pause or resume new orders — for a set number of minutes (or until reopened) with a reason.
    * Seated guests can still see and pay. Managers are told.
    */
-  pauseOrders(paused: boolean, opts?: { minutes?: number | null; reason?: string }) {
+  pauseOrders(
+    paused: boolean,
+    opts?: { minutes?: number | null; reason?: string; venueId?: string | null },
+  ) {
     return this.http.post<KitchenPaceSettings>(
       `${this.api}/operate/pace/pause`,
-      { paused, minutes: opts?.minutes ?? null, reason: opts?.reason ?? '' },
+      {
+        paused,
+        minutes: opts?.minutes ?? null,
+        reason: opts?.reason ?? '',
+        ...(opts?.venueId ? { venueId: opts.venueId } : {}),
+      },
       { headers: this.staffAuthHeaders() },
     );
   }

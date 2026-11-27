@@ -16,6 +16,7 @@ import { LeosApiService } from '../services/leos-api.service';
 import { StudioContextService } from '../services/studio-context.service';
 import { parseMenuList } from '../studio/menu-list-import';
 import { withBusy, withHours, type PaceSettings } from '../leos/kitchen-pace-view';
+import { soldOutLabel } from '../studio/order-actions';
 
 type MenuItem = {
   id: string;
@@ -24,6 +25,8 @@ type MenuItem = {
   unitPrice: number;
   category: string;
   available?: boolean;
+  /** When off: back 'tomorrow' by itself, or only when 'changed'. */
+  soldOutUntil?: 'tomorrow' | 'changed' | null;
   routingTags?: string[];
   imageUrl?: string | null;
   allergens?: string[];
@@ -74,6 +77,9 @@ type EditorMode = 'list' | 'edit';
                     <span class="menu-editor__row-main">
                       <strong>{{ item.label }}</strong>
                       <span class="menu-editor__meta">{{ item.category }} · R{{ priceLabel(item.unitPrice) }}</span>
+                      @if (item.available === false) {
+                        <span class="menu-editor__meta">{{ offLabel(item) }}</span>
+                      }
                     </span>
                   </button>
                   <button
@@ -81,9 +87,19 @@ type EditorMode = 'list' | 'edit';
                     class="menu-editor__switch"
                     role="switch"
                     [attr.aria-checked]="item.available !== false"
+                    [attr.aria-expanded]="item.available !== false ? choosingOffId === item.id : null"
                     [attr.aria-label]="item.label + ' on the menu tonight'"
                     (click)="toggleAvailable(item)"
                   ></button>
+                  @if (choosingOffId === item.id) {
+                    <div class="menu-editor__off" role="group" [attr.aria-label]="'Take ' + item.label + ' off'">
+                      <button type="button" class="menu-editor__pill" (click)="takeOff(item, 'today')">Off today</button>
+                      <button type="button" class="menu-editor__pill" (click)="takeOff(item, 'until_changed')">
+                        Until I change it
+                      </button>
+                      <button type="button" class="menu-editor__pill" (click)="choosingOffId = ''">Keep it on</button>
+                    </div>
+                  }
                 </li>
               }
             </ul>
@@ -125,6 +141,26 @@ type EditorMode = 'list' | 'edit';
                         (ngModelChange)="paceBusy(cat, $event)"
                       />
                     </label>
+                  </div>
+                }
+                @if (hasBusyMinutes) {
+                  <div class="menu-editor__pace-row">
+                    <label>
+                      <span>Busy minutes last</span>
+                      <select
+                        class="leos-field__input"
+                        [ngModel]="busyForMinutes"
+                        (ngModelChange)="setBusyFor($event)"
+                      >
+                        <option [ngValue]="null">Until I clear them</option>
+                        <option [ngValue]="60">1 hour</option>
+                        <option [ngValue]="120">2 hours</option>
+                        <option [ngValue]="240">4 hours</option>
+                      </select>
+                    </label>
+                    @if (busyUntilLabel) {
+                      <span class="menu-editor__closed-note">{{ busyUntilLabel }}</span>
+                    }
                   </div>
                 }
                 <label class="menu-editor__toggle">
@@ -334,6 +370,7 @@ type EditorMode = 'list' | 'edit';
       }
       .menu-editor__card {
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
         gap: 0.75rem;
         padding-right: 1.1rem;
@@ -429,6 +466,13 @@ type EditorMode = 'list' | 'edit';
         cursor: pointer;
         font-weight: 600;
       }
+      .menu-editor__off {
+        flex-basis: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        padding: 0 1rem 0.75rem;
+      }
       .menu-editor__closed {
         display: flex;
         flex-direction: column;
@@ -509,7 +553,7 @@ export class StudioMenuPageComponent implements OnInit, OnDestroy {
   }
 
   private loadPace() {
-    this.api.getPace().subscribe({
+    this.api.getPace(this.venueId).subscribe({
       next: (p) => (this.pace = p),
       error: () => (this.pace = null),
     });
@@ -537,6 +581,33 @@ export class StudioMenuPageComponent implements OnInit, OnDestroy {
   paceHold(on: boolean) {
     if (!this.pace) return;
     this.pace = { ...this.pace, holdRounds: !!on };
+    this.savePaceSoon();
+  }
+
+  /** The length picked this visit; the saved end time is shown beside it. */
+  busyForMinutes: number | null = null;
+
+  get hasBusyMinutes(): boolean {
+    return !!this.pace && Object.values(this.pace.busyMinutes ?? {}).some((m) => m > 0);
+  }
+
+  get busyUntilLabel(): string {
+    const until = this.pace?.busyUntil;
+    if (!until) return '';
+    const t = Date.parse(until);
+    return Number.isFinite(t)
+      ? `Busy minutes stop at ${new Date(t).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
+      : '';
+  }
+
+  /** Busy minutes for a while, then the kitchen is back to normal by itself. */
+  setBusyFor(minutes: number | null) {
+    if (!this.pace) return;
+    this.busyForMinutes = minutes;
+    this.pace = {
+      ...this.pace,
+      busyUntil: minutes ? new Date(Date.now() + minutes * 60_000).toISOString() : null,
+    };
     this.savePaceSoon();
   }
 
@@ -568,7 +639,7 @@ export class StudioMenuPageComponent implements OnInit, OnDestroy {
     if (this.paceTimer) clearTimeout(this.paceTimer);
     this.paceTimer = setTimeout(() => {
       if (!this.pace) return;
-      this.api.savePace(this.pace).subscribe({
+      this.api.savePace(this.pace, this.venueId).subscribe({
         next: (p) => {
           this.pace = p;
           this.paceStatus = 'Saved';
@@ -612,14 +683,36 @@ export class StudioMenuPageComponent implements OnInit, OnDestroy {
     return Number(n).toFixed(2).replace(/\.00$/, '');
   }
 
-  /** One tap: on or off the menu tonight. The phone follows. */
+  /** Which dish is asking "off today, or until I change it?". */
+  choosingOffId = '';
+
+  offLabel(item: MenuItem): string {
+    return soldOutLabel({ available: item.available !== false, soldOutUntil: item.soldOutUntil });
+  }
+
+  /** Off asks for how long; back on is one tap. The phone follows. */
   toggleAvailable(item: MenuItem) {
-    const next = item.available === false;
-    item.available = next;
-    this.api.updateCatalogueItem(item.id, { available: next }).subscribe({
+    if (item.available !== false) {
+      this.choosingOffId = this.choosingOffId === item.id ? '' : item.id;
+      return;
+    }
+    this.setAvailability(item, 'back');
+  }
+
+  takeOff(item: MenuItem, mode: 'today' | 'until_changed') {
+    this.choosingOffId = '';
+    this.setAvailability(item, mode);
+  }
+
+  private setAvailability(item: MenuItem, mode: 'today' | 'until_changed' | 'back') {
+    const before = { available: item.available, soldOutUntil: item.soldOutUntil };
+    item.available = mode === 'back';
+    item.soldOutUntil = mode === 'today' ? 'tomorrow' : mode === 'until_changed' ? 'changed' : null;
+    this.api.setItemAvailability(item.id, mode).subscribe({
       next: () => this.catalogueLive.bump(),
       error: () => {
-        item.available = !next;
+        item.available = before.available;
+        item.soldOutUntil = before.soldOutUntil;
         this.importStatus = 'Couldn’t change that dish — try again.';
       },
     });

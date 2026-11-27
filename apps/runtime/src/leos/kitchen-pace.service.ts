@@ -27,9 +27,14 @@ export class KitchenPaceService {
     return { pace: livePace(stored, now, timezone), timezone };
   }
 
-  async forOrganisation(organisationId: string) {
+  /**
+   * The venue a manager is working on. Each venue keeps its own pause, hours and sold-out
+   * items; a venue from another organisation is never found. Without one, the first venue.
+   */
+  async forOrganisation(organisationId: string, venueId?: string | null) {
+    const wanted = venueId?.trim();
     const venue = await this.prisma.venue.findFirst({
-      where: { organisationId },
+      where: { organisationId, ...(wanted ? { id: wanted } : {}) },
       orderBy: { createdAt: 'asc' },
       select: { id: true },
     });
@@ -49,8 +54,8 @@ export class KitchenPaceService {
    * A manager saves the pace. Fields the caller leaves out keep their value,
    * so an older screen never wipes closed days or sold-out items it does not show.
    */
-  async save(organisationId: string, input: unknown): Promise<LivePace> {
-    const { venueId } = await this.forOrganisation(organisationId);
+  async save(organisationId: string, input: unknown, venueIdIn?: string | null): Promise<LivePace> {
+    const { venueId } = await this.forOrganisation(organisationId, venueIdIn);
     const current = await this.stored(venueId);
     const patch = input && typeof input === 'object' ? (input as Record<string, unknown>) : {};
     const pace = normalisePace({ ...current, ...patch });
@@ -61,10 +66,10 @@ export class KitchenPaceService {
   /** Pause or resume new orders; a pause can end by itself and carries a reason. */
   async setPaused(
     organisationId: string,
-    input: { paused: boolean; minutes?: number | null; reason?: string | null },
+    input: { paused: boolean; minutes?: number | null; reason?: string | null; venueId?: string | null },
     now = new Date(),
   ): Promise<LivePace> {
-    const { venueId } = await this.forOrganisation(organisationId);
+    const { venueId } = await this.forOrganisation(organisationId, input.venueId);
     const next = pausedPace(await this.stored(venueId), input, now);
     await this.write(venueId, next);
     return (await this.forVenue(venueId, now)).pace;

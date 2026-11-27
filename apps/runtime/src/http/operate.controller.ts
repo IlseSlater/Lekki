@@ -126,16 +126,20 @@ export class OperateController {
 
   /** The kitchen's pace right now: hours, pause, busy minutes, hold-and-fire. */
   @Get('pace')
-  async pace(@Req() req: { staff: StaffTokenClaims }) {
-    const { pace } = await this.kitchenPace.forOrganisation(req.staff.org);
+  async pace(@Req() req: { staff: StaffTokenClaims }, @Query('venueId') venueId?: string) {
+    const { pace } = await this.kitchenPace.forOrganisation(req.staff.org, venueId);
     return pace;
   }
 
-  /** A manager saves the pace. */
+  /** A manager saves one venue's pace (?venueId=; the first venue when left out). */
   @Put('pace')
-  async savePace(@Req() req: { staff: StaffTokenClaims }, @Body() body: unknown) {
+  async savePace(
+    @Req() req: { staff: StaffTokenClaims },
+    @Body() body: unknown,
+    @Query('venueId') venueId?: string,
+  ) {
     this.requireManager(req.staff);
-    return this.kitchenPace.save(req.staff.org, body);
+    return this.kitchenPace.save(req.staff.org, body, venueId);
   }
 
   /**
@@ -145,7 +149,7 @@ export class OperateController {
   @Post('pace/pause')
   async pause(
     @Req() req: { staff: StaffTokenClaims },
-    @Body() body: { paused?: boolean; minutes?: number; reason?: string },
+    @Body() body: { paused?: boolean; minutes?: number; reason?: string; venueId?: string },
   ) {
     this.requireManager(req.staff);
     const paused = body?.paused === true;
@@ -153,6 +157,7 @@ export class OperateController {
       paused,
       minutes: body?.minutes ?? null,
       reason: body?.reason ?? null,
+      venueId: body?.venueId ?? null,
     });
     if (paused) {
       void this.push.notifyManagers(

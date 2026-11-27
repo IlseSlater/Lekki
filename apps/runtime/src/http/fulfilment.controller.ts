@@ -11,6 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { CANCEL_REASONS, cancelAlert, cleanCancelReason } from '../leos/order-log';
+import { canManage } from '../leos/staff-admin';
 import { PushService } from '../push/push.service';
 import { LeosService } from '../leos/leos.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -55,11 +56,14 @@ export class FulfilmentController {
     if (existing.organisationId !== staff.org) {
       throw new ForbiddenException('Wrong organisation');
     }
-    if (!this.tokens.canAccessStation(staff.role, existing.stationId)) {
+    // A manager may cancel any order in their place; moving an order on stays with its station.
+    const managerCancel = body.status === 'cancelled' && canManage(staff.permissions);
+    if (!managerCancel && !this.tokens.canAccessStation(staff.role, existing.stationId)) {
       throw new ForbiddenException('Experience cannot update this station');
     }
     // Serve / handoff roles may only mark ready → delivered
     if (
+      !managerCancel &&
       isDeliverOnlyRole(staff.role, restaurantStationAccess) &&
       body.status !== 'delivered'
     ) {
@@ -89,14 +93,15 @@ export class FulfilmentController {
     @Req() req: { staff?: StaffTokenClaims },
   ) {
     const staff = req.staff!;
-    // Same rule as moving a ticket: only the station that makes it can push it back.
+    // The station that makes it can push it back, and so can a manager.
     const existing = await this.prisma.fulfilment.findUnique({ where: { id } });
     if (!existing || existing.organisationId !== staff.org) {
       throw new ForbiddenException('Fulfilment not found');
     }
     if (
-      !this.tokens.canAccessStation(staff.role, existing.stationId) ||
-      isDeliverOnlyRole(staff.role, restaurantStationAccess)
+      !canManage(staff.permissions) &&
+      (!this.tokens.canAccessStation(staff.role, existing.stationId) ||
+        isDeliverOnlyRole(staff.role, restaurantStationAccess))
     ) {
       throw new ForbiddenException('Only the station making this order can delay it');
     }
@@ -122,7 +127,8 @@ export class FulfilmentController {
     @Req() req: { staff?: StaffTokenClaims },
   ) {
     const staff = req.staff!;
-    if (!this.tokens.canAccessStation(staff.role, stationId)) {
+    // Managers watch every station; everyone else reads their own.
+    if (!canManage(staff.permissions) && !this.tokens.canAccessStation(staff.role, stationId)) {
       throw new ForbiddenException('Experience cannot read this station');
     }
     const rows = await this.prisma.fulfilment.findMany({

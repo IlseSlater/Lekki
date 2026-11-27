@@ -1427,6 +1427,11 @@ export class ServicePageComponent implements OnInit, OnDestroy {
     settled: boolean;
   }> = [];
 
+  /** The venue this device works for (Studio's active place); the API falls back to the first. */
+  get paceVenueId(): string | null {
+    return this.ctx.activeExperience()?.venueId?.trim() || null;
+  }
+
   get pauseStatus(): string {
     return pausedLine({ paused: this.ordersPaused, pausedUntil: this.pausedUntil });
   }
@@ -1439,7 +1444,7 @@ export class ServicePageComponent implements OnInit, OnDestroy {
   pauseOrders() {
     if (this.busy) return;
     this.busy = true;
-    this.api.pauseOrders(true, { minutes: this.pauseMinutes, reason: this.pauseReason }).subscribe({
+    this.api.pauseOrders(true, { minutes: this.pauseMinutes, reason: this.pauseReason, venueId: this.paceVenueId }).subscribe({
       next: (p) => {
         this.busy = false;
         this.ordersPaused = p.paused;
@@ -1457,7 +1462,7 @@ export class ServicePageComponent implements OnInit, OnDestroy {
   resumeOrders() {
     if (this.busy) return;
     this.busy = true;
-    this.api.pauseOrders(false).subscribe({
+    this.api.pauseOrders(false, { venueId: this.paceVenueId }).subscribe({
       next: (p) => {
         this.busy = false;
         this.ordersPaused = p.paused;
@@ -1650,7 +1655,7 @@ export class ServicePageComponent implements OnInit, OnDestroy {
       assistance: this.api.listAssistance().pipe(catchError(() => of([]))),
       floor: this.api.listFloorTables().pipe(catchError(() => of({ tables: [] }))),
       tips: this.api.myTips().pipe(catchError(() => of(null))),
-      pace: this.isManager ? this.api.getPace().pipe(catchError(() => of(null))) : of(null),
+      pace: this.isManager ? this.api.getPace(this.paceVenueId).pipe(catchError(() => of(null))) : of(null),
       payments: this.api.paymentFeed().pipe(catchError(() => of([]))),
     }).subscribe({
       next: (bundle) => {

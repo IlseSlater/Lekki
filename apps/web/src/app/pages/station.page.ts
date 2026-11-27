@@ -109,7 +109,7 @@ type StationItem = {
                   <span class="studio-operate__hint">{{ actionHint(item.status) }}</span>
                 }
               </button>
-              @if (!monitorMode) {
+              @if (!monitorMode || canManageOrders) {
                 <button
                   type="button"
                   class="station-more"
@@ -148,7 +148,7 @@ type StationItem = {
                   <span class="studio-operate__hint">{{ actionHint(item.status) }}</span>
                 }
               </button>
-              @if (!monitorMode) {
+              @if (!monitorMode || canManageOrders) {
                 <button
                   type="button"
                   class="station-more"
@@ -187,7 +187,7 @@ type StationItem = {
                   <span class="studio-operate__hint">{{ actionHint(item.status) }}</span>
                 }
               </button>
-              @if (!monitorMode) {
+              @if (!monitorMode || canManageOrders) {
                 <button
                   type="button"
                   class="station-more"
@@ -1051,6 +1051,14 @@ export class StationPageComponent implements OnInit, OnChanges, OnDestroy {
   cancelReason: CancelReason | '' = '';
   cancelNote = '';
   timeline: Array<{ at: string; step: string; by: string | null; detail: string | null }> = [];
+
+  /**
+   * Managers open any order — even on Studio's read-only board — to see its steps,
+   * push it back or cancel it. Moving it along stays with the station.
+   */
+  get canManageOrders(): boolean {
+    return !!this.staffSession.read()?.permissions?.includes('organisation.manage');
+  }
 
   get canCancel(): boolean {
     return cancelReady(this.cancelReason, this.cancelNote);
